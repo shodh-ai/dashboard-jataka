@@ -2,7 +2,26 @@
 
 import { useAuth, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { Copy, Check, Terminal, Shield, UserPlus } from "lucide-react";
+import {
+  Copy,
+  Check,
+  Terminal,
+  Shield,
+  UserPlus,
+  Activity,
+  ShieldCheck,
+  BookOpen,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
+
+interface Metrics {
+  senior_deflection_rate: number;
+  drift_score: number;
+  avg_hours_to_mastery: number;
+  knowledge_coverage_files: number;
+  context_injection_rate: number;
+}
 
 export default function Home() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
@@ -12,6 +31,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState("");
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -33,6 +53,45 @@ export default function Home() {
     }
     fetchToken();
   }, [isSignedIn, getToken]);
+
+  useEffect(() => {
+    async function fetchMetrics() {
+      if (isSignedIn && token) {
+        try {
+          const res = await fetch(
+            "https://api.shodh.ai/api/proxy/brum/dashboard-metrics",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+          if (res.ok) {
+            setMetrics(await res.json());
+          } else {
+            setMetrics(null);
+          }
+        } catch {
+          console.error("Failed to load metrics");
+        }
+      } else {
+        setMetrics(null);
+      }
+    }
+    fetchMetrics();
+  }, [isSignedIn, token]);
+
+  const MetricCard = ({ title, value, icon: Icon, color }: any) => (
+    <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-400">{title}</p>
+          <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+        </div>
+        <div className={`rounded-lg p-3 ${color} bg-opacity-10`}>
+          <Icon size={24} className={color.replace("bg-", "text-")} />
+        </div>
+      </div>
+    </div>
+  );
 
   const handleCopy = () => {
     if (token) {
@@ -90,7 +149,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
+    <main className="min-h-screen bg-slate-950 p-8 text-slate-200 flex flex-col items-center">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900 p-8 shadow-2xl ring-1 ring-white/10">
         {/* Header */}
         <div className="text-center">
@@ -193,6 +252,49 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {isSignedIn && metrics && (
+        <div className="mx-auto max-w-5xl mt-10 w-full">
+          <h3 className="text-xl font-bold text-white mb-6">Team Brain Health</h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <MetricCard
+              title="Senior Deflection Rate"
+              value={`${metrics.senior_deflection_rate.toFixed(1)}%`}
+              icon={ShieldCheck}
+              color="bg-green-500"
+            />
+
+            <MetricCard
+              title="Files Documented"
+              value={metrics.knowledge_coverage_files}
+              icon={BookOpen}
+              color="bg-blue-500"
+            />
+
+            <MetricCard
+              title="Knowledge Drift"
+              value={`${metrics.drift_score.toFixed(1)}%`}
+              icon={AlertTriangle}
+              color="bg-orange-500"
+            />
+
+            <MetricCard
+              title="Avg Mastery Time"
+              value={`${metrics.avg_hours_to_mastery.toFixed(1)}h`}
+              icon={Clock}
+              color="bg-purple-500"
+            />
+
+            <MetricCard
+              title="Context Success"
+              value={`${metrics.context_injection_rate.toFixed(1)}%`}
+              icon={Activity}
+              color="bg-teal-500"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 text-center text-xs text-slate-600">
         &copy; {new Date().getFullYear()} Shodh AI. Secure Connection.
