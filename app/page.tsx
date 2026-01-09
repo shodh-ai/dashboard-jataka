@@ -23,6 +23,14 @@ interface Metrics {
   context_injection_rate: number;
 }
 
+const DEFAULT_METRICS: Metrics = {
+  senior_deflection_rate: 0,
+  drift_score: 0,
+  avg_hours_to_mastery: 0,
+  knowledge_coverage_files: 0,
+  context_injection_rate: 0,
+};
+
 export default function Home() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
@@ -71,13 +79,15 @@ export default function Home() {
           if (res.ok) {
             setMetrics(await res.json());
           } else {
-            setMetrics(null);
-            setMetricsError("Unable to load metrics right now. Please try again in a bit.");
+            // Backend responded but not OK – show placeholder metrics
+            setMetrics(DEFAULT_METRICS);
+            setMetricsError("Showing placeholder metrics while we connect to your backend.");
           }
         } catch (e) {
           console.error("Failed to load metrics", e);
-          setMetrics(null);
-          setMetricsError("We couldn't fetch your team metrics. Check your connection or try refreshing.");
+          // Network or other error – also fallback to placeholder metrics
+          setMetrics(DEFAULT_METRICS);
+          setMetricsError("We couldn't reach your metrics backend. Showing placeholder numbers for now.");
         } finally {
           setMetricsLoading(false);
         }
@@ -282,18 +292,18 @@ export default function Home() {
           )}
 
           {!metricsLoading && metricsError && (
-            <div className="flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+            <div className="flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100">
               <div className="mt-0.5">
-                <AlertTriangle className="h-4 w-4 text-red-400" />
+                <AlertTriangle className="h-4 w-4 text-amber-300" />
               </div>
               <div>
-                <p className="font-medium">Failed to load team metrics</p>
-                <p className="mt-1 text-xs text-red-200/80">{metricsError}</p>
+                <p className="font-medium">Live metrics are temporarily unavailable</p>
+                <p className="mt-1 text-xs text-amber-200/80">{metricsError}</p>
               </div>
             </div>
           )}
 
-          {!metricsLoading && !metricsError && metrics && (
+          {!metricsLoading && metrics && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <MetricCard
                 title="Senior Deflection Rate"
