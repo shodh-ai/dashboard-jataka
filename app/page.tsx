@@ -32,6 +32,8 @@ export default function Home() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteStatus, setInviteStatus] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -57,6 +59,8 @@ export default function Home() {
   useEffect(() => {
     async function fetchMetrics() {
       if (isSignedIn && token) {
+        setMetricsLoading(true);
+        setMetricsError(null);
         try {
           const res = await fetch(
             "https://api.shodh.ai/api/proxy/brum/dashboard-metrics",
@@ -68,12 +72,18 @@ export default function Home() {
             setMetrics(await res.json());
           } else {
             setMetrics(null);
+            setMetricsError("Unable to load metrics right now. Please try again in a bit.");
           }
-        } catch {
-          console.error("Failed to load metrics");
+        } catch (e) {
+          console.error("Failed to load metrics", e);
+          setMetrics(null);
+          setMetricsError("We couldn't fetch your team metrics. Check your connection or try refreshing.");
+        } finally {
+          setMetricsLoading(false);
         }
       } else {
         setMetrics(null);
+        setMetricsError(null);
       }
     }
     fetchMetrics();
@@ -253,46 +263,74 @@ export default function Home() {
         )}
       </div>
 
-      {isSignedIn && metrics && (
-        <div className="mx-auto max-w-5xl mt-10 w-full">
-          <h3 className="text-xl font-bold text-white mb-6">Team Brain Health</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricCard
-              title="Senior Deflection Rate"
-              value={`${metrics.senior_deflection_rate.toFixed(1)}%`}
-              icon={ShieldCheck}
-              color="bg-green-500"
-            />
-
-            <MetricCard
-              title="Files Documented"
-              value={metrics.knowledge_coverage_files}
-              icon={BookOpen}
-              color="bg-blue-500"
-            />
-
-            <MetricCard
-              title="Knowledge Drift"
-              value={`${metrics.drift_score.toFixed(1)}%`}
-              icon={AlertTriangle}
-              color="bg-orange-500"
-            />
-
-            <MetricCard
-              title="Avg Mastery Time"
-              value={`${metrics.avg_hours_to_mastery.toFixed(1)}h`}
-              icon={Clock}
-              color="bg-purple-500"
-            />
-
-            <MetricCard
-              title="Context Success"
-              value={`${metrics.context_injection_rate.toFixed(1)}%`}
-              icon={Activity}
-              color="bg-teal-500"
-            />
+      {isSignedIn && (
+        <div className="mx-auto max-w-5xl mt-10 w-full space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white">Team Brain Health</h3>
+            <p className="text-xs text-slate-500">Live view of how your team brain is performing</p>
           </div>
+
+          {metricsLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((key) => (
+                <div
+                  key={key}
+                  className="h-28 rounded-xl bg-slate-900/60 ring-1 ring-white/5 animate-pulse"
+                ></div>
+              ))}
+            </div>
+          )}
+
+          {!metricsLoading && metricsError && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-100">
+              <div className="mt-0.5">
+                <AlertTriangle className="h-4 w-4 text-red-400" />
+              </div>
+              <div>
+                <p className="font-medium">Failed to load team metrics</p>
+                <p className="mt-1 text-xs text-red-200/80">{metricsError}</p>
+              </div>
+            </div>
+          )}
+
+          {!metricsLoading && !metricsError && metrics && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <MetricCard
+                title="Senior Deflection Rate"
+                value={`${metrics.senior_deflection_rate.toFixed(1)}%`}
+                icon={ShieldCheck}
+                color="bg-green-500"
+              />
+
+              <MetricCard
+                title="Files Documented"
+                value={metrics.knowledge_coverage_files}
+                icon={BookOpen}
+                color="bg-blue-500"
+              />
+
+              <MetricCard
+                title="Knowledge Drift"
+                value={`${metrics.drift_score.toFixed(1)}%`}
+                icon={AlertTriangle}
+                color="bg-orange-500"
+              />
+
+              <MetricCard
+                title="Avg Mastery Time"
+                value={`${metrics.avg_hours_to_mastery.toFixed(1)}h`}
+                icon={Clock}
+                color="bg-purple-500"
+              />
+
+              <MetricCard
+                title="Context Success"
+                value={`${metrics.context_injection_rate.toFixed(1)}%`}
+                icon={Activity}
+                color="bg-teal-500"
+              />
+            </div>
+          )}
         </div>
       )}
 

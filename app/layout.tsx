@@ -16,16 +16,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (!publishableKey) {
-    return (
-      <html lang="en">
-        <body className={`${inter.className} bg-slate-950 text-slate-200 antialiased`}>
-          {children}
-        </body>
-      </html>
-    );
-  }
-
   return (
     <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
