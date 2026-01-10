@@ -42,6 +42,8 @@ export default function Home() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [viewState, setViewState] = useState<'loading' | 'dashboard' | 'onboarding'>('loading');
+  const [companyName, setCompanyName] = useState("");
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -64,14 +66,42 @@ export default function Home() {
     fetchToken();
   }, [isSignedIn, getToken]);
 
+  // Sync user with backend to determine whether they need onboarding
+  useEffect(() => {
+    async function syncUser() {
+      if (isSignedIn && token) {
+        try {
+          const res = await fetch('http://localhost:3001/api/auth/sync', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await res.json();
+
+          if (data.status === 'active') {
+            setViewState('dashboard');
+          } else if (data.status === 'needs_onboarding') {
+            setViewState('onboarding');
+          } else {
+            setViewState('dashboard');
+          }
+        } catch (e) {
+          console.error('Sync failed', e);
+          setViewState('dashboard');
+        }
+      } else if (!isSignedIn) {
+        setViewState('loading');
+      }
+    }
+    syncUser();
+  }, [isSignedIn, token]);
+
   useEffect(() => {
     async function fetchMetrics() {
-      if (isSignedIn && token) {
+      if (isSignedIn && token && viewState === 'dashboard') {
         setMetricsLoading(true);
         setMetricsError(null);
         try {
           const res = await fetch(
-            "https://api.shodh.ai/api/proxy/brum/dashboard-metrics",
+            "http://localhost:3001/api/proxy/brum/dashboard-metrics",
             {
               headers: { Authorization: `Bearer ${token}` },
             },
@@ -97,7 +127,7 @@ export default function Home() {
       }
     }
     fetchMetrics();
-  }, [isSignedIn, token]);
+  }, [isSignedIn, token, viewState]);
 
   const MetricCard = ({ title, value, icon: Icon, color }: any) => (
     <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
@@ -122,34 +152,68 @@ export default function Home() {
   };
 
   const handleInvite = async () => {
-    if (!token || !inviteEmail.trim()) return;
+    if (!inviteEmail.trim()) return;
     setInviteStatus("Sending...");
 
     try {
-      const res = await fetch("https://api.shodh.ai/api/team/invite", {
+      // Always fetch a fresh token to avoid expiry issues
+      const freshToken = await getToken();
+
+      if (!freshToken) {
+        setInviteStatus("❌ Error: You are not signed in.");
+        return;
+      }
+
+      const res = await fetch("http://localhost:3001/api/team/invite", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${freshToken}`,
         },
         body: JSON.stringify({ email: inviteEmail }),
       });
 
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        // ignore JSON parse errors; fall back to generic messages
+      }
+
       if (res.ok) {
-        setInviteStatus("✅ Invite Sent!");
+        const msg = data.message || `Invited ${inviteEmail} successfully.`;
+        setInviteStatus(`✅ ${msg}`);
         setInviteEmail("");
       } else {
-        let message = "Unknown error";
-        try {
-          const err = await res.json();
-          message = err.message || JSON.stringify(err);
-        } catch {
-          // ignore JSON parse errors
-        }
-        setInviteStatus(`❌ Error: ${message}`);
+        const errorMsg = data.message || "Failed to send invite";
+        setInviteStatus(`❌ ${errorMsg}`);
       }
     } catch (e: any) {
-      setInviteStatus("❌ Network Error");
+      console.error(e);
+      setInviteStatus("❌ Network Connection Error");
+    }
+  };
+
+  const handleOnboarding = async () => {
+    if (!companyName.trim() || !token) return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/auth/onboard', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ companyName }),
+      });
+
+      if (res.ok) {
+        setViewState('dashboard');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -165,6 +229,38 @@ export default function Home() {
       <div className="flex h-screen items-center justify-center bg-slate-950">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
       </div>
+    );
+  }
+
+  if (viewState === 'onboarding' && isSignedIn) {
+    return (
+      <main className="min-h-screen bg-slate-950 p-8 flex flex-col items-center justify-center">
+        <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900 p-8 shadow-2xl border border-blue-500/30">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white">Setup Workspace</h2>
+            <p className="text-slate-400 mt-2">Create a new organization to start.</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-slate-300">Company Name</label>
+              <input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full mt-1 p-3 rounded bg-slate-950 text-white border border-slate-700 focus:border-blue-500 outline-none"
+                placeholder="Acme Corp"
+              />
+            </div>
+            <button
+              onClick={handleOnboarding}
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded transition-all"
+            >
+              {loading ? 'Creating...' : 'Create Workspace'}
+            </button>
+          </div>
+        </div>
+      </main>
     );
   }
 
