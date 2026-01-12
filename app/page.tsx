@@ -23,16 +23,12 @@ interface Metrics {
   context_injection_rate: number;
 }
 
-// const SYNC_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_SYNC_URL;
-// Use your actual production backend URL here
-const BASE_API = "https://api.shodh.ai/api";
+const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const SYNC_URL = `${BASE_API}/auth/sync`;
-const METRICS_URL = `${BASE_API}/brum-proxy/dashboard-metrics`;
-const INVITE_URL = `${BASE_API}/team/invite`;
-const ONBOARD_URL = `${BASE_API}/auth/onboard`;
-const SLACK_CLIENT_ID = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
-const SLACK_REDIRECT_URI = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
+const SYNC_URL = BASE_API ? `${BASE_API}/auth/sync` : undefined;
+const METRICS_URL = BASE_API ? `${BASE_API}/brum-proxy/dashboard-metrics` : undefined;
+const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
+const ONBOARD_URL = BASE_API ? `${BASE_API}/auth/onboard` : undefined;
 
 const DEFAULT_METRICS: Metrics = {
   senior_deflection_rate: 0,
@@ -83,7 +79,7 @@ export default function Home() {
       if (isSignedIn && token) {
         try {
           if (!SYNC_URL) {
-            console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_SYNC_URL");
+            console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
             setViewState('dashboard');
             return;
           }
@@ -118,7 +114,7 @@ export default function Home() {
         setMetricsError(null);
         try {
           if (!METRICS_URL) {
-            console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_METRICS_URL");
+            console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
             setMetrics(DEFAULT_METRICS);
             setMetricsError("Metrics endpoint isn't configured. Showing placeholder numbers for now.");
             return;
@@ -173,28 +169,12 @@ export default function Home() {
   };
 
   const handleSlackInstall = () => {
-    if (!SLACK_CLIENT_ID || !SLACK_REDIRECT_URI) {
-      console.error('Missing NEXT_PUBLIC_SLACK_CLIENT_ID or NEXT_PUBLIC_SLACK_REDIRECT_URI');
+    // Delegate OAuth flow + state handling to backend Bolt receiver
+    if (!BASE_API) {
+      console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
       return;
     }
-
-    const scopes = [
-      'chat:write',
-      'commands',
-      'files:read',
-      'files:write',
-      'im:history',
-      'users:read',
-      'channels:history',
-    ].join(',');
-
-    const url = `https://slack.com/oauth/v2/authorize?client_id=${encodeURIComponent(
-      SLACK_CLIENT_ID,
-    )}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(
-      SLACK_REDIRECT_URI,
-    )}`;
-
-    window.open(url, '_blank');
+    window.location.href = `${BASE_API}/slack/install`;
   };
 
   const handleInvite = async () => {
@@ -211,7 +191,7 @@ export default function Home() {
       }
 
       if (!INVITE_URL) {
-        console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_INVITE_URL");
+        console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
         setInviteStatus("❌ Invite endpoint isn't configured.");
         return;
       }
@@ -251,7 +231,7 @@ export default function Home() {
     setLoading(true);
     try {
       if (!ONBOARD_URL) {
-        console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_ONBOARD_URL");
+        console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
         return;
       }
 
