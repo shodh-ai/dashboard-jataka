@@ -23,6 +23,11 @@ interface Metrics {
   context_injection_rate: number;
 }
 
+ const SYNC_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_SYNC_URL;
+ const METRICS_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_METRICS_URL;
+ const INVITE_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_INVITE_URL;
+ const ONBOARD_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_ONBOARD_URL;
+
 const DEFAULT_METRICS: Metrics = {
   senior_deflection_rate: 0,
   drift_score: 0,
@@ -71,7 +76,13 @@ export default function Home() {
     async function syncUser() {
       if (isSignedIn && token) {
         try {
-          const res = await fetch('http://localhost:3001/api/auth/sync', {
+          if (!SYNC_URL) {
+            console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_SYNC_URL");
+            setViewState('dashboard');
+            return;
+          }
+
+          const res = await fetch(SYNC_URL, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
@@ -100,12 +111,16 @@ export default function Home() {
         setMetricsLoading(true);
         setMetricsError(null);
         try {
-          const res = await fetch(
-            "http://localhost:3001/api/proxy/brum/dashboard-metrics",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          );
+          if (!METRICS_URL) {
+            console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_METRICS_URL");
+            setMetrics(DEFAULT_METRICS);
+            setMetricsError("Metrics endpoint isn't configured. Showing placeholder numbers for now.");
+            return;
+          }
+
+          const res = await fetch(METRICS_URL, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           if (res.ok) {
             setMetrics(await res.json());
           } else {
@@ -164,7 +179,13 @@ export default function Home() {
         return;
       }
 
-      const res = await fetch("http://localhost:3001/api/team/invite", {
+      if (!INVITE_URL) {
+        console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_INVITE_URL");
+        setInviteStatus("❌ Invite endpoint isn't configured.");
+        return;
+      }
+
+      const res = await fetch(INVITE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -198,7 +219,12 @@ export default function Home() {
     if (!companyName.trim() || !token) return;
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/auth/onboard', {
+      if (!ONBOARD_URL) {
+        console.error("Missing env var: NEXT_PUBLIC_ONE_BACKEND_ONBOARD_URL");
+        return;
+      }
+
+      const res = await fetch(ONBOARD_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
