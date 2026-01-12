@@ -23,10 +23,16 @@ interface Metrics {
   context_injection_rate: number;
 }
 
- const SYNC_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_SYNC_URL;
- const METRICS_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_METRICS_URL;
- const INVITE_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_INVITE_URL;
- const ONBOARD_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_ONBOARD_URL;
+// const SYNC_URL = process.env.NEXT_PUBLIC_ONE_BACKEND_SYNC_URL;
+// Use your actual production backend URL here
+const BASE_API = "https://api.shodh.ai/api";
+
+const SYNC_URL = `${BASE_API}/auth/sync`;
+const METRICS_URL = `${BASE_API}/brum-proxy/dashboard-metrics`;
+const INVITE_URL = `${BASE_API}/team/invite`;
+const ONBOARD_URL = `${BASE_API}/auth/onboard`;
+const SLACK_CLIENT_ID = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+const SLACK_REDIRECT_URI = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
 
 const DEFAULT_METRICS: Metrics = {
   senior_deflection_rate: 0,
@@ -164,6 +170,31 @@ export default function Home() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleSlackInstall = () => {
+    if (!SLACK_CLIENT_ID || !SLACK_REDIRECT_URI) {
+      console.error('Missing NEXT_PUBLIC_SLACK_CLIENT_ID or NEXT_PUBLIC_SLACK_REDIRECT_URI');
+      return;
+    }
+
+    const scopes = [
+      'chat:write',
+      'commands',
+      'files:read',
+      'files:write',
+      'im:history',
+      'users:read',
+      'channels:history',
+    ].join(',');
+
+    const url = `https://slack.com/oauth/v2/authorize?client_id=${encodeURIComponent(
+      SLACK_CLIENT_ID,
+    )}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(
+      SLACK_REDIRECT_URI,
+    )}`;
+
+    window.open(url, '_blank');
   };
 
   const handleInvite = async () => {
@@ -355,6 +386,21 @@ export default function Home() {
                   Paste this token into the input box in VS Code.
                 </p>
               </div>
+            </div>
+
+            {/* Slack Install Button */}
+            <div className="mt-4 w-full rounded-2xl bg-slate-900 p-4 shadow-xl ring-1 ring-white/10 flex justify-center">
+              <button
+                onClick={handleSlackInstall}
+                className="flex items-center gap-2 bg-[#4A154B] text-white px-4 py-2 rounded font-bold"
+              >
+                <img
+                  src="https://cdn.icon-icons.com/icons2/2699/PNG/512/slack_logo_icon_169752.png"
+                  className="w-5 h-5"
+                  alt="Slack logo"
+                />
+                Add to Slack
+              </button>
             </div>
 
             {/* NEW: Invite Section */}
