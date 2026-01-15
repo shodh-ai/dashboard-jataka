@@ -53,7 +53,7 @@ interface BusFactorWorkflow {
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 const GITHUB_APP_NAME =
-  process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "jataka-salesforce-sentinel";
+  process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "jataka-ai";
 const GITHUB_INSTALL_URL = `https://github.com/apps/${GITHUB_APP_NAME}/installations/new`;
 
 const SYNC_URL = BASE_API ? `${BASE_API}/auth/sync` : undefined;
@@ -90,6 +90,7 @@ export default function Home() {
   const [qaError, setQaError] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'loading' | 'dashboard' | 'onboarding'>('loading');
   const [companyName, setCompanyName] = useState("");
+  const [orgName, setOrgName] = useState("");
   const [brains, setBrains] = useState<any[]>([]);
   const [activeBrain, setActiveBrain] = useState<string>("");
   const [newBrainName, setNewBrainName] = useState("");
@@ -131,6 +132,10 @@ export default function Home() {
           });
           const data = await res.json();
 
+          if (data.org && data.org.name) {
+            setOrgName(data.org.name);
+          }
+
           if (data.status === 'active') {
             setViewState('dashboard');
           } else if (data.status === 'needs_onboarding') {
@@ -144,6 +149,7 @@ export default function Home() {
         }
       } else if (!isSignedIn) {
         setViewState('loading');
+        setOrgName("");
       }
     }
     syncUser();
@@ -468,6 +474,11 @@ export default function Home() {
             <Terminal size={24} />
           </div>
           <h2 className="text-3xl font-bold tracking-tight text-white">Kamikaze</h2>
+          {orgName && (
+            <div className="mt-2 inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
+              🏢 {orgName}
+            </div>
+          )}
           <p className="mt-2 text-slate-400">Developer Context & Guardrails</p>
         </div>
 
