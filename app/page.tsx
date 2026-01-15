@@ -23,10 +23,44 @@ interface Metrics {
   context_injection_rate: number;
 }
 
+interface WorkflowSummary {
+  name: string;
+  status?: string;
+  drift_reason?: string;
+  last_drift_detected?: string;
+  step_count?: number;
+  file_count?: number;
+}
+
+interface HealerLogEntry {
+  workflow_name?: string;
+  new_step: string;
+  old_step?: string;
+  step_order?: number;
+  expert_intent?: string;
+  created_at?: string;
+  action_count?: number;
+}
+
+interface BusFactorWorkflow {
+  workflow: string;
+  step_count?: number;
+  file_count?: number;
+  capture_count?: number;
+  risk_level: 'ok' | 'warning' | 'critical';
+}
+
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+const GITHUB_APP_NAME =
+  process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "jataka-salesforce-sentinel";
+const GITHUB_INSTALL_URL = `https://github.com/apps/${GITHUB_APP_NAME}/installations/new`;
 
 const SYNC_URL = BASE_API ? `${BASE_API}/auth/sync` : undefined;
 const METRICS_URL = BASE_API ? `${BASE_API}/brum-proxy/dashboard-metrics` : undefined;
+const WORKFLOWS_URL = BASE_API ? `${BASE_API}/brum-proxy/workflows` : undefined;
+const HEALER_LOG_URL = BASE_API ? `${BASE_API}/brum-proxy/healer-log` : undefined;
+const BUS_FACTOR_URL = BASE_API ? `${BASE_API}/brum-proxy/bus-factor` : undefined;
 const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
 const ONBOARD_URL = BASE_API ? `${BASE_API}/auth/onboard` : undefined;
 
@@ -49,8 +83,16 @@ export default function Home() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [healerLog, setHealerLog] = useState<HealerLogEntry[]>([]);
+  const [busFactor, setBusFactor] = useState<BusFactorWorkflow[]>([]);
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState<string | null>(null);
   const [viewState, setViewState] = useState<'loading' | 'dashboard' | 'onboarding'>('loading');
   const [companyName, setCompanyName] = useState("");
+  const [brains, setBrains] = useState<any[]>([]);
+  const [activeBrain, setActiveBrain] = useState<string>("");
+  const [newBrainName, setNewBrainName] = useState("");
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -146,6 +188,86 @@ export default function Home() {
     fetchMetrics();
   }, [isSignedIn, token, viewState]);
 
+  // Load available brains (curriculums) for the org
+  useEffect(() => {
+    async function fetchBrains() {
+      if (!isSignedIn || !token) return;
+      if (!BASE_API) return;
+
+      try {
+        const res = await fetch(`${BASE_API}/curriculum/list`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const list = Array.isArray(data.brains) ? data.brains : [];
+        setBrains(list);
+
+        if (list.length > 0) {
+          const current = list.find((b: any) => b.id === data.activeBrainId);
+          const selected = current || list[0];
+          setActiveBrain(selected.knowledgeBaseId);
+        }
+      } catch (e) {
+        console.error('Failed to load brains', e);
+      }
+    }
+
+    fetchBrains();
+  }, [isSignedIn, token]);
+
+  useEffect(() => {
+    async function fetchQaCommandCenter() {
+      if (!(isSignedIn && token && viewState === 'dashboard')) {
+        setWorkflows([]);
+        setHealerLog([]);
+        setBusFactor([]);
+        setQaError(null);
+        setQaLoading(false);
+        return;
+      }
+
+      setQaLoading(true);
+      setQaError(null);
+
+      try {
+        const headers = { Authorization: `Bearer ${token}` };
+
+        if (!WORKFLOWS_URL || !HEALER_LOG_URL || !BUS_FACTOR_URL) {
+          setQaError('QA Command Center endpoints are not configured.');
+          return;
+        }
+
+        const [wfRes, logRes, bfRes] = await Promise.all([
+          fetch(`${WORKFLOWS_URL}?branch=main&limit=50`, { headers }),
+          fetch(`${HEALER_LOG_URL}?limit=25`, { headers }),
+          fetch(`${BUS_FACTOR_URL}?branch=main&limit=50`, { headers }),
+        ]);
+
+        if (wfRes.ok) {
+          const wfJson = await wfRes.json();
+          setWorkflows(Array.isArray(wfJson?.workflows) ? wfJson.workflows : []);
+        }
+        if (logRes.ok) {
+          const logJson = await logRes.json();
+          setHealerLog(Array.isArray(logJson?.healer_log) ? logJson.healer_log : []);
+        }
+        if (bfRes.ok) {
+          const bfJson = await bfRes.json();
+          setBusFactor(Array.isArray(bfJson?.workflows) ? bfJson.workflows : []);
+        }
+      } catch (e) {
+        console.error('Failed to load QA Command Center', e);
+        setQaError("Couldn't load QA Command Center data.");
+      } finally {
+        setQaLoading(false);
+      }
+    }
+
+    fetchQaCommandCenter();
+  }, [isSignedIn, token, viewState]);
+
   const MetricCard = ({ title, value, icon: Icon, color }: any) => (
     <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
       <div className="flex items-center justify-between">
@@ -175,6 +297,10 @@ export default function Home() {
       return;
     }
     window.location.href = `${BASE_API}/slack/install`;
+  };
+
+  const handleGithubInstall = () => {
+    window.location.href = GITHUB_INSTALL_URL;
   };
 
   const handleInvite = async () => {
@@ -259,6 +385,38 @@ export default function Home() {
     // if (token) {
     //   window.location.href = `${process.env.NEXT_PUBLIC_VSCODE_URI_SCHEME}/auth?token=${encodeURIComponent(token)}`;
     // }
+  };
+
+  const handleConnectVsCode = async () => {
+    if (!token) return;
+
+    const extensionId = "ShodhAI.Jataka";
+    const params = new URLSearchParams({ token });
+    if (activeBrain) {
+      params.append('curriculumId', activeBrain);
+    }
+    const uri = `vscode://${extensionId}/auth?${params.toString()}`;
+    window.location.href = uri;
+  };
+
+  const handleCreateBrain = async () => {
+    if (!token || !newBrainName.trim()) return;
+    if (!BASE_API) return;
+
+    try {
+      await fetch(`${BASE_API}/curriculum/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newBrainName.trim() }),
+      });
+      setNewBrainName("");
+      window.location.reload();
+    } catch (e) {
+      console.error('Failed to create brain', e);
+    }
   };
 
   if (!isLoaded) {
@@ -361,6 +519,13 @@ export default function Home() {
                 )}
               </div>
 
+              <button
+                onClick={handleConnectVsCode}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded transition-all"
+              >
+                🚀 Auto-Connect VS Code
+              </button>
+
               <div className="text-center">
                 <p className="text-xs text-slate-500">
                   Paste this token into the input box in VS Code.
@@ -380,6 +545,84 @@ export default function Home() {
                   alt="Slack logo"
                 />
                 Add to Slack
+              </button>
+            </div>
+
+            <div className="mt-4 w-full rounded-2xl bg-slate-900 p-6 shadow-xl ring-1 ring-white/10">
+              <h3 className="text-xl font-bold text-white mb-4">🧠 Active Brain Context</h3>
+
+              <div className="flex gap-4 mb-4">
+                <select
+                  className="bg-slate-950 text-white p-3 rounded w-full border border-slate-700"
+                  value={activeBrain}
+                  onChange={async (e) => {
+                    const kb = e.target.value;
+                    setActiveBrain(kb);
+
+                    const brain = brains.find((b: any) => b.knowledgeBaseId === kb);
+                    if (brain && token && BASE_API) {
+                      try {
+                        await fetch(`${BASE_API}/curriculum/switch`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({ curriculumId: brain.id }),
+                        });
+                      } catch (err) {
+                        console.error('Failed to switch brain', err);
+                      }
+                    }
+                  }}
+                >
+                  {brains.map((b) => (
+                    <option key={b.id} value={b.knowledgeBaseId}>
+                      {b.name} ({b.knowledgeBaseId})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handleConnectVsCode}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded mb-6"
+              >
+                🚀 Connect VS Code to THIS Brain
+              </button>
+
+              <div className="border-t border-slate-700 pt-4">
+                <p className="text-sm text-slate-400 mb-2">Create New Brain</p>
+                <div className="flex gap-2">
+                  <input
+                    className="bg-slate-950 text-white p-2 rounded flex-1 border border-slate-700"
+                    placeholder="e.g. Mobile App V2"
+                    value={newBrainName}
+                    onChange={(e) => setNewBrainName(e.target.value)}
+                  />
+                  <button
+                    onClick={handleCreateBrain}
+                    className="bg-blue-600 px-4 rounded text-white font-bold"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 w-full rounded-2xl bg-slate-900 p-4 shadow-xl ring-1 ring-white/10">
+              <p className="text-sm text-slate-400">To connect Slack, run:</p>
+              <code className="block mt-2 bg-black p-2 rounded text-green-400">
+                /connect {user?.primaryEmailAddress?.emailAddress}
+              </code>
+            </div>
+
+            <div className="mt-4 w-full rounded-2xl bg-slate-900 p-4 shadow-xl ring-1 ring-white/10 flex justify-center">
+              <button
+                onClick={handleGithubInstall}
+                className="flex items-center gap-2 bg-slate-950 text-white px-4 py-2 rounded font-bold ring-1 ring-white/10 hover:bg-slate-800 transition-colors"
+              >
+                Connect GitHub Repository
               </button>
             </div>
 
@@ -489,6 +732,121 @@ export default function Home() {
               />
             </div>
           )}
+
+          <div className="mt-8">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">QA Command Center</h3>
+              <p className="text-xs text-slate-500">Workflow drift, healing activity, and coverage risk</p>
+            </div>
+
+            {qaLoading && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((key) => (
+                  <div
+                    key={key}
+                    className="h-28 rounded-xl bg-slate-900/60 ring-1 ring-white/5 animate-pulse"
+                  ></div>
+                ))}
+              </div>
+            )}
+
+            {!qaLoading && qaError && (
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+                <div className="mt-0.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-300" />
+                </div>
+                <div>
+                  <p className="font-medium">QA telemetry is temporarily unavailable</p>
+                  <p className="mt-1 text-xs text-amber-200/80">{qaError}</p>
+                </div>
+              </div>
+            )}
+
+            {!qaLoading && !qaError && (
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
+                  <p className="text-sm font-medium text-slate-400">Coverage Risk</p>
+                  <p className="mt-2 text-xs text-slate-500">Workflows with low documentation density</p>
+                  <div className="mt-4 space-y-3">
+                    {busFactor.slice(0, 5).map((wf) => (
+                      <div key={wf.workflow} className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-200">{wf.workflow}</p>
+                          <p className="text-xs text-slate-500">
+                            {wf.file_count || 0} files · {wf.step_count || 0} steps · {wf.capture_count || 0} captures
+                          </p>
+                        </div>
+                        <span
+                          className={
+                            "ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 " +
+                            (wf.risk_level === 'critical'
+                              ? 'bg-red-500/10 text-red-200 ring-red-400/30'
+                              : wf.risk_level === 'warning'
+                              ? 'bg-amber-500/10 text-amber-200 ring-amber-400/30'
+                              : 'bg-emerald-500/10 text-emerald-200 ring-emerald-400/30')
+                          }
+                        >
+                          {wf.risk_level}
+                        </span>
+                      </div>
+                    ))}
+                    {busFactor.length === 0 && (
+                      <p className="text-sm text-slate-500">No workflows found yet.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
+                  <p className="text-sm font-medium text-slate-400">Drift Watchlist</p>
+                  <p className="mt-2 text-xs text-slate-500">Workflows marked as needs_review</p>
+                  <div className="mt-4 space-y-3">
+                    {workflows
+                      .filter((w) => (w.status || '').toLowerCase() === 'needs_review')
+                      .slice(0, 6)
+                      .map((w) => (
+                        <div key={w.name} className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm text-slate-200">{w.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{w.drift_reason || 'No drift reason recorded'}</p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-orange-500/10 px-2 py-1 text-xs font-medium text-orange-200 ring-1 ring-orange-400/30">
+                            needs_review
+                          </span>
+                        </div>
+                      ))}
+                    {workflows.filter((w) => (w.status || '').toLowerCase() === 'needs_review').length === 0 && (
+                      <p className="text-sm text-slate-500">No drifted workflows detected.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
+                  <p className="text-sm font-medium text-slate-400">Healer Log</p>
+                  <p className="mt-2 text-xs text-slate-500">Recent workflow step updates</p>
+                  <div className="mt-4 space-y-3">
+                    {healerLog.slice(0, 6).map((h) => (
+                      <div key={h.new_step} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-200">
+                            {(h.workflow_name || 'Workflow') + ' · Step ' + (h.step_order ?? '?')}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {(h.expert_intent || '').toString() || 'Updated step'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-200 ring-1 ring-blue-400/30">
+                          {h.action_count || 0} actions
+                        </span>
+                      </div>
+                    ))}
+                    {healerLog.length === 0 && (
+                      <p className="text-sm text-slate-500">No healer updates recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
