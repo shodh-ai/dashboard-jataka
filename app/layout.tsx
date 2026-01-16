@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 
-const inter = Inter({ subsets: ["latin"] });
+const plusJakartaSans = Plus_Jakarta_Sans({ 
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans",
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
+});
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export const metadata: Metadata = {
@@ -19,7 +23,7 @@ export default function RootLayout({
   return (
     <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
-        <body className={`${inter.className} bg-slate-950 text-slate-200 antialiased`}>
+        <body className={`${plusJakartaSans.variable} ${plusJakartaSans.className} bg-slate-950 text-slate-200 antialiased`}>
           {children}
         </body>
       </html>
