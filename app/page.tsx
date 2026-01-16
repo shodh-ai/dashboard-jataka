@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, useUser, SignInButton, SignOutButton } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Copy,
   Check,
@@ -13,6 +13,7 @@ import {
   BookOpen,
   AlertTriangle,
   Clock,
+  RefreshCcw,
 } from "lucide-react";
 
 interface Metrics {
@@ -94,6 +95,7 @@ export default function Home() {
   const [brains, setBrains] = useState<any[]>([]);
   const [activeBrain, setActiveBrain] = useState<string>("");
   const [newBrainName, setNewBrainName] = useState("");
+  const [hasLoadedQa, setHasLoadedQa] = useState(false);
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -223,56 +225,52 @@ export default function Home() {
     fetchBrains();
   }, [isSignedIn, token]);
 
-  useEffect(() => {
-    async function fetchQaCommandCenter() {
-      if (!(isSignedIn && token && viewState === 'dashboard')) {
-        setWorkflows([]);
-        setHealerLog([]);
-        setBusFactor([]);
-        setQaError(null);
-        setQaLoading(false);
+  const refreshQaData = useCallback(async () => {
+    if (!isSignedIn || !token || viewState !== 'dashboard') return;
+
+    setQaLoading(true);
+    setQaError(null);
+
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (!WORKFLOWS_URL || !HEALER_LOG_URL || !BUS_FACTOR_URL) {
+        setQaError('QA Command Center endpoints are not configured.');
         return;
       }
 
-      setQaLoading(true);
-      setQaError(null);
+      const [wfRes, logRes, bfRes] = await Promise.all([
+        fetch(`${WORKFLOWS_URL}?branch=main&limit=50`, { headers }),
+        fetch(`${HEALER_LOG_URL}?limit=25`, { headers }),
+        fetch(`${BUS_FACTOR_URL}?branch=main&limit=50`, { headers }),
+      ]);
 
-      try {
-        const headers = { Authorization: `Bearer ${token}` };
-
-        if (!WORKFLOWS_URL || !HEALER_LOG_URL || !BUS_FACTOR_URL) {
-          setQaError('QA Command Center endpoints are not configured.');
-          return;
-        }
-
-        const [wfRes, logRes, bfRes] = await Promise.all([
-          fetch(`${WORKFLOWS_URL}?branch=main&limit=50`, { headers }),
-          fetch(`${HEALER_LOG_URL}?limit=25`, { headers }),
-          fetch(`${BUS_FACTOR_URL}?branch=main&limit=50`, { headers }),
-        ]);
-
-        if (wfRes.ok) {
-          const wfJson = await wfRes.json();
-          setWorkflows(Array.isArray(wfJson?.workflows) ? wfJson.workflows : []);
-        }
-        if (logRes.ok) {
-          const logJson = await logRes.json();
-          setHealerLog(Array.isArray(logJson?.healer_log) ? logJson.healer_log : []);
-        }
-        if (bfRes.ok) {
-          const bfJson = await bfRes.json();
-          setBusFactor(Array.isArray(bfJson?.workflows) ? bfJson.workflows : []);
-        }
-      } catch (e) {
-        console.error('Failed to load QA Command Center', e);
-        setQaError("Couldn't load QA Command Center data.");
-      } finally {
-        setQaLoading(false);
+      if (wfRes.ok) {
+        const wfJson = await wfRes.json();
+        setWorkflows(Array.isArray(wfJson?.workflows) ? wfJson.workflows : []);
       }
+      if (logRes.ok) {
+        const logJson = await logRes.json();
+        setHealerLog(Array.isArray(logJson?.healer_log) ? logJson.healer_log : []);
+      }
+      if (bfRes.ok) {
+        const bfJson = await bfRes.json();
+        setBusFactor(Array.isArray(bfJson?.workflows) ? bfJson.workflows : []);
+      }
+    } catch (e) {
+      console.error('Failed to load QA Command Center', e);
+      setQaError("Couldn't load QA Command Center data. Server might be busy.");
+    } finally {
+      setQaLoading(false);
+      setHasLoadedQa(true);
     }
-
-    fetchQaCommandCenter();
   }, [isSignedIn, token, viewState]);
+
+  useEffect(() => {
+    if (isSignedIn && token && viewState === 'dashboard' && !hasLoadedQa) {
+      refreshQaData();
+    }
+  }, [isSignedIn, token, viewState, hasLoadedQa, refreshQaData]);
 
   const MetricCard = ({ title, value, icon: Icon, color }: any) => (
     <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
@@ -746,8 +744,19 @@ export default function Home() {
 
           <div className="mt-8">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white">QA Command Center</h3>
-              <p className="text-xs text-slate-500">Workflow drift, healing activity, and coverage risk</p>
+              <div>
+                <h3 className="text-xl font-bold text-white">QA Command Center</h3>
+                <p className="text-xs text-slate-500">Workflow drift, healing activity, and coverage risk</p>
+              </div>
+
+              <button
+                onClick={refreshQaData}
+                disabled={qaLoading}
+                className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700 disabled:opacity-50 ring-1 ring-white/10"
+              >
+                <RefreshCcw size={16} className={qaLoading ? "animate-spin" : ""} />
+                {qaLoading ? "Refreshing..." : "Refresh Data"}
+              </button>
             </div>
 
             {qaLoading && (
