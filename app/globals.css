@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-plus-jakarta-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,5 +22,64 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-plus-jakarta-sans), sans-serif;
+}
+
+.background-glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at bottom left,
+      rgba(255, 255, 255, 0.4),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(255, 255, 255, 0.4),
+      transparent 60%
+    );
+  filter: blur(40px);
+}
+
+/* Gradient border button effect - white gradient from 0% to 100% opacity */
+.gradient-border-button {
+  position: relative;
+  border: none;
+}
+
+.gradient-border-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 90%,
+    rgba(255, 255, 255, 0) 100%
+  );
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  opacity: 0.6;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.gradient-border-button:hover::before,
+.gradient-border-button:active::before,
+.gradient-border-button:focus-visible::before {
+  opacity: 1;
+}
+
+.gradient-border-button > * {
+  position: relative;
+  z-index: 1;
 }
