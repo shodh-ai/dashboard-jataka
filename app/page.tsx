@@ -531,7 +531,6 @@ export default function Home() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm text-slate-300">Company Name</label>
               <input
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
@@ -656,22 +655,39 @@ export default function Home() {
         ) : (
           <>
             {/* Team Brain Health Section */}
-            <div className="mb-5 rounded-xl bg-slate-900 p-4 sm:p-6 border border-white/10 ring-1 white/5">
-
-
+            <div className="mb-5 rounded-xl bg-slate-900 p-4 sm:p-6 border border-white/10 hover:border-white transition-colors">
               <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                 <h2 className="ml-0 sm:ml-4 text-lg font-bold text-white">Team Brain Health</h2>
                 <div className="relative w-full sm:w-auto">
-                  <select
-                    value={timePeriod}
-                    onChange={(e) => setTimePeriod(e.target.value)}
-                    className="appearance-none rounded-lg bg-slate-800 px-4 py-2 pr-8 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
+                  <button
+                    onClick={() => setOpen(!open)}
+                    className=" flex w-full items-center justify-between rounded-lg bg-slate-800 px-4 py-2 text-sm text-white border border-white/10 hover:border-white transition"
                   >
-                    <option value="7 days">7 days</option>
-                    <option value="30 days">30 days</option>
-                    <option value="90 days">90 days</option>
-                  </select>
-                  <ChevronDown size={16} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                    {timePeriod}
+                    <ChevronDown
+                      size={16}
+                      className={`ml-2 transition-transform ${open ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {open && (
+                    <div className=" absolute z-50 mt-2 w-full min-w-[120px] rounded-xl bg-slate-900 border border-white/10 shadow-xl overflow-hidden
+                    ">
+                      {["Last 15 days", "Last Month", "Last Year"].map((item) => (
+                        <button
+                          key={item}
+                          onClick={() => {
+                            setTimePeriod(item);
+                            setOpen(false);
+                          }}
+                          className=" block w-full px-4 py-3 text-left text-sm text-white hover:bg-white/10 transition
+                          "
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -808,7 +824,7 @@ export default function Home() {
             {/* Cards Row 1 */}
             <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Combined: Active Brain Context + Create New Brain */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 md:col-span-2">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 md:col-span-2 border border-white/10 hover:border-white transition-colors">
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6">
                   {/* Active Brain Context Section */}
                   <div>
@@ -888,7 +904,7 @@ export default function Home() {
               </div>
 
               {/* Connect Your Workspace */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 ">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors ">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Connect Your Workspace</h3>
                 <div className="space-y-3">
                   <button
@@ -910,7 +926,7 @@ export default function Home() {
             {/* Cards Row 2 */}
             <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Invite Team */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Invite Team</h3>
 
                 <div className="relative">
@@ -931,7 +947,7 @@ export default function Home() {
                 )}
               </div>
               {/* To connect Slack, run: */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">To connect Slack, run:</h3>
                 <div className="flex items-center gap-2 rounded-md bg-slate-950 px-3 py-3 ring-1 ring-white/10">
                   <code className="flex-1 text-sm text-slate-400">
@@ -948,7 +964,7 @@ export default function Home() {
               </div>
 
               {/* Access Token for VS Code */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Access Token for VS Code</h3>
                 <div className="flex items-center gap-2 rounded-md bg-slate-950 px-3 py-3 ring-1 ring-white/10">
                   <code className="flex-1 truncate text-sm text-slate-400">
@@ -1095,7 +1111,7 @@ export default function Home() {
             {/* Sign Out */}
             <div className="mt-6 sm:mt-8 flex justify-end border-t border-white/10 pt-4 sm:pt-6">
               <SignOutButton>
-                <button className="text-sm font-medium text-red-400 transition-colors hover:text-red-300">
+                <button className="text-md font-bold text-red-400 transition-colors hover:text-red-300">
                   Sign out
                 </button>
               </SignOutButton>
