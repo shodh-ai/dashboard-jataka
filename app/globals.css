@@ -47,28 +47,36 @@ body {
 /* Gradient border button effect - white gradient from 0% to 100% opacity */
 .gradient-border-button {
   position: relative;
-  background: rgba(255, 255, 255, 0.1);
   border: none;
 }
 
 .gradient-border-button::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 1) 90%,
     rgba(255, 255, 255, 0) 100%
   );
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
+
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+
+  opacity: 0.6;
+  transition: opacity 200ms ease;
   pointer-events: none;
-  z-index: 0;
+}
+
+.gradient-border-button:hover::before,
+.gradient-border-button:active::before,
+.gradient-border-button:focus-visible::before {
+  opacity: 1;
 }
 
 .gradient-border-button > * {
