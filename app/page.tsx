@@ -106,6 +106,7 @@ export default function Home() {
   const [newBrainName, setNewBrainName] = useState("");
   const [hasLoadedQa, setHasLoadedQa] = useState(false);
   const [timePeriod, setTimePeriod] = useState("7 days");
+  const [open, setOpen] = useState(false);
   const [copiedSlackCommand, setCopiedSlackCommand] = useState(false);
   const [previousMetrics, setPreviousMetrics] = useState<Metrics | null>(null);
 
@@ -146,8 +147,25 @@ export default function Home() {
           });
           const data = await res.json();
 
-          if (data.org && data.org.name) {
-            setOrgName(data.org.name);
+          // Try multiple possible locations for org name
+          const orgNameValue = 
+            data.org?.name || 
+            data.organization?.name || 
+            data.orgName || 
+            data.organizationName ||
+            data.company?.name ||
+            data.companyName ||
+            '';
+
+          if (orgNameValue) {
+            setOrgName(orgNameValue);
+          } else {
+            // Log the response structure for debugging
+            console.log('Sync API response (no org name found):', JSON.stringify(data, null, 2));
+            // Check if response has organization data at all
+            if (data.org) {
+              console.log('data.org structure:', JSON.stringify(data.org, null, 2));
+            }
           }
 
           if (data.status === 'active') {
@@ -573,7 +591,7 @@ export default function Home() {
             <div className="flex flex-col">
               {/* Dashboard label */}
               <h1 className="text-base font-medium text-blue-500">
-                Dashboard
+                {orgName || 'Dashboard'}
               </h1>
               {/* User name */}
               {isSignedIn && user && (
