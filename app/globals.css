@@ -33,12 +33,12 @@ body {
   background:
     radial-gradient(
       circle at bottom left,
-      rgba(255, 255, 255, 0.4),
+      rgba(255, 255, 255, 0.601),
       transparent 60%
     ),
     radial-gradient(
       circle at top right,
-      rgba(255, 255, 255, 0.4),
+      rgba(255, 255, 255, 0.618),
       transparent 60%
     );
   filter: blur(40px);
