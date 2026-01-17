@@ -702,126 +702,111 @@ export default function Home() {
                 </div>
               )} */}
 
-              {!metricsLoading && metrics && (
-                <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr_auto_1fr]">
-                  {/* Senior Deflection Rate */}
-                  <div className="p-4 h-full flex flex-col">
-                    <p className="text-sm font-medium text-slate-400">
-                      Senior Deflection Rate
-                    </p>
+              {!metricsLoading && metrics && (() => {
+                // MetricCard configuration - same logic as before but structured
+                const metricCards = [
+                  {
+                    title: "Senior Deflection Rate",
+                    value: `${metrics.senior_deflection_rate.toFixed(1)}%`,
+                    metricKey: 'senior_deflection_rate' as keyof Metrics,
+                    currentValue: metrics.senior_deflection_rate,
+                    icon: ShieldCheck,
+                    color: "bg-green-500",
+                    arrowIcon: "/arrow_circle_up.svg",
+                    trendText: (trend: TrendData) => `+ ${trend.change}% improved as of ${trend.period}`
+                  },
+                  {
+                    title: "Files Documented",
+                    value: metrics.knowledge_coverage_files.toString(),
+                    metricKey: 'knowledge_coverage_files' as keyof Metrics,
+                    currentValue: metrics.knowledge_coverage_files,
+                    icon: BookOpen,
+                    color: "bg-blue-500",
+                    arrowIcon: "/arrow_circle_up.svg",
+                    trendText: (trend: TrendData) => `+ ${trend.change}% higher than ${trend.period}`
+                  },
+                  {
+                    title: "Knowledge Drift",
+                    value: `${metrics.drift_score.toFixed(1)}%`,
+                    metricKey: 'drift_score' as keyof Metrics,
+                    currentValue: metrics.drift_score,
+                    icon: AlertTriangle,
+                    color: "bg-orange-500",
+                    arrowIcon: "/arrow_circle_down.svg",
+                    trendText: (trend: TrendData) => `- ${trend.change}% decreased as of ${trend.period}`
+                  },
+                  {
+                    title: "Avg Mastery Time",
+                    value: `${metrics.avg_hours_to_mastery.toFixed(1)}h`,
+                    metricKey: 'avg_hours_to_mastery' as keyof Metrics,
+                    currentValue: metrics.avg_hours_to_mastery,
+                    icon: Clock,
+                    color: "bg-purple-500",
+                    arrowIcon: "/arrow_circle_up.svg",
+                    trendText: (trend: TrendData) => `+ ${trend.change}% from ${trend.period}`
+                  },
+                  {
+                    title: "Context Success",
+                    value: `${metrics.context_injection_rate.toFixed(1)}%`,
+                    metricKey: 'context_injection_rate' as keyof Metrics,
+                    currentValue: metrics.context_injection_rate,
+                    icon: Activity,
+                    color: "bg-teal-500",
+                    arrowIcon: "/arrow_circle_up.svg",
+                    trendText: (trend: TrendData) => `+ ${trend.change}% higher than ${trend.period}`
+                  }
+                ];
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-3xl font-bold text-white">
-                        {metrics.senior_deflection_rate.toFixed(2)}%
-                      </p>
-                      <img src="/arrow_circle_up.svg" alt="up" className="ml-2 w-5 h-5" />
-                    </div>
+                // Build array with cards and dividers for proper grid layout
+                const gridItems: Array<{ type: 'card' | 'divider'; card?: typeof metricCards[0]; index?: number }> = [];
+                metricCards.forEach((card, index) => {
+                  if (index > 0) {
+                    gridItems.push({ type: 'divider' });
+                  }
+                  gridItems.push({ type: 'card', card, index });
+                });
 
-                    <p className="mt-2 text-xs text-white">
-                      + {getTrend('senior_deflection_rate', metrics.senior_deflection_rate).change}%
-                      {" "}improved as of{" "}
-                      {getTrend('senior_deflection_rate', metrics.senior_deflection_rate).period}
-                    </p>
+                return (
+                  <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr_auto_1fr]">
+                    {gridItems.map((item, idx) => {
+                      if (item.type === 'divider') {
+                        return (
+                          <div key={`divider-${idx}`} className="flex items-center justify-center">
+                            <span className="h-20 w-px bg-white/10" />
+                          </div>
+                        );
+                      }
+
+                      const card = item.card!;
+                      const trend = getTrend(card.metricKey, card.currentValue);
+                      const displayValue = card.metricKey === 'avg_hours_to_mastery' 
+                        ? `${Math.round(card.currentValue)} hrs`
+                        : card.metricKey === 'knowledge_coverage_files'
+                        ? card.currentValue.toString()
+                        : card.value;
+
+                      return (
+                        <div key={card.metricKey} className={`p-4 h-full flex flex-col ${item.index! > 0 ? 'ml-9' : ''}`}>
+                          <p className="text-sm font-medium text-slate-400">
+                            {card.title}
+                          </p>
+
+                          <div className="mt-2 flex items-center gap-2">
+                            <p className="text-3xl font-bold text-white">
+                              {displayValue}
+                            </p>
+                            <img src={card.arrowIcon} alt={trend.direction} className="ml-2 w-5 h-5" />
+                          </div>
+
+                          <p className="mt-2 text-xs text-white">
+                            {card.trendText(trend)}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-
-                  <div className="flex items-center justify-center">
-                    <span className="h-20 w-px bg-white/10" />
-                  </div>
-
-                  {/* Files Documented */}
-                  <div className="ml-9 p-4 h-full flex flex-col">
-                    <p className="text-sm font-medium text-slate-400">
-                      Files Documented
-                    </p>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-3xl font-bold text-white">
-                        {metrics.knowledge_coverage_files}
-                      </p>
-                      <img src="/arrow_circle_up.svg" alt="up" className="ml-2 w-5 h-5" />
-                    </div>
-
-                    <p className="mt-2 text-xs text-white">
-                      + {getTrend('knowledge_coverage_files', metrics.knowledge_coverage_files).change}%
-                      {" "}higher than{" "}
-                      {getTrend('knowledge_coverage_files', metrics.knowledge_coverage_files).period}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <span className="h-20 w-px bg-white/10" />
-                  </div>
-
-                  {/* Knowledge Drift */}
-                  <div className="ml-9 p-4 h-full flex flex-col">
-                    <p className="text-sm font-medium text-slate-400">
-                      Knowledge Drift
-                    </p>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-3xl font-bold text-white">
-                        {metrics.drift_score.toFixed(2)}%
-                      </p>
-                      <img src="/arrow_circle_down.svg" alt="down" className="ml-2 w-5 h-5" />
-                    </div>
-
-                    <p className="mt-2 text-xs text-white">
-                      - {getTrend('drift_score', metrics.drift_score).change}%
-                      {" "}decreased as of{" "}
-                      {getTrend('drift_score', metrics.drift_score).period}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <span className="h-20 w-px bg-white/10" />
-                  </div>
-
-                  {/* Avg. Mastery Time */}
-                  <div className="ml-9 p-4 h-full flex flex-col">
-                    <p className="text-sm font-medium text-slate-400">
-                      Avg. Mastery Time
-                    </p>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-3xl font-bold text-white">
-                        {Math.round(metrics.avg_hours_to_mastery)} hrs
-                      </p>
-                      <img src="/arrow_circle_up.svg" alt="up" className="ml-2 w-5 h-5" />
-                    </div>
-
-                    <p className="mt-2 text-xs text-white">
-                      + {getTrend('avg_hours_to_mastery', metrics.avg_hours_to_mastery).change}%
-                      {" "}from{" "}
-                      {getTrend('avg_hours_to_mastery', metrics.avg_hours_to_mastery).period}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <span className="h-20 w-px bg-white/10" />
-                  </div>
-
-                  {/* Context Success */}
-                  <div className="ml-9 p-4 h-full flex flex-col">
-                    <p className="text-sm font-medium text-slate-400">
-                      Context Success
-                    </p>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-3xl font-bold text-white">
-                        {metrics.context_injection_rate.toFixed(2)}%
-                      </p>
-                      <img src="/arrow_circle_up.svg" alt="up" className="ml-2 w-5 h-5" />
-                    </div>
-
-                    <p className="mt-2 text-xs text-white">
-                      + {getTrend('context_injection_rate', metrics.context_injection_rate).change}%
-                      {" "}higher than{" "}
-                      {getTrend('context_injection_rate', metrics.context_injection_rate).period}
-                    </p>
-                  </div>
-
-                </div>
-            )}
+                );
+              })()}
             </div>
 
             {/* Cards Row 1 */}
