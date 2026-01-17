@@ -16,6 +16,7 @@ import {
   RefreshCcw,
   Send,
   ChevronDown,
+  Play,
 } from "lucide-react";
 
 interface Metrics {
@@ -525,7 +526,7 @@ export default function Home() {
         <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900 p-8 shadow-2xl border border-blue-500/30">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-white">Setup Workspace</h2>
-            <p className="text-slate-400 mt-2">Create a new organization to start.</p>
+            <p className="text-white text-lg pt-2.5 font-bold">Create a new organization to start.</p>
           </div>
 
           <div className="space-y-4">
@@ -534,14 +535,14 @@ export default function Home() {
               <input
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full mt-1 p-3 rounded bg-slate-950 text-white border border-slate-700 focus:border-blue-500 outline-none"
+                className="w-full mt-1 p-3 rounded bg-slate-950 text-white border border-slate-700 focus:border-white-500 outline-none"
                 placeholder="Acme Corp"
               />
             </div>
             <button
               onClick={handleOnboarding}
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded transition-all"
+              className="items-center gradient-border-button w-full rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
             >
               {loading ? 'Creating...' : 'Create Workspace'}
             </button>
@@ -556,9 +557,9 @@ export default function Home() {
       {/* Background Spheres */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Sphere 1 - Top Right */}
-        <div className="absolute -top-32 -right-32 w-[700px] h-[700px] rounded-full bg-gradient-to-br from-purple-400/80 via-blue-500/40 to-cyan-500/30 blur-[100px]"></div>
+        <div className="absolute -top-32 -right-32 w-[700px] h-[700px] rounded-full bg-gradient-to-br from-blue-200/80 via-blue-500/40 to-blue-900/30 blur-[100px]"></div>
         {/* Sphere 2 - Bottom Left */}
-        <div className="absolute -bottom-32 -left-32 w-[700px] h-[700px] rounded-full bg-gradient-to-br from-purple-400/50 via-blue-500/40 to-cyan-500/30 blur-[100px]"></div>
+        <div className="absolute -bottom-32 -left-32 w-[700px] h-[700px] rounded-full bg-gradient-to-br from-blue-200/80 via-blue-500/40 to-blue-900/30 blur-[100px]"></div>
       </div>
       
       {/* Blurred Rectangle Overlay */}
@@ -567,8 +568,9 @@ export default function Home() {
       {/* Content */}
       <div className="relative z-10">
         {/* Header Section */}
-        <div className="mx-auto max-w-7xl px-6 pt-8 pb-2">
-          <div className="flex items-center justify-between">
+        <div className="mx-auto max-w-[1400px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-12 xl:px-16 pt-6 sm:pt-8 pb-2 2xl:pt-10">
+          {isSignedIn && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
             <div className="flex flex-col">
               {/* Dashboard label */}
               <h1 className="text-base font-medium text-blue-500">
@@ -576,82 +578,76 @@ export default function Home() {
               </h1>
               {/* User name */}
               {isSignedIn && user && (
-                <span className="text-3xl font-semibold text-white leading-tight">
+                <span className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
                   {user.firstName && user.lastName
                     ? `${user.firstName} ${user.lastName}`
                     : user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
+              <div className="flex flex-col gap-2 ml-auto sm:ml-0">
                 {/* JATAKA */}
                 <div className="flex items-center justify-end gap-2 text-right w-full">
-                  <img src="/WhiteLOGO.svg" alt="up" className="w-7 h-7" />
-                  <span className="text-2xl font-bold text-white">JATAKA</span>
+                  <img src="/WhiteLOGO.svg" alt="up" className="w-6 h-6 sm:w-7 sm:h-7" />
+                  <span className="text-xl sm:text-2xl font-bold text-white">JATAKA</span>
                 </div>
 
                 {/* Integrations */}
-                {isSignedIn && (
-                  <div className="flex flex-col gap-2 text-sm text-slate-400">
-                    
-
-                    <div className="flex items-center justify-end gap-3 w-full">
-                      <span className="font-medium text-base">Integrations</span>
+                  <div className="flex flex-col gap-2 text-sm text-slate-400 mt-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-2 sm:gap-3 w-full">
+                      <span className="font-medium text-sm sm:text-base text-white">Integrations</span>
                       {/* GitHub */}
-                      <div className="flex items-center divide-x divide-white/20">
-                      <div className="flex items-center gap-1.5 px-3">
-                        <img src="/github.png" alt="up" className="w-6 h-6" />
-                        <span className="text-sm">GitHub</span>
+                      <div className="flex items-center divide-x divide-white/20 flex-wrap">
+                      <div className="flex items-center gap-1.5 px-2 sm:px-3">
+                        <img src="/github.png" alt="up" className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <span className="text-xs sm:text-sm text-white">GitHub</span>
                       </div>
 
                       {/* Slack */}
-                      <div className="flex items-center gap-1.5 px-3">
-                        <img src="/slack-new.png" alt="up" className="w-6 h-6" />
-                        <span className="text-sm">Slack</span>
+                      <div className="flex items-center gap-1.5 px-2 sm:px-3">
+                        <img src="/slack-new.png" alt="up" className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <span className="text-xs sm:text-sm text-white">Slack</span>
                       </div>
 
                       {/* VS Code */}
-                      <div className="flex items-center gap-1.5 pl-3">
-                        <img src="/code-stable-white.png" alt="up" className="w-5 h-5" />
-                        <span className="text-sm">Visual Studio Code</span>
+                      <div className="flex items-center gap-1.5 pl-2 sm:pl-3">
+                        <img src="/code-stable-white.png" alt="up" className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="xs:hidden text-xs sm:text-sm text-white">Visual Studio Code</span>
                       </div>
                       </div>
                     </div>
                   </div>
-                )}
               </div>
-
             </div>
           </div>
+          )}
         </div>
 
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-[1400px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-12 xl:px-16 py-6 sm:py-8 2xl-pt-10">
         {!isSignedIn ? (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <div className="w-full max-w-md space-y-6 rounded-2xl bg-slate-900 p-8 shadow-2xl ring-1 ring-white/10">
+          <div className="flex min-h-[80vh] items-center justify-center">
+            <div className="w-full max-w-md space-y-6 rounded-xl bg-slate-900 p-8 shadow-2xl ring-1 ring-white">
               <div className="text-center">
               <div className="mx-auto mb-4 flex items-center justify-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg shadow-blue-500/20">
                   <img src="/WhiteLOGO.svg" alt="up" className="h-7 w-7" />
-                </div>
-                <h2 className="text-3xl font-bold tracking-tight text-white">
+                <h2 className="text-4xl font-bold tracking-tight text-white">
                   JATAKA
                 </h2>
               </div>
 
-              <p className="mt-2 text-slate-400">
-                Brain Health & Workspace Integration
+              <p className="mt-2 text-white text-xl pt-2.5 font-bold">
+                Developer Context & Guardrails
               </p>
             </div>
-              <div className="rounded-md bg-slate-800/50 p-4 text-sm text-slate-300">
-                <p className="flex items-center gap-2">
-                  <Shield size={16} className="text-green-400" />
+              <div className="ml-10 text-sm pt-2.5">
+                <p className="flex items-center gap-2 text-white">
+                  <Shield size={16} className="text-white" />
                   Sign in to verify your organization access.
                 </p>
               </div>
               <SignInButton mode="modal">
-                <button className="flex w-full items-center justify-center rounded-md bg-white px-8 py-3 text-sm font-semibold text-slate-900 transition-all hover:bg-slate-200">
+                <button className="items-center gradient-border-button w-full rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20">
                   Sign in with Google / GitHub
                 </button>
               </SignInButton>
@@ -660,16 +656,16 @@ export default function Home() {
         ) : (
           <>
             {/* Team Brain Health Section */}
-            <div className="mb-5 rounded-xl bg-slate-900 p-6 border border-white/10 ring-1 white/5">
+            <div className="mb-5 rounded-xl bg-slate-900 p-4 sm:p-6 border border-white/10 ring-1 white/5">
 
 
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="ml-4 text-lg font-bold text-white">Team Brain Health</h2>
-                <div className="relative">
+              <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                <h2 className="ml-0 sm:ml-4 text-lg font-bold text-white">Team Brain Health</h2>
+                <div className="relative w-full sm:w-auto">
                   <select
                     value={timePeriod}
                     onChange={(e) => setTimePeriod(e.target.value)}
-                    className="appearance-none rounded-lg bg-slate-800 px-4 py-2 pr-8 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="appearance-none rounded-lg bg-slate-800 px-4 py-2 pr-8 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-auto"
                   >
                     <option value="7 days">7 days</option>
                     <option value="30 days">30 days</option>
@@ -767,11 +763,11 @@ export default function Home() {
                 });
 
                 return (
-                  <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr_auto_1fr]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 sm:gap-6 lg:gap-0">
                     {gridItems.map((item, idx) => {
                       if (item.type === 'divider') {
                         return (
-                          <div key={`divider-${idx}`} className="flex items-center justify-center">
+                          <div key={`divider-${idx}`} className="hidden lg:flex items-center justify-center">
                             <span className="h-20 w-px bg-white/10" />
                           </div>
                         );
@@ -786,19 +782,19 @@ export default function Home() {
                         : card.value;
 
                       return (
-                        <div key={card.metricKey} className={`p-4 h-full flex flex-col ${item.index! > 0 ? 'ml-9' : ''}`}>
-                          <p className="text-sm font-medium text-slate-400">
+                        <div key={card.metricKey} className={`p-3 sm:p-4 h-full flex flex-col ${item.index! > 0 ? 'lg:ml-9' : ''}`}>
+                          <p className="text-xs sm:text-sm font-medium text-slate-400">
                             {card.title}
                           </p>
 
                           <div className="mt-2 flex items-center gap-2">
-                            <p className="text-3xl font-bold text-white">
+                            <p className="text-2xl sm:text-3xl font-bold text-white">
                               {displayValue}
                             </p>
-                            <img src={card.arrowIcon} alt={trend.direction} className="ml-2 w-5 h-5" />
+                            <img src={card.arrowIcon} alt={trend.direction} className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
 
-                          <p className="mt-2 text-xs text-white">
+                          <p className="mt-2 text-xs text-white break-words">
                             {card.trendText(trend)}
                           </p>
                         </div>
@@ -812,13 +808,14 @@ export default function Home() {
             {/* Cards Row 1 */}
             <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Combined: Active Brain Context + Create New Brain */}
-              <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10 md:col-span-2">
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-6">
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6">
                   {/* Active Brain Context Section */}
                   <div>
-                    <h3 className="ml-1 mb-4 text-lg font-semibold text-white">Active Brain Context</h3>
+                    <h3 className="ml-0 md:ml-1 mb-4 text-base sm:text-lg font-semibold text-white">Active Brain Context</h3>
+                    <div className="relative mb-4">
                     <select
-                      className="mb-4 w-full rounded-lg bg-slate-950 px-3 py-3 text-sm text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full appearance-none rounded-lg bg-slate-950 px-3 py-3 pr-10 text-sm text-white ring-1 ring-white/10 focus:white-500"
                       value={activeBrain}
                       onChange={async (e) => {
                         const kb = e.target.value;
@@ -850,6 +847,11 @@ export default function Home() {
                         <option value="">No brains available</option>
                       )}
                     </select>
+                    <Play
+                      size={14}
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-white/80 fill-white"
+                    />
+                      </div>
                     <button
                       onClick={handleConnectVsCode}
                       className="gradient-border-button w-full rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
@@ -859,16 +861,18 @@ export default function Home() {
                   </div>
 
                   {/* Vertical Divider */}
-                  <div className="flex items-stretch">
+                  <div className="hidden md:flex items-stretch">
                     <span className="w-px bg-white/10"></span>
                   </div>
+                  {/* Horizontal Divider for mobile */}
+                  <div className="md:hidden w-full h-px bg-white/10"></div>
 
                   {/* Create New Brain Section */}
                   <div>
-                    <h3 className="mb-4 text-lg font-semibold text-white">Create New Brain</h3>
+                    <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Create New Brain</h3>
                     <input
                       type="text"
-                      className="mb-4 w-full rounded-md bg-slate-950 px-3 py-3 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="mb-4 w-full rounded-md bg-slate-950 px-3 py-3 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:white-500"
                       placeholder="e.g. Mobile App for Bank of New York V2"
                       value={newBrainName}
                       onChange={(e) => setNewBrainName(e.target.value)}
@@ -884,8 +888,8 @@ export default function Home() {
               </div>
 
               {/* Connect Your Workspace */}
-              <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10 ">
-                <h3 className="mb-4 text-lg font-semibold text-white">Connect Your Workspace</h3>
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 ">
+                <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Connect Your Workspace</h3>
                 <div className="space-y-3">
                   <button
                       onClick={handleSlackInstall}
@@ -906,8 +910,8 @@ export default function Home() {
             {/* Cards Row 2 */}
             <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Invite Team */}
-              <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
-                <h3 className="mb-4 text-lg font-semibold text-white">Invite Team</h3>
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+                <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Invite Team</h3>
 
                 <div className="relative">
                   <input type="email" className=" w-full rounded-md bg-slate-950 px-3 py-3 pr-10 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-white/20" placeholder="sachin@shodh.ai" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
@@ -915,7 +919,7 @@ export default function Home() {
                   {/* Send icon inside input */}
                   <button
                     onClick={handleInvite}
-                    className=" absolute right-2 top-1/2 -translate-y-1/2 text-white-400 hover:text-white transition-colors"
+                    className=" absolute mr-2 right-2 top-1/2 -translate-y-1/2 text-white-400 hover:text-white transition-colors"
                     title="Send invite"
                   >
                     <Send size={16} />
@@ -927,8 +931,8 @@ export default function Home() {
                 )}
               </div>
               {/* To connect Slack, run: */}
-              <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
-                <h3 className="mb-4 text-lg font-semibold text-white">To connect Slack, run:</h3>
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+                <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">To connect Slack, run:</h3>
                 <div className="flex items-center gap-2 rounded-md bg-slate-950 px-3 py-3 ring-1 ring-white/10">
                   <code className="flex-1 text-sm text-slate-400">
                     /connect {user?.primaryEmailAddress?.emailAddress || 'teacher@example.com'}
@@ -944,8 +948,8 @@ export default function Home() {
               </div>
 
               {/* Access Token for VS Code */}
-              <div className="rounded-xl bg-slate-900 p-6 ring-1 ring-white/10">
-                <h3 className="mb-4 text-lg font-semibold text-white">Access Token for VS Code</h3>
+              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10">
+                <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Access Token for VS Code</h3>
                 <div className="flex items-center gap-2 rounded-md bg-slate-950 px-3 py-3 ring-1 ring-white/10">
                   <code className="flex-1 truncate text-sm text-slate-400">
                     {loading ? 'Loading...' : token ? `${token.substring(0, 20)}......` : 'No token available'}
@@ -1089,7 +1093,7 @@ export default function Home() {
             </div> */}
 
             {/* Sign Out */}
-            <div className="mt-8 flex justify-end border-t border-white/10 pt-6">
+            <div className="mt-6 sm:mt-8 flex justify-end border-t border-white/10 pt-4 sm:pt-6">
               <SignOutButton>
                 <button className="text-sm font-medium text-red-400 transition-colors hover:text-red-300">
                   Sign out
