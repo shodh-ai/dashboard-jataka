@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { Loader2, GitBranch, Database, CheckCircle, AlertTriangle } from "lucide-react"; 
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
