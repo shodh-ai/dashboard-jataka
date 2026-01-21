@@ -83,3 +83,153 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* ============================================
+   Graph Visualizer - System Map Styles
+   ============================================ */
+
+/* Flowing dash animation for edges */
+@keyframes flowingDash {
+  0% {
+    stroke-dashoffset: 24;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Pulse animation for critical nodes */
+@keyframes criticalPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Neon glow effect */
+@keyframes neonGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px rgba(34, 211, 238, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.8));
+  }
+}
+
+/* Graph canvas background pattern */
+.graph-canvas {
+  background-color: #0f172a;
+  background-image: 
+    radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* React Flow overrides for dark theme */
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+/* Controls styling */
+.react-flow__controls {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-flow__controls-button {
+  background-color: #1e293b !important;
+  border: none !important;
+  border-bottom: 1px solid #334155 !important;
+  fill: #94a3b8 !important;
+  transition: all 0.2s ease !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #334155 !important;
+  fill: #e2e8f0 !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+/* MiniMap styling */
+.react-flow__minimap {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(15, 23, 42, 0.85) !important;
+}
+
+/* Handle styling */
+.react-flow__handle {
+  width: 6px !important;
+  height: 6px !important;
+  background-color: #475569 !important;
+  border: 1px solid #64748b !important;
+}
+
+.react-flow__handle:hover {
+  background-color: #22d3ee !important;
+  border-color: #22d3ee !important;
+}
+
+/* Selection box */
+.react-flow__selection {
+  background: rgba(34, 211, 238, 0.08) !important;
+  border: 1px solid rgba(34, 211, 238, 0.4) !important;
+}
+
+/* Attribution hidden */
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* Custom scrollbar for graph container */
+.graph-canvas::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.graph-canvas::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.graph-canvas::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.graph-canvas::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Custom scrollbar for cypher editor textarea */
+.cypher-editor::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cypher-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cypher-editor::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.cypher-editor::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Firefox scrollbar support */
+.cypher-editor {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
