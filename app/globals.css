@@ -233,3 +233,37 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #334155 transparent;
 }
+/* Fix rrweb player scaling & controller visibility */
+.rr-player {
+  max-width: 100% !important;
+}
+
+.rr-player__frame {
+  width: 100% !important;
+}
+
+.rr-controller {
+  position: relative !important;
+  z-index: 50;
+}
+
+.rr-player video,
+.rr-player iframe {
+  max-width: 100%;
+}
+
+.rr-player-wrapper {
+  height: 55vh;
+}
+
+@media (min-width: 1280px) {
+  .rr-player-wrapper {
+    height: 45vh;
+  }
+}
+
+@media (min-width: 1536px) {
+  .rr-player-wrapper {
+    height: 80vh;
+  }
+}

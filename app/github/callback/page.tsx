@@ -3,67 +3,149 @@
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, GitBranch, Database, CheckCircle, AlertTriangle } from "lucide-react"; 
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 function GithubCallbackInner() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState("Linking GitHub...");
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  
+  // New State Variables
+  const [status, setStatus] = useState<"loading" | "selecting" | "linking" | "success" | "error">("loading");
+  const [brains, setBrains] = useState<any[]>([]);
+  const [selectedBrain, setSelectedBrain] = useState<string>("");
+  const [errorMsg, setErrorMsg] = useState("");
 
+  const installationId = searchParams.get("installation_id");
+
+  // Effect 1: Load the list of brains immediately
   useEffect(() => {
-    async function linkGithub() {
-      const installationId = searchParams.get("installation_id");
+    if (!isLoaded || !isSignedIn || !installationId) return;
 
-      if (!installationId || !isSignedIn) return;
-
+    const fetchBrains = async () => {
       try {
-        if (!BASE_API) {
-          setStatus("Error: Missing env var NEXT_PUBLIC_API_BASE_URL");
-          return;
-        }
-
         const token = await getToken();
-        if (!token) {
-          setStatus("Not signed in.");
-          return;
-        }
+        if (!token || !BASE_API) return;
 
-        const res = await fetch(
-          `${BASE_API}/integrations/github/link-installation`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ installation_id: installationId }),
-          },
-        );
+        const res = await fetch(`${BASE_API}/curriculum/list`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (res.ok) {
-          setStatus("Success! Redirecting...");
-          setTimeout(() => router.push("/"), 1500);
+          const data = await res.json();
+          const list = Array.isArray(data.brains) ? data.brains : [];
+          setBrains(list);
+          // Pre-select active or first brain
+          const initial = list.find((b: any) => b.id === data.activeBrainId) || list[0];
+          if (initial) setSelectedBrain(initial.knowledgeBaseId);
+          
+          setStatus("selecting"); // Show form instead of spinner
         } else {
-          setStatus("Failed to link repository.");
+          throw new Error("Failed to load brains");
         }
-      } catch {
-        setStatus("Error connecting to server.");
+      } catch (err) {
+        console.error(err);
+        setStatus("error");
+        setErrorMsg("Could not load available brains.");
       }
-    }
+    };
 
-    if (isLoaded && isSignedIn) {
-      linkGithub();
+    fetchBrains();
+  }, [isLoaded, isSignedIn, installationId, getToken]);
+
+  // Handler: User clicks confirm
+  const handleConfirm = async () => {
+    setStatus("linking");
+    try {
+      const token = await getToken();
+      if (!BASE_API || !token) throw new Error("Auth error");
+
+      const res = await fetch(`${BASE_API}/integrations/github/link-installation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          installation_id: installationId,
+          target_curriculum_id: selectedBrain // <--- Sending the choice
+        }),
+      });
+
+      if (!res.ok) throw new Error("Link failed");
+
+      setStatus("success");
+      setTimeout(() => router.push("/"), 2000);
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg("Failed to link repository.");
     }
-  }, [isLoaded, isSignedIn, searchParams, getToken, router]);
+  };
+
+  if (!installationId) return <div className="p-8 text-center text-white">Invalid Callback URL</div>;
 
   return (
-    <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
-        <p>{status}</p>
+    <div className="flex h-screen items-center justify-center bg-slate-950 px-4">
+      <div className="w-full max-w-md rounded-xl bg-slate-900 p-8 shadow-2xl border border-slate-800">
+        
+        {/* Header Section */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800 ring-1 ring-white/10">
+            {status === "loading" || status === "linking" ? (
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            ) : status === "success" ? (
+              <CheckCircle className="h-8 w-8 text-green-500" />
+            ) : status === "error" ? (
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+            ) : (
+              <img src="/github.png" className="h-8 w-8 opacity-90" alt="GitHub" />
+            )}
+          </div>
+          <h2 className="text-2xl font-bold text-white">GitHub Integration</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            {status === "selecting" ? "Select a Brain for this repository" : 
+             status === "linking" ? "Connecting..." : 
+             status === "success" ? "Connected!" : 
+             status === "error" ? errorMsg : "Loading..."}
+          </p>
+        </div>
+
+        {/* Selection Form */}
+        {status === "selecting" && (
+          <div className="space-y-6">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-300">Target Brain</label>
+              <div className="relative">
+                <select
+                  value={selectedBrain}
+                  onChange={(e) => setSelectedBrain(e.target.value)}
+                  className="w-full appearance-none rounded-lg bg-slate-950 px-4 py-3 text-white ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {brains.map((b) => (
+                    <option key={b.id} value={b.knowledgeBaseId}>{b.name}</option>
+                  ))}
+                </select>
+                <Database className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              </div>
+            </div>
+            <button
+              onClick={handleConfirm}
+              disabled={!selectedBrain}
+              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+            >
+              Connect Repository
+            </button>
+          </div>
+        )}
+
+        {/* Error Return Button */}
+        {status === "error" && (
+           <button onClick={() => router.push("/")} className="w-full text-center text-sm text-slate-400 hover:text-white mt-4 underline">
+             Return to Dashboard
+           </button>
+        )}
       </div>
     </div>
   );
