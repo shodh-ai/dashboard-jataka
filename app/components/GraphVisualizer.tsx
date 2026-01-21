@@ -22,6 +22,9 @@ import {
   Clock, 
   Calendar,
   Radar,
+  Sparkles,
+  Play,
+  Terminal,
 } from 'lucide-react';
 
 // Custom components
@@ -96,6 +99,11 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
   const [error, setError] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [timelineValue, setTimelineValue] = useState(100); // 100 = Today, 0 = Last Week
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [aiStatus, setAiStatus] = useState<string | null>(null);
+  const [generatedCypher, setGeneratedCypher] = useState<string>('');
+  const [showCypher, setShowCypher] = useState(false);
+  const [isRunningRaw, setIsRunningRaw] = useState(false);
   
   const [nodes, setNodes, onNodesChange] = useNodesState<GlassNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<AnimatedEdgeData>([]);
@@ -229,26 +237,55 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
   // Fetch data
   const handleSearch = async () => {
     const freshToken = await getToken();
-    if (!searchTerm.trim()  || !baseUrl) return;
+    if (!searchTerm.trim() || !baseUrl) return;
     
     setNodes([]);
     setEdges([]);
     setLoading(true);
     setError(null);
+    setAiStatus(null);
+    setShowCypher(false);
     
     try {
-      const res = await fetch(`${baseUrl}/brum-proxy/graph/impact`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${freshToken}` 
-        },
-        body: JSON.stringify({ field_name: searchTerm }),
-      });
+      let res: Response;
 
-      if (!res.ok) throw new Error('Failed to fetch dependency graph');
+      if (isAiMode) {
+        // AI Mode: Call /graph/ask with natural language query
+        setAiStatus('Generating Query...');
+        res = await fetch(`${baseUrl}/brum-proxy/graph/ask`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${freshToken}` 
+          },
+          body: JSON.stringify({ query: searchTerm }),
+        });
+        setAiStatus(null);
+      } else {
+        // Standard Mode: Call /graph/impact with field name
+        res = await fetch(`${baseUrl}/brum-proxy/graph/impact`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${freshToken}` 
+          },
+          body: JSON.stringify({ field_name: searchTerm }),
+        });
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to fetch dependency graph');
+      }
 
       const data = await res.json();
+      
+      // Capture Cypher from Standard OR AI mode
+      if (data.cypher) {
+        setGeneratedCypher(data.cypher);
+        // Auto-open in AI mode to show the generated query
+        if (isAiMode) setShowCypher(true);
+      }
       
       // Transform API response to React Flow format with custom node type
       const rawNodes: Node<GlassNodeData>[] = data.nodes.map((n: ApiNode) => ({
@@ -288,6 +325,80 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
       setError(errorMessage);
     } finally {
       setLoading(false);
+      setAiStatus(null);
+    }
+  };
+
+  // Execute edited/raw Cypher query
+  const handleRunRaw = async () => {
+    const freshToken = await getToken();
+    if (!generatedCypher.trim() || !baseUrl) return;
+    
+    setIsRunningRaw(true);
+    setError(null);
+    setNodes([]);
+    setEdges([]);
+    
+    try {
+      const res = await fetch(`${baseUrl}/brum-proxy/graph/raw`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${freshToken}` 
+        },
+        body: JSON.stringify({ query: generatedCypher }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to execute custom query');
+      }
+
+      const data = await res.json();
+      
+      // Update cypher if returned (in case it was cleaned/modified)
+      if (data.cypher) {
+        setGeneratedCypher(data.cypher);
+      }
+      
+      // Transform API response to React Flow format
+      const rawNodes: Node<GlassNodeData>[] = data.nodes.map((n: ApiNode) => ({
+        id: n.id,
+        type: 'glassNode',
+        data: { 
+          label: n.label,
+          type: (n.type as 'Field' | 'Apex' | 'Flow') || 'Flow',
+          risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
+          apiName: n.id,
+          createdAt: n.createdAt,
+          timelineStatus: 'unchanged' as const,
+          isHighlighted: false,
+          isDimmed: false,
+        },
+        position: { x: 0, y: 0 },
+      }));
+
+      const rawEdges: Edge<AnimatedEdgeData>[] = data.edges.map((e: ApiEdge, i: number) => ({
+        id: `e-${i}`,
+        source: e.source,
+        target: e.target,
+        type: 'animatedEdge',
+        data: {
+          isHighlighted: false,
+          isDimmed: false,
+          label: e.relationType,
+        },
+      }));
+
+      const layouted = getLayoutedElements(rawNodes, rawEdges);
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
+
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Execution failed';
+      setError(errorMessage);
+    } finally {
+      setIsRunningRaw(false);
     }
   };
 
@@ -319,43 +430,173 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
       <EdgeMarkerDefs />
 
       {/* Header / Search Bar */}
-      <div className="p-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-sm z-20 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
-            <Network className="text-blue-400" size={20} />
+      <div className="p-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-sm z-20 flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg border transition-colors ${
+              isAiMode 
+                ? 'bg-green-500/10 border-green-500/20' 
+                : 'bg-blue-500/10 border-blue-500/20'
+            }`}>
+              {isAiMode ? (
+                <Sparkles className="text-green-400" size={20} />
+              ) : (
+                <Network className="text-blue-400" size={20} />
+              )}
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white tracking-tight">
+                Dependency Graph
+              </h3>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-semibold text-white tracking-tight">
-            Dependency Graph
-            </h3>
+          
+          {/* Mode Toggle */}
+          <div className="flex items-center gap-1 bg-slate-800/50 rounded-lg p-1 border border-white/5">
+            <button
+              onClick={() => setIsAiMode(false)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                !isAiMode 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Search size={12} />
+              Standard
+            </button>
+            <button
+              onClick={() => setIsAiMode(true)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                isAiMode 
+                  ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sparkles size={12} />
+              Generate Query
+            </button>
           </div>
         </div>
-        
-        <div className="flex w-full sm:w-auto gap-2">
-          <div className="relative flex-1 sm:w-72">
+
+        {/* Search Bar */}
+        <div className="flex w-full gap-2">
+          <div className="relative flex-1">
             <input
               type="text"
-              className="w-full rounded-lg bg-slate-900/80 px-4 py-2.5 text-sm text-white placeholder-slate-600 
-                         border border-white/5 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20
-                         outline-none pl-10 font-mono transition-all"
-              placeholder="Enter a field name"
+              className={`w-full rounded-lg bg-slate-900/80 px-4 py-2.5 text-sm text-white placeholder-slate-600 
+                         border focus:ring-1 outline-none pl-10 font-mono transition-all ${
+                           isAiMode 
+                             ? 'border-green-500/20 focus:border-green-500/50 focus:ring-green-500/20'
+                             : 'border-white/5 focus:border-blue-500/50 focus:ring-blue-500/20'
+                         }`}
+              placeholder={isAiMode 
+                ? "e.g., Show me all critical Apex classes..." 
+                : "Enter a field name"}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
+            {isAiMode ? (
+              <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={16} />
+            ) : (
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={16} />
+            )}
           </div>
           <button 
             onClick={handleSearch}
             disabled={loading}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg 
-                       transition-all disabled:opacity-50 flex items-center gap-2 
-                       shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+            className={`px-5 py-2.5 text-white text-sm font-medium rounded-lg 
+                       transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg ${
+                         isAiMode
+                           ? 'bg-green-600 hover:bg-green-500 shadow-green-500/20 hover:shadow-green-500/30'
+                           : 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20 hover:shadow-blue-500/30'
+                       }`}
           >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : 'Trace'}
+            {loading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : isAiMode ? (
+              <Sparkles size={16} />
+            ) : null}
+            {isAiMode ? 'Ask' : 'Trace'}
           </button>
+          
+          {/* Terminal Toggle Button - Show when query exists but editor is hidden */}
+          {generatedCypher && !showCypher && (
+            <button
+              onClick={() => setShowCypher(true)}
+              className="p-2.5 rounded-lg bg-slate-800/50 text-slate-400 hover:text-purple-400 
+                         border border-transparent hover:border-purple-500/30 transition-all"
+              title="Edit Query"
+            >
+              <Terminal size={16} />
+            </button>
+          )}
         </div>
+
+        {/* AI Status Feedback */}
+        {aiStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-center gap-2 text-green-400 text-xs"
+          >
+            <Loader2 className="animate-spin" size={12} />
+            <span>{aiStatus}</span>
+          </motion.div>
+        )}
       </div>
+
+      {/* Query Editor / Terminal */}
+      <AnimatePresence>
+        {showCypher && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b border-white/5 bg-slate-900/80"
+          >
+            <div className="px-4 py-3">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Terminal size={14} className="text-purple-400" />
+                  <span className="text-[11px] font-mono text-purple-300 uppercase tracking-wider">
+                    Cypher Query Editor
+                  </span>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <button 
+                    onClick={handleRunRaw}
+                    disabled={isRunningRaw}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-600 hover:bg-purple-500 
+                               text-white text-[10px] font-medium transition-colors disabled:opacity-50"
+                  >
+                    {isRunningRaw ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
+                    RUN QUERY
+                  </button>
+                  <button 
+                    onClick={() => setShowCypher(false)}
+                    className="text-[10px] text-slate-500 hover:text-white transition-colors px-2 py-1"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              
+              {/* Editor Area */}
+              <textarea 
+                value={generatedCypher}
+                onChange={(e) => setGeneratedCypher(e.target.value)}
+                className="w-full bg-slate-950/60 rounded-lg border border-white/5 p-3 
+                           text-[11px] font-mono text-white-400 focus:outline-none focus:border-green-500/30
+                           resize-y min-h-[70px] max-h-[150px] cypher-editor"
+                spellCheck={false}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Canvas */}
       <div className="flex-1 relative graph-canvas">
@@ -369,14 +610,24 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
               className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none"
             >
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full" />
-                <Radar size={64} className="text-slate-700 relative" strokeWidth={1} />
+                <div className={`absolute inset-0 blur-3xl rounded-full ${
+                  isAiMode ? 'bg-green-500/20' : 'bg-blue-500/20'
+                }`} />
+                {isAiMode ? (
+                  <Sparkles size={64} className="text-slate-700 relative" strokeWidth={1} />
+                ) : (
+                  <Radar size={64} className="text-slate-700 relative" strokeWidth={1} />
+                )}
               </div>
               <p className="mt-4 text-slate-600 text-sm font-mono">
-                Enter a field name to trace dependencies
+                {isAiMode 
+                  ? "Ask a question about your Salesforce metadata" 
+                  : "Enter a field name to trace dependencies"}
               </p>
               <p className="mt-1 text-slate-700 text-xs">
-                Field → Apex Classes → Flows & Triggers
+                {isAiMode 
+                  ? "e.g., \"Show me all flows that update Account\"" 
+                  : "Field → Apex Classes → Flows & Triggers"}
               </p>
             </motion.div>
           )}

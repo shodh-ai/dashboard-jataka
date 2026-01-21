@@ -208,3 +208,28 @@ body {
 .graph-canvas::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Custom scrollbar for cypher editor textarea */
+.cypher-editor::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.cypher-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cypher-editor::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.cypher-editor::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Firefox scrollbar support */
+.cypher-editor {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
