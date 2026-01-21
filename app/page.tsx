@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Play,
 } from "lucide-react";
+import GraphVisualizer from "./components/GraphVisualizer";
 
 interface Metrics {
   senior_deflection_rate: number;
@@ -939,6 +940,11 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Dependency Explorer / Graph Visualizer */}
+            <div className="mb-8">
+              <GraphVisualizer baseUrl={BASE_API} />
             </div>
 
             {/* Cards Row 2 */}
