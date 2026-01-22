@@ -17,8 +17,11 @@ import {
   Send,
   ChevronDown,
   Play,
+  Crown,
+  Code2,
 } from "lucide-react";
 import GraphVisualizer from "./components/GraphVisualizer";
+import { useOrganizationList } from "@clerk/nextjs";
 
 interface Metrics {
   senior_deflection_rate: number;
@@ -84,12 +87,14 @@ const DEFAULT_METRICS: Metrics = {
 };
 
 export default function Home() {
+  const { setActive } = useOrganizationList(); 
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const { user } = useUser();
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("developer");
   const [inviteStatus, setInviteStatus] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -111,6 +116,7 @@ export default function Home() {
   const [copiedSlackCommand, setCopiedSlackCommand] = useState(false);
   const [previousMetrics, setPreviousMetrics] = useState<Metrics | null>(null);
 
+  const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   // Fetch the token when the user signs in
   useEffect(() => {
     async function fetchToken() {
@@ -167,6 +173,13 @@ export default function Home() {
             if (data.org) {
               console.log('data.org structure:', JSON.stringify(data.org, null, 2));
             }
+          }
+
+          const rawRole = data.user?.role || data.orgRole || ''; 
+          if (rawRole === 'senior' || rawRole === 'org:admin' || rawRole === 'admin' || rawRole === 'teacher') {
+            setUserRole("ARCHITECT");
+          } else {
+            setUserRole("DEVELOPER");
           }
 
           if (data.status === 'active') {
@@ -440,7 +453,7 @@ export default function Home() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${freshToken}`,
         },
-        body: JSON.stringify({ email: inviteEmail }),
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole}),
       });
 
       let data: any = {};
@@ -452,7 +465,7 @@ export default function Home() {
 
       if (res.ok) {
         const msg = data.message || `Invited ${inviteEmail} successfully.`;
-        setInviteStatus(`✅ ${msg}`);
+        setInviteStatus(`✅ Invited as ${inviteRole}.`);
         setInviteEmail("");
       } else {
         const errorMsg = data.message || "Failed to send invite";
@@ -482,8 +495,23 @@ export default function Home() {
         body: JSON.stringify({ companyName }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.clerkOrgId) {
+        console.log("✅ Org Created via Backend. Switching Context...");
+        
+        // 2. CRITICAL: Tell Clerk to switch to the new Org.
+        // This forces a token refresh. The new token will have org_id.
+        if (setActive) {
+            await setActive({ organization: data.clerkOrgId });
+        }
+        
+        // 3. Update View
         setViewState('dashboard');
+        // Optional: Reload page to ensure clean state
+        window.location.reload(); 
+      } else {
+        console.error("Failed to create org:", data);
       }
     } catch (e) {
       console.error(e);
@@ -587,7 +615,7 @@ export default function Home() {
       <div className="relative z-10">
         {/* Header Section */}
         <div className="mx-auto max-w-[1400px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 lg:px-12 xl:px-16 pt-6 sm:pt-8 pb-2 2xl:pt-10">
-          {isSignedIn && (
+          {isSignedIn && user && (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
             <div className="flex flex-col">
               {/* Dashboard label */}
@@ -595,13 +623,24 @@ export default function Home() {
                 {orgName || 'Dashboard'}
               </h1>
               {/* User name */}
-              {isSignedIn && user && (
+              <div className="flex items-center gap-3">
                 <span className="text-2xl sm:text-3xl font-semibold text-white leading-tight">
                   {user.firstName && user.lastName
                     ? `${user.firstName} ${user.lastName}`
                     : user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
                 </span>
-              )}
+                
+                {userRole === 'ARCHITECT' && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-500 ring-1 ring-inset ring-amber-500/20">
+                        <Crown size={12} /> Architect
+                    </span>
+                )}
+                {userRole === 'DEVELOPER' && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">
+                        <Code2 size={12} /> Developer
+                    </span>
+                )}
+                </div>
             </div>
             <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
               <div className="flex flex-col gap-2 ml-auto sm:ml-0">
@@ -855,8 +894,8 @@ export default function Home() {
             {/* Cards Row 1 */}
             <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Combined: Active Brain Context + Create New Brain */}
-              <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 md:col-span-2 border border-white/10 hover:border-white transition-colors">
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-6">
+              <div className={`rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 ${userRole === 'ARCHITECT' ? 'md:col-span-2' : 'md:col-span-3'} border border-white/10 hover:border-white transition-colors`}>
+                <div className={`grid grid-cols-1 ${userRole === 'ARCHITECT' ? 'md:grid-cols-[1fr_auto_1fr]' : ''} gap-6`}>
                   {/* Active Brain Context Section */}
                   <div>
                     <h3 className="ml-0 md:ml-1 mb-4 text-base sm:text-lg font-semibold text-white">Active Brain Context</h3>
@@ -906,7 +945,8 @@ export default function Home() {
                       Connect VS Code to Brain
                     </button>
                   </div>
-
+              {userRole === 'ARCHITECT' && (
+                <>
                   {/* Vertical Divider */}
                   <div className="hidden md:flex items-stretch">
                     <span className="w-px bg-white/10"></span>
@@ -931,10 +971,12 @@ export default function Home() {
                       Create
                     </button>
                   </div>
+                  </>
+                 )}
                 </div>
               </div>
 
-              {/* Connect Your Workspace */}
+            {userRole === 'ARCHITECT' && (
               <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors ">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Connect Your Workspace</h3>
                 <div className="space-y-3">
@@ -943,7 +985,7 @@ export default function Home() {
                       className="gradient-border-button w-full rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
                     >
                       Add to Slack
-                    </button>
+                  </button>
                   <button
                     onClick={handleGithubInstall}
                     className="gradient-border-button w-full rounded-md px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/20"
@@ -952,7 +994,8 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
 
             {/* Dependency Explorer / Graph Visualizer */}
             <div className="mb-8">
@@ -962,6 +1005,7 @@ export default function Home() {
             {/* Cards Row 2 */}
             <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
               {/* Invite Team */}
+             {userRole === 'ARCHITECT' ? (
               <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Invite Team</h3>
 
@@ -969,6 +1013,20 @@ export default function Home() {
                   <input type="email" className=" w-full rounded-md bg-slate-950 px-3 py-3 pr-10 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-white/20" placeholder="sachin@shodh.ai" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
                   />
                   {/* Send icon inside input */}
+                  <div className="flex gap-2">
+                            <button 
+                                onClick={() => setInviteRole('developer')}
+                                className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'developer' ? 'bg-blue-500/20 border-blue-500 text-blue-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
+                            >
+                                Developer
+                            </button>
+                            <button 
+                                onClick={() => setInviteRole('architect')}
+                                className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'architect' ? 'bg-amber-500/20 border-amber-500 text-amber-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
+                            >
+                                Architect
+                            </button>
+                        </div>
                   <button
                     onClick={handleInvite}
                     className=" absolute mr-2 right-2 top-1/2 -translate-y-1/2 text-white-400 hover:text-white transition-colors"
@@ -982,6 +1040,12 @@ export default function Home() {
                   <p className="mt-2 text-xs text-slate-400">{inviteStatus}</p>
                 )}
               </div>
+               ) : (
+                // Placeholder for Developers so layout stays balanced
+                <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 flex items-center justify-center opacity-50">
+                    <p className="text-sm text-slate-500 text-center">Contact an Architect to invite new members.</p>
+                </div>
+              )}
               {/* To connect Slack, run: */}
               <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
                 <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">To connect Slack, run:</h3>
