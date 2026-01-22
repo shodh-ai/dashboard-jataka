@@ -628,6 +628,18 @@ export default function Home() {
                         <span className="text-xs sm:text-sm text-white">Slack</span>
                       </div>
 
+                      {/* Jira */}
+                      <div
+                        className="flex items-center gap-1.5 px-2 sm:px-3 cursor-pointer hover:bg-white/10 rounded transition"
+                        onClick={() => window.location.href = '/settings/integrations'}
+                        title="Configure Jira Integration"
+                      >
+                        <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.757a1 1 0 0 0-1-1zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1a1 1 0 0 0-0.987-1z" fill="#2684FF"/>
+                        </svg>
+                        <span className="text-xs sm:text-sm text-white">Jira</span>
+                      </div>
+
                       {/* VS Code */}
                       <div className="flex items-center gap-1.5 pl-2 sm:pl-3">
                         <img src="/code-stable-white.png" alt="up" className="w-4 h-4 sm:w-5 sm:h-5" />
