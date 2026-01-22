@@ -1,4 +1,4 @@
-import ReplayPlayer from "../Components/ReplayPlayer";
+import ReplayPlayer from "../components/ReplayPlayer";
 import { Suspense } from 'react';
 
 type Props = {

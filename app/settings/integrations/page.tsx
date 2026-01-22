@@ -329,14 +329,14 @@ export default function IntegrationsPage() {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={
+                  disabled={!!(
                     !baseUrl ||
                     !email ||
                     !apiToken ||
                     !projectKey ||
                     saving ||
                     (testResult && !testResult.success)
-                  }
+                   )}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
