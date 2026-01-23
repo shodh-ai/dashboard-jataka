@@ -17,6 +17,8 @@ import {
   Send,
   ChevronDown,
   Play,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import GraphVisualizer from "./components/GraphVisualizer";
 
@@ -110,6 +112,7 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [copiedSlackCommand, setCopiedSlackCommand] = useState(false);
   const [previousMetrics, setPreviousMetrics] = useState<Metrics | null>(null);
+  const [isGraphFullScreen, setIsGraphFullScreen] = useState(false);
 
   // Fetch the token when the user signs in
   useEffect(() => {
@@ -955,9 +958,49 @@ export default function Home() {
             </div>
 
             {/* Dependency Explorer / Graph Visualizer */}
-            <div className="mb-8">
-              <GraphVisualizer baseUrl={BASE_API} />
-            </div>
+            <div
+                className={`${
+                  isGraphFullScreen
+                    ? "fixed inset-0 z-[100] bg-slate-950 flex flex-col"
+                    : "relative mb-8"
+                } transition-all duration-300 ease-in-out`}
+              >
+                {/* Graph Component Wrapper */}
+                <div className={`w-full ${isGraphFullScreen ? "flex-1 h-full [&>div]:h-full" : ""}`}>
+                  <GraphVisualizer baseUrl={BASE_API} />
+                </div>
+
+                {/* Toggle Button */}
+                <div
+                  className={`absolute z-[110] flex gap-2 transition-all duration-500 ${
+                    isGraphFullScreen ? "bottom-1 right-4" : "bottom-1 right-4"
+                  }`}
+                >
+                  <button
+                    onClick={() => setIsGraphFullScreen(!isGraphFullScreen)}
+                    // Updated classes: Reduced padding (px-2.5 py-1) and text size (text-xs)
+                    className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium text-white transition-colors shadow-lg
+                      ${isGraphFullScreen 
+                        ? "bg-blue-600 hover:bg-blue-500 ring-0 rounded-full" 
+                        : "bg-slate-800 hover:bg-slate-700 ring-1 ring-white/20"
+                      }
+                    `}
+                    title={isGraphFullScreen ? "Minimize" : "Full Screen"}
+                  >
+                    {isGraphFullScreen ? (
+                      <>
+                        <Minimize2 size={14} />
+                        <span className="hidden sm:inline">Minimize</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 size={14} />
+                        <span className="hidden sm:inline">Full Screen</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
 
             {/* Cards Row 2 */}
             <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
