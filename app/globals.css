@@ -233,6 +233,25 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #334155 transparent;
 }
+
+/* Custom scrollbar for GitHub callback page */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgb(15 23 42);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(71 85 105);
+}
 /* Fix rrweb player scaling & controller visibility */
 .rr-player {
   max-width: 100% !important;
