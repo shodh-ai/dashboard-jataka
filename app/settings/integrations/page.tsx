@@ -38,10 +38,21 @@ export default function IntegrationsPage() {
   const [projectKey, setProjectKey] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
+  // Salesforce state
+  const [salesforceConnected, setSalesforceConnected] = useState(false);
+  const [checkingSalesforce, setCheckingSalesforce] = useState(false);
+  const [salesforceInfo, setSalesforceInfo] = useState<{
+    org_id?: string;
+    instance_url?: string;
+    sf_username?: string;
+    connected_at?: string;
+  } | null>(null);
+
   // Load existing config
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       loadJiraConfig();
+      checkSalesforceConnection();
     }
   }, [isLoaded, isSignedIn]);
 
@@ -134,6 +145,69 @@ export default function IntegrationsPage() {
       alert(`Failed to disconnect: ${error.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Salesforce functions
+  const checkSalesforceConnection = async () => {
+    try {
+      setCheckingSalesforce(true);
+      const token = await getToken();
+      if (!token) return;
+
+      // Get user ID from token (Clerk user ID)
+      const response = await fetch(`https://api.jataka.ai/connections/${token}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSalesforceConnected(data.connected);
+        if (data.connected) {
+          setSalesforceInfo(data);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check Salesforce connection:", error);
+      setSalesforceConnected(false);
+    } finally {
+      setCheckingSalesforce(false);
+    }
+  };
+
+  const handleConnectSalesforce = async () => {
+    const token = await getToken();
+    if (!token) return;
+
+    // Redirect to OAuth service
+    window.location.href = `https://api.jataka.ai/connect/salesforce?user_id=${token}`;
+  };
+
+  const handleDisconnectSalesforce = async () => {
+    if (!confirm("Are you sure you want to disconnect Salesforce?")) return;
+
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const response = await fetch(`https://api.jataka.ai/connections/${token}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSalesforceConnected(false);
+        setSalesforceInfo(null);
+        alert("Salesforce disconnected successfully");
+      } else {
+        throw new Error("Failed to disconnect");
+      }
+    } catch (error: any) {
+      alert(`Failed to disconnect Salesforce: ${error.message}`);
     }
   };
 
@@ -371,6 +445,93 @@ export default function IntegrationsPage() {
                   </p>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Salesforce Integration Card */}
+        <div className="bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-700 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="#00A1E0">
+                  <path d="M12.5 2C9.47 2 7 4.47 7 7.5c0 .55.45 1 1 1s1-.45 1-1c0-1.93 1.57-3.5 3.5-3.5S16 5.57 16 7.5c0 .55.45 1 1 1s1-.45 1-1C18 4.47 15.53 2 12.5 2z"/>
+                  <path d="M12.5 22c3.03 0 5.5-2.47 5.5-5.5 0-.55-.45-1-1-1s-1 .45-1 1c0 1.93-1.57 3.5-3.5 3.5S8 18.43 8 16.5c0-.55-.45-1-1-1s-1 .45-1 1C6 19.53 8.47 22 12.5 22z"/>
+                </svg>
+                Salesforce Integration
+              </h2>
+              <p className="text-gray-400 mt-2">
+                Connect your Salesforce org for automated testing
+              </p>
+            </div>
+
+            {salesforceConnected && (
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span>Connected</span>
+              </div>
+            )}
+          </div>
+
+          {checkingSalesforce ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+            </div>
+          ) : salesforceConnected && salesforceInfo ? (
+            // Connected state
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <label className="text-gray-400">Instance URL</label>
+                  <p className="text-white">{salesforceInfo.instance_url}</p>
+                </div>
+                <div>
+                  <label className="text-gray-400">Username</label>
+                  <p className="text-white">{salesforceInfo.sf_username}</p>
+                </div>
+                <div>
+                  <label className="text-gray-400">Org ID</label>
+                  <p className="text-white font-mono text-xs">{salesforceInfo.org_id}</p>
+                </div>
+                <div>
+                  <label className="text-gray-400">Connected</label>
+                  <p className="text-white">
+                    {salesforceInfo.connected_at && new Date(salesforceInfo.connected_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleDisconnectSalesforce}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
+                >
+                  Disconnect
+                </button>
+                <button
+                  onClick={checkSalesforceConnection}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition"
+                >
+                  Refresh Status
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Not connected state
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-md">
+                <p className="text-blue-300 text-sm">
+                  Connect your Salesforce org to enable automated testing. You'll be redirected to Salesforce to authorize access.
+                </p>
+              </div>
+
+              <button
+                onClick={handleConnectSalesforce}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition font-semibold flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Connect with Salesforce
+              </button>
             </div>
           )}
         </div>
