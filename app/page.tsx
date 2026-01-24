@@ -88,9 +88,15 @@ const DEFAULT_METRICS: Metrics = {
   context_injection_rate: 0,
 };
 
+const orgListParams = {
+  userMemberships: {
+    infinite: true,
+  },
+};
+
 export default function Home() {
-  const { setActive } = useOrganizationList(); 
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { setActive, userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList(orgListParams); 
+  const { isLoaded, isSignedIn, getToken, orgId } = useAuth();
   const { user } = useUser();
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -115,11 +121,26 @@ export default function Home() {
   const [hasLoadedQa, setHasLoadedQa] = useState(false);
   const [timePeriod, setTimePeriod] = useState("7 days");
   const [open, setOpen] = useState(false);
+  const timeOptions = ["Last 7 days", "Last 15 days", "Last Month", "Last Year"];
   const [copiedSlackCommand, setCopiedSlackCommand] = useState(false);
   const [previousMetrics, setPreviousMetrics] = useState<Metrics | null>(null);
   const [isGraphFullScreen, setIsGraphFullScreen] = useState(false);
-
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
+  
+  useEffect(() => {
+    if (!isLoaded || !isOrgListLoaded || !isSignedIn) return;
+
+    // If user has organizations but none is currently active
+    if (!orgId && userMemberships.count > 0) {
+      const firstOrgId = userMemberships.data[0].organization.id;
+      console.log("Auto-switching to Organization:", firstOrgId);
+      
+      if (setActive) {
+        setActive({ organization: firstOrgId });
+      }
+    }
+  }, [isLoaded, isOrgListLoaded, isSignedIn, orgId, userMemberships, setActive]);
+
   // Fetch the token when the user signs in
   useEffect(() => {
     async function fetchToken() {
@@ -128,7 +149,9 @@ export default function Home() {
         try {
           // Get the raw JWT to send to One-Backend / VS Code
           const jwt = await getToken();
-          setToken(jwt || null);
+          if (jwt !== token) {
+            setToken(jwt || null);
+          }
         } catch (err) {
           console.error("Failed to get token", err);
         } finally {
@@ -139,7 +162,7 @@ export default function Home() {
       }
     }
     fetchToken();
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, getToken, orgId, token]);
 
   // Sync user with backend to determine whether they need onboarding
   useEffect(() => {
@@ -206,7 +229,7 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchMetrics() {
-      if (isSignedIn && token && viewState === 'dashboard') {
+      if (isSignedIn && token && viewState === 'dashboard' && orgId) {
         setMetricsLoading(true);
         setMetricsError(null);
         try {
@@ -227,7 +250,11 @@ export default function Home() {
 
             // Fetch historical metrics for trend calculation
             // Calculate the date based on timePeriod
-            const days = timePeriod === "7 days" ? 7 : timePeriod === "30 days" ? 30 : 90;
+            let days = 7;
+            if (timePeriod === "Last 15 days") days = 15;
+            else if (timePeriod === "Last Month") days = 30;
+            else if (timePeriod === "Last Year") days = 365;
+            
             const historicalDate = new Date();
             historicalDate.setDate(historicalDate.getDate() - days);
             
@@ -285,7 +312,7 @@ export default function Home() {
       }
     }
     fetchMetrics();
-  }, [isSignedIn, token, viewState, timePeriod]);
+  }, [isSignedIn, token, viewState, timePeriod, orgId]);
 
   // Load available brains (curriculums) for the org
   useEffect(() => {
@@ -317,7 +344,7 @@ export default function Home() {
   }, [isSignedIn, token]);
 
   const refreshQaData = useCallback(async () => {
-    if (!isSignedIn || !token || viewState !== 'dashboard') return;
+    if (!isSignedIn || !token || viewState !== 'dashboard' || !orgId) return;
 
     setQaLoading(true);
     setQaError(null);
@@ -355,7 +382,7 @@ export default function Home() {
       setQaLoading(false);
       setHasLoadedQa(true);
     }
-  }, [isSignedIn, token, viewState]);
+  }, [isSignedIn, token, viewState, orgId]);
 
   useEffect(() => {
     if (isSignedIn && token && viewState === 'dashboard' && !hasLoadedQa) {
@@ -406,9 +433,10 @@ export default function Home() {
 
     // Format period string
     const periodMap: Record<string, string> = {
-      '7 days': 'last week',
-      '30 days': 'last month',
-      '90 days': 'last quarter',
+      'Last 7 days': 'last week',
+      'Last 15 days': 'last 15 days',
+      'Last Month': 'last month',
+      'Last Year': 'last year',
     };
 
     return {
@@ -746,7 +774,7 @@ export default function Home() {
                   {open && (
                     <div className=" absolute z-50 mt-2 w-full min-w-[120px] rounded-xl bg-slate-900 border border-white/10 shadow-xl overflow-hidden
                     ">
-                      {["Last 15 days", "Last Month", "Last Year"].map((item) => (
+                      {timeOptions.filter((option) => option !== timePeriod).map((item) => (
                         <button
                           key={item}
                           onClick={() => {
