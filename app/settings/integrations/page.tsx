@@ -16,6 +16,12 @@ import {
   deleteJiraConfig,
   type JiraConfig,
 } from "../../../lib/jira-api";
+import {
+  getSalesforceStatus,
+  connectSalesforce,
+  disconnectSalesforce,
+  type SalesforceConnectionResponse,
+} from "../../../lib/salesforce-api";
 
 export default function IntegrationsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -41,12 +47,7 @@ export default function IntegrationsPage() {
   // Salesforce state
   const [salesforceConnected, setSalesforceConnected] = useState(false);
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
-  const [salesforceInfo, setSalesforceInfo] = useState<{
-    org_id?: string;
-    instance_url?: string;
-    sf_username?: string;
-    connected_at?: string;
-  } | null>(null);
+  const [salesforceInfo, setSalesforceInfo] = useState<SalesforceConnectionResponse | null>(null);
 
   // Load existing config
   useEffect(() => {
@@ -155,19 +156,10 @@ export default function IntegrationsPage() {
       const token = await getToken();
       if (!token) return;
 
-      // Get user ID from token (Clerk user ID)
-      const response = await fetch(`https://api.jataka.ai/connections/${token}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSalesforceConnected(data.connected);
-        if (data.connected) {
-          setSalesforceInfo(data);
-        }
+      const data = await getSalesforceStatus(token);
+      setSalesforceConnected(data.connected);
+      if (data.connected) {
+        setSalesforceInfo(data);
       }
     } catch (error) {
       console.error("Failed to check Salesforce connection:", error);
@@ -181,8 +173,8 @@ export default function IntegrationsPage() {
     const token = await getToken();
     if (!token) return;
 
-    // Redirect to OAuth service
-    window.location.href = `https://api.jataka.ai/connect/salesforce?user_id=${token}`;
+    // Redirect to OAuth backend endpoint
+    connectSalesforce(token);
   };
 
   const handleDisconnectSalesforce = async () => {
@@ -192,20 +184,10 @@ export default function IntegrationsPage() {
       const token = await getToken();
       if (!token) return;
 
-      const response = await fetch(`https://api.jataka.ai/connections/${token}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        setSalesforceConnected(false);
-        setSalesforceInfo(null);
-        alert("Salesforce disconnected successfully");
-      } else {
-        throw new Error("Failed to disconnect");
-      }
+      await disconnectSalesforce(token);
+      setSalesforceConnected(false);
+      setSalesforceInfo(null);
+      alert("Salesforce disconnected successfully");
     } catch (error: any) {
       alert(`Failed to disconnect Salesforce: ${error.message}`);
     }
