@@ -36,11 +36,32 @@ export async function getSalesforceStatus(authToken: string): Promise<Salesforce
 
 /**
  * Initiate Salesforce OAuth flow
- * This will redirect the user to Salesforce for authorization
+ * Gets the authorization URL from backend and redirects user to Salesforce
  */
-export function connectSalesforce(authToken: string) {
-  // Redirect to the backend endpoint which will handle the OAuth flow
-  window.location.href = `${BASE_API}/integrations/salesforce/connect`;
+export async function connectSalesforce(authToken: string): Promise<void> {
+  try {
+    // First, get the authorization URL from the backend (with auth header)
+    const response = await fetch(`${BASE_API}/integrations/salesforce/auth-url`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get authorization URL');
+    }
+
+    const { url } = await response.json();
+
+    // Now redirect the browser to Salesforce authorization page
+    window.location.href = url;
+  } catch (error: any) {
+    console.error('Failed to initiate Salesforce OAuth:', error);
+    throw error;
+  }
 }
 
 /**

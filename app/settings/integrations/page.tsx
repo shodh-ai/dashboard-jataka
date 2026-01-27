@@ -173,8 +173,13 @@ export default function IntegrationsPage() {
     const token = await getToken();
     if (!token) return;
 
-    // Redirect to OAuth backend endpoint
-    connectSalesforce(token);
+    try {
+      // Fetch auth URL and redirect to Salesforce
+      await connectSalesforce(token);
+    } catch (error) {
+      console.error('Failed to connect to Salesforce:', error);
+      alert('Failed to connect to Salesforce. Please try again.');
+    }
   };
 
   const handleDisconnectSalesforce = async () => {
