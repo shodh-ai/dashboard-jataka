@@ -1038,7 +1038,7 @@ export default function Home() {
               >
                 {/* Graph Component Wrapper */}
                 <div className={`w-full ${isGraphFullScreen ? "flex-1 h-full [&>div]:h-full" : ""}`}>
-                  <GraphVisualizer baseUrl={BASE_API} />
+                  <GraphVisualizer baseUrl={BASE_API} activeBrainId={activeBrain} />
                 </div>
 
                 {/* Toggle Button */}
@@ -1078,32 +1078,32 @@ export default function Home() {
               {/* Invite Team */}
              {userRole === 'ARCHITECT' ? (
               <div className="rounded-lg bg-slate-900 p-4 sm:p-6 ring-1 ring-white/10 border border-white/10 hover:border-white transition-colors">
-                <h3 className="mb-4 text-base sm:text-lg font-semibold text-white">Invite Team</h3>
+                <h3 className="mb-6 text-base sm:text-lg font-semibold text-white">Invite Team</h3>
 
-                <div className="relative">
-                  <input type="email" className=" w-full rounded-md bg-slate-950 px-3 py-3 pr-10 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-white/20" placeholder="sachin@shodh.ai" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
+                <div className="relative mb-4">
+                  <input type="email" className="w-full rounded-md bg-slate-950 px-3 py-3 pr-10 text-sm text-white placeholder-slate-500 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-white/20" placeholder="sachin@shodh.ai" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)}
                   />
-                  {/* Send icon inside input */}
-                  <div className="flex gap-2">
-                            <button 
-                                onClick={() => setInviteRole('developer')}
-                                className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'developer' ? 'bg-blue-500/20 border-blue-500 text-blue-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
-                            >
-                                Developer
-                            </button>
-                            <button 
-                                onClick={() => setInviteRole('architect')}
-                                className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'architect' ? 'bg-amber-500/20 border-amber-500 text-amber-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
-                            >
-                                Architect
-                            </button>
-                        </div>
                   <button
                     onClick={handleInvite}
-                    className=" absolute mr-2 right-2 top-1/2 -translate-y-1/2 text-white-400 hover:text-white transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
                     title="Send invite"
                   >
                     <Send size={16} />
+                  </button>
+                </div>
+                {/* Role selection buttons */}
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setInviteRole('developer')}
+                    className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'developer' ? 'bg-blue-500/20 border-blue-500 text-blue-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
+                  >
+                    Developer
+                  </button>
+                  <button 
+                    onClick={() => setInviteRole('architect')}
+                    className={`flex-1 py-2 text-xs rounded border ${inviteRole === 'architect' ? 'bg-amber-500/20 border-amber-500 text-amber-200' : 'bg-slate-950 border-white/10 text-slate-400'}`}
+                  >
+                    Architect
                   </button>
                 </div>
 
