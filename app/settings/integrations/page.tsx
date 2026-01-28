@@ -10,11 +10,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import {
-  getJiraConfig,
-  saveJiraConfig,
-  verifyJiraConnection,
-  deleteJiraConfig,
-  type JiraConfig,
+  getJiraStatus,
+  connectJira,
+  updateJiraProjectKey,
+  disconnectJira,
+  type JiraConnectionResponse,
 } from "../../../lib/jira-api";
 import {
   getSalesforceStatus,
@@ -26,23 +26,12 @@ import {
 export default function IntegrationsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  // Jira state
-  const [jiraConfig, setJiraConfig] = useState<JiraConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    message: string;
-    projects?: Array<{ key: string; name: string }>;
-  } | null>(null);
-
-  // Form state
-  const [baseUrl, setBaseUrl] = useState("");
-  const [email, setEmail] = useState("");
-  const [apiToken, setApiToken] = useState("");
-  const [projectKey, setProjectKey] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
+  // Jira state (OAuth)
+  const [jiraConnected, setJiraConnected] = useState(false);
+  const [checkingJira, setCheckingJira] = useState(false);
+  const [jiraInfo, setJiraInfo] = useState<JiraConnectionResponse | null>(null);
+  const [editingProjectKey, setEditingProjectKey] = useState(false);
+  const [newProjectKey, setNewProjectKey] = useState("");
 
   // Salesforce state
   const [salesforceConnected, setSalesforceConnected] = useState(false);
@@ -52,100 +41,102 @@ export default function IntegrationsPage() {
   // Load existing config
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      loadJiraConfig();
+      checkJiraConnection();
       checkSalesforceConnection();
+
+      // Check for OAuth callback parameters
+      const params = new URLSearchParams(window.location.search);
+      const jiraStatus = params.get('jira');
+      const salesforceStatus = params.get('salesforce');
+
+      if (jiraStatus === 'connected') {
+        alert('✅ Jira connected successfully!');
+        // Clean URL
+        window.history.replaceState({}, '', '/settings/integrations');
+      } else if (jiraStatus === 'error') {
+        const message = params.get('message');
+        alert(`❌ Failed to connect Jira: ${message || 'Unknown error'}`);
+        window.history.replaceState({}, '', '/settings/integrations');
+      }
+
+      if (salesforceStatus === 'connected') {
+        alert('✅ Salesforce connected successfully!');
+        window.history.replaceState({}, '', '/settings/integrations');
+      } else if (salesforceStatus === 'error') {
+        const message = params.get('message');
+        alert(`❌ Failed to connect Salesforce: ${message || 'Unknown error'}`);
+        window.history.replaceState({}, '', '/settings/integrations');
+      }
     }
   }, [isLoaded, isSignedIn]);
 
-  const loadJiraConfig = async () => {
+  // Jira functions
+  const checkJiraConnection = async () => {
     try {
-      setLoading(true);
+      setCheckingJira(true);
       const token = await getToken();
       if (!token) return;
 
-      const config = await getJiraConfig(token);
-      setJiraConfig(config);
-
-      if (config) {
-        setBaseUrl(config.baseUrl);
-        setEmail(config.email);
-        setProjectKey(config.projectKey);
-        // Don't populate API token for security
+      const data = await getJiraStatus(token);
+      setJiraConnected(data.connected);
+      if (data.connected) {
+        setJiraInfo(data);
+        setNewProjectKey(data.project_key || "");
       }
-    } catch (error: any) {
-      console.error("Failed to load Jira config:", error);
+    } catch (error) {
+      console.error("Failed to check Jira connection:", error);
+      setJiraConnected(false);
     } finally {
-      setLoading(false);
+      setCheckingJira(false);
     }
   };
 
-  const handleTestConnection = async () => {
+  const handleConnectJira = async () => {
+    const token = await getToken();
+    if (!token) return;
+
     try {
-      setTesting(true);
-      setTestResult(null);
+      // Fetch auth URL and redirect to Atlassian
+      await connectJira(token);
+    } catch (error) {
+      console.error('Failed to connect to Jira:', error);
+      alert('Failed to connect to Jira. Please try again.');
+    }
+  };
+
+  const handleUpdateProjectKey = async () => {
+    if (!newProjectKey.trim()) {
+      alert('Please enter a project key');
+      return;
+    }
+
+    try {
       const token = await getToken();
       if (!token) return;
 
-      const result = await verifyJiraConnection(
-        { baseUrl, email, apiToken, projectKey },
-        token
-      );
-
-      setTestResult(result);
+      await updateJiraProjectKey({ projectKey: newProjectKey.toUpperCase() }, token);
+      setEditingProjectKey(false);
+      await checkJiraConnection(); // Refresh status
+      alert('Project key updated successfully!');
     } catch (error: any) {
-      setTestResult({
-        success: false,
-        message: error.message || "Failed to verify connection",
-      });
-    } finally {
-      setTesting(false);
+      alert(`Failed to update project key: ${error.message}`);
     }
   };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const token = await getToken();
-      if (!token) return;
-
-      const config = await saveJiraConfig(
-        { baseUrl, email, apiToken, projectKey },
-        token
-      );
-
-      setJiraConfig(config);
-      setIsEditing(false);
-      setApiToken(""); // Clear sensitive data
-      setTestResult(null);
-      alert("Jira integration saved successfully!");
-    } catch (error: any) {
-      alert(`Failed to save: ${error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
+  const handleDisconnectJira = async () => {
     if (!confirm("Are you sure you want to disconnect Jira?")) return;
 
     try {
-      setSaving(true);
       const token = await getToken();
       if (!token) return;
 
-      await deleteJiraConfig(token);
-      setJiraConfig(null);
-      setBaseUrl("");
-      setEmail("");
-      setApiToken("");
-      setProjectKey("");
-      setIsEditing(false);
-      setTestResult(null);
-      alert("Jira integration disconnected");
+      await disconnectJira(token);
+      setJiraConnected(false);
+      setJiraInfo(null);
+      setNewProjectKey("");
+      alert("Jira disconnected successfully");
     } catch (error: any) {
-      alert(`Failed to disconnect: ${error.message}`);
-    } finally {
-      setSaving(false);
+      alert(`Failed to disconnect Jira: ${error.message}`);
     }
   };
 
@@ -224,7 +215,7 @@ export default function IntegrationsPage() {
               </p>
             </div>
 
-            {jiraConfig && !isEditing && (
+            {jiraConnected && (
               <div className="flex items-center gap-2 text-green-400">
                 <CheckCircle className="w-5 h-5" />
                 <span>Connected</span>
@@ -232,206 +223,110 @@ export default function IntegrationsPage() {
             )}
           </div>
 
-          {loading ? (
+          {checkingJira ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
             </div>
-          ) : jiraConfig && !isEditing ? (
-            // Display mode
+          ) : jiraConnected && jiraInfo ? (
+            // Connected state
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <label className="text-gray-400">Base URL</label>
-                  <p className="text-white">{jiraConfig.baseUrl}</p>
+                  <label className="text-gray-400">Site URL</label>
+                  <p className="text-white">{jiraInfo.site_url}</p>
                 </div>
                 <div>
-                  <label className="text-gray-400">Email</label>
-                  <p className="text-white">{jiraConfig.email}</p>
+                  <label className="text-gray-400">Cloud ID</label>
+                  <p className="text-white font-mono text-xs">{jiraInfo.cloud_id}</p>
                 </div>
                 <div>
                   <label className="text-gray-400">Project Key</label>
-                  <p className="text-white">{jiraConfig.projectKey}</p>
+                  {editingProjectKey ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newProjectKey}
+                        onChange={(e) => setNewProjectKey(e.target.value.toUpperCase())}
+                        placeholder="PROJ"
+                        className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                      />
+                      <button
+                        onClick={handleUpdateProjectKey}
+                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingProjectKey(false);
+                          setNewProjectKey(jiraInfo.project_key || "");
+                        }}
+                        className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-white">{jiraInfo.project_key || "Not set"}</p>
+                      <button
+                        onClick={() => setEditingProjectKey(true)}
+                        className="text-blue-400 hover:text-blue-300 text-xs"
+                      >
+                        {jiraInfo.project_key ? "Edit" : "Set"}
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label className="text-gray-400">Status</label>
+                  <label className="text-gray-400">Connected</label>
                   <p className="text-white">
-                    {jiraConfig.isActive ? "Active" : "Inactive"}
+                    {jiraInfo.connected_at && new Date(jiraInfo.connected_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
 
+              {!jiraInfo.project_key && (
+                <div className="p-3 bg-yellow-900/20 border border-yellow-700 rounded-md flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-yellow-300">
+                    Please set a project key to enable automatic ticket creation.
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleDisconnect}
+                  onClick={handleDisconnectJira}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
                 >
                   Disconnect
                 </button>
+                <button
+                  onClick={checkJiraConnection}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition"
+                >
+                  Refresh Status
+                </button>
               </div>
             </div>
           ) : (
-            // Edit/Create mode
+            // Not connected state
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Jira Base URL *
-                </label>
-                <input
-                  type="url"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://your-company.atlassian.net"
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-md">
+                <p className="text-blue-300 text-sm">
+                  Connect your Jira account using OAuth. You'll be redirected to Atlassian to authorize access.
+                  No need to manually enter API tokens!
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="bot@your-company.com"
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  API Token *
-                  <a
-                    href="https://id.atlassian.com/manage-profile/security/api-tokens"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-2 text-blue-400 hover:text-blue-300 text-xs inline-flex items-center gap-1"
-                  >
-                    Get your token
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </label>
-                <input
-                  type="password"
-                  value={apiToken}
-                  onChange={(e) => setApiToken(e.target.value)}
-                  placeholder="ATATT3xFfGN0..."
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Project Key *
-                </label>
-                <input
-                  type="text"
-                  value={projectKey}
-                  onChange={(e) => setProjectKey(e.target.value.toUpperCase())}
-                  placeholder="PROJ"
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Test Result */}
-              {testResult && (
-                <div
-                  className={`p-4 rounded-md flex items-start gap-3 ${
-                    testResult.success
-                      ? "bg-green-900/20 border border-green-700"
-                      : "bg-red-900/20 border border-red-700"
-                  }`}
-                >
-                  {testResult.success ? (
-                    <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <p
-                      className={
-                        testResult.success ? "text-green-300" : "text-red-300"
-                      }
-                    >
-                      {testResult.message}
-                    </p>
-                    {testResult.projects && testResult.projects.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-400">
-                          Available projects:
-                        </p>
-                        <ul className="text-sm text-gray-300 mt-1">
-                          {testResult.projects.slice(0, 5).map((p) => (
-                            <li key={p.key}>
-                              {p.key} - {p.name}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleTestConnection}
-                  disabled={!baseUrl || !email || !apiToken || testing}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {testing && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Test Connection
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={!!(
-                    !baseUrl ||
-                    !email ||
-                    !apiToken ||
-                    !projectKey ||
-                    saving ||
-                    (testResult && !testResult.success)
-                   )}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {jiraConfig ? "Update" : "Save"}
-                </button>
-                {isEditing && (
-                  <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setTestResult(null);
-                      if (jiraConfig) {
-                        setBaseUrl(jiraConfig.baseUrl);
-                        setEmail(jiraConfig.email);
-                        setProjectKey(jiraConfig.projectKey);
-                        setApiToken("");
-                      }
-                    }}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition"
-                  >
-                    Cancel
-                  </button>
-                )}
-              </div>
-
-              {/* Hint */}
-              {!testResult && (
-                <div className="mt-4 p-3 bg-blue-900/20 border border-blue-700 rounded-md flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-blue-300">
-                    Test your connection before saving to ensure your credentials
-                    are correct.
-                  </p>
-                </div>
-              )}
+              <button
+                onClick={handleConnectJira}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition font-semibold flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Connect with Jira
+              </button>
             </div>
           )}
         </div>
