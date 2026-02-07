@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #111111;
+  --card-hover: #191919;
+  --border: #1f1f1f;
+  --border-hover: #333333;
+  --muted: #888888;
+  --muted-foreground: #a1a1a1;
+  --accent: #ffffff;
 }
 
 @theme inline {
@@ -12,76 +19,72 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-plus-jakarta-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.background-glow {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      circle at bottom left,
-      rgba(255, 255, 255, 0.601),
-      transparent 60%
-    ),
-    radial-gradient(
-      circle at top right,
-      rgba(255, 255, 255, 0.618),
-      transparent 60%
-    );
-  filter: blur(40px);
+/* Clean button style - Vercel inspired */
+.btn-primary {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: background 150ms ease, opacity 150ms ease;
+  border: none;
+  cursor: pointer;
 }
 
-/* Gradient border button effect - white gradient from 0% to 100% opacity */
+.btn-primary:hover {
+  background: #e5e5e5;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #a1a1a1;
+  font-weight: 500;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  color: #ffffff;
+  border-color: var(--border-hover);
+  background: var(--card);
+}
+
+/* Gradient border button effect - kept for backward compat */
 .gradient-border-button {
   position: relative;
+  background: #ffffff;
+  color: #000000;
+  font-weight: 500;
   border: none;
+  border-radius: 0.5rem;
+  transition: opacity 150ms ease;
+  cursor: pointer;
+}
+
+.gradient-border-button:hover {
+  opacity: 0.9;
 }
 
 .gradient-border-button::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 90%,
-    rgba(255, 255, 255, 0) 100%
-  );
-
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-
-  opacity: 0.6;
-  transition: opacity 200ms ease;
-  pointer-events: none;
-}
-
-.gradient-border-button:hover::before,
-.gradient-border-button:active::before,
-.gradient-border-button:focus-visible::before {
-  opacity: 1;
-}
-
-.gradient-border-button > * {
-  position: relative;
-  z-index: 1;
+  display: none;
 }
 
 /* ============================================
