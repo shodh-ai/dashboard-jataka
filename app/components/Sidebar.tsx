@@ -7,11 +7,9 @@ import {
   Network,
   Settings,
   LogOut,
-  ChevronDown,
-  Brain,
-  Users,
   ChevronsLeft,
   ChevronsRight,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,7 +31,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
 
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
-    { label: "Graph Explorer", href: "/#graph", icon: Network },
+    { label: "Knowledge Graph", href: "/#graph", icon: Network },
     { label: "Settings", href: "/settings/integrations", icon: Settings, architectOnly: true },
   ];
 
@@ -49,72 +47,85 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     ? `${user.firstName} ${user.lastName}`
     : user?.primaryEmailAddress?.emailAddress?.split("@")[0] || "User";
 
+  const email = user?.primaryEmailAddress?.emailAddress || "";
+
   return (
     <aside
-      className={`flex flex-col h-screen border-r border-[#1f1f1f] bg-[#0a0a0a] transition-all duration-200 ${
-        collapsed ? "w-[60px]" : "w-[240px]"
+      className={`flex flex-col h-screen bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] transition-all duration-300 ease-in-out ${
+        collapsed ? "w-[68px]" : "w-[260px]"
       }`}
     >
-      {/* Workspace Header */}
-      <div className="flex items-center gap-2.5 px-3 py-4 border-b border-[#1f1f1f]">
-        <div className="flex-shrink-0 w-7 h-7 rounded-md bg-white flex items-center justify-center">
-          <img src="/WhiteLOGO.svg" alt="Jataka" className="w-4 h-4 invert" />
+      {/* ─── Brand Header ─── */}
+      <div className={`flex items-center gap-3 px-4 h-16 border-b border-[var(--border-subtle)] ${collapsed ? "justify-center px-0" : ""}`}>
+        <div className="flex-shrink-0 w-8 h-8 rounded-[10px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <Sparkles size={16} className="text-white" />
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">
+            <p className="text-[15px] font-semibold text-[var(--text-primary)] truncate tracking-tight">
               {orgName || "Jataka"}
             </p>
-            <p className="text-[11px] text-[#666] truncate capitalize">
-              {userRole.toLowerCase() || "member"}
+            <p className="text-[11px] text-[var(--text-muted)] truncate capitalize mt-0.5">
+              {userRole ? `${userRole.toLowerCase()} workspace` : "workspace"}
             </p>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex-shrink-0 p-1 rounded hover:bg-[#1a1a1a] text-[#666] hover:text-white transition-colors"
+          className={`flex-shrink-0 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all duration-200 ${collapsed ? "mx-auto mt-0" : ""}`}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+          {collapsed ? <ChevronsRight size={15} /> : <ChevronsLeft size={15} />}
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5">
+      {/* ─── Navigation ─── */}
+      <nav className="flex-1 px-3 py-4 space-y-1">
+        {!collapsed && (
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-faint)]">
+            Navigation
+          </p>
+        )}
         {filteredNav.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm transition-colors ${
+              className={`group flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] font-medium transition-all duration-200 ${
                 isActive
-                  ? "bg-[#1a1a1a] text-white"
-                  : "text-[#888] hover:text-white hover:bg-[#111]"
-              } ${collapsed ? "justify-center" : ""}`}
+                  ? "bg-gradient-to-r from-indigo-500/10 to-violet-500/5 text-[var(--accent)] border border-indigo-500/15"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] border border-transparent"
+              } ${collapsed ? "justify-center px-0 mx-auto w-11 h-11" : ""}`}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon size={16} className="flex-shrink-0" />
+              <item.icon
+                size={18}
+                className={`flex-shrink-0 transition-colors duration-200 ${
+                  isActive ? "text-[var(--accent)]" : "text-[var(--text-faint)] group-hover:text-[var(--text-secondary)]"
+                }`}
+              />
               {!collapsed && <span>{item.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* User Footer */}
-      <div className="border-t border-[#1f1f1f] px-2 py-3">
+      {/* ─── User Footer ─── */}
+      <div className="border-t border-[var(--border-subtle)] px-3 py-3">
         <div
-          className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md ${
-            collapsed ? "justify-center" : ""
+          className={`flex items-center gap-3 px-2 py-2 rounded-[10px] hover:bg-[var(--bg-elevated)] transition-all duration-200 ${
+            collapsed ? "justify-center px-0" : ""
           }`}
         >
-          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[#222] flex items-center justify-center text-[11px] font-medium text-white">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center text-[11px] font-bold text-[var(--accent)] tracking-wide">
             {initials}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate">{displayName}</p>
+              <p className="text-[13px] font-medium text-[var(--text-primary)] truncate">{displayName}</p>
               <SignOutButton>
-                <button className="text-[11px] text-[#666] hover:text-red-400 transition-colors">
+                <button className="text-[11px] text-[var(--text-faint)] hover:text-rose-400 transition-colors duration-200 mt-0.5">
                   Sign out
                 </button>
               </SignOutButton>

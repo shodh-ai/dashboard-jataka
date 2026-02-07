@@ -1,90 +1,220 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card: #111111;
-  --card-hover: #191919;
-  --border: #1f1f1f;
-  --border-hover: #333333;
-  --muted: #888888;
-  --muted-foreground: #a1a1a1;
-  --accent: #ffffff;
+  --bg-base: #0a0d14;
+  --bg-surface: #111520;
+  --bg-card: #161b28;
+  --bg-elevated: #1c2235;
+  --bg-input: #0e1219;
+  --border-subtle: rgba(148, 163, 184, 0.07);
+  --border-default: rgba(148, 163, 184, 0.1);
+  --border-hover: rgba(148, 163, 184, 0.18);
+  --border-active: rgba(129, 140, 248, 0.4);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-faint: #475569;
+  --accent: #818cf8;
+  --accent-hover: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.25);
+  --emerald: #34d399;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --sky: #38bdf8;
+  --purple: #a78bfa;
+  --teal: #2dd4bf;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-plus-jakarta-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-inter);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-plus-jakarta-sans), sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Clean button style - Vercel inspired */
+/* ─── Auth page animated mesh background ─── */
+.auth-bg {
+  background: var(--bg-base);
+  position: relative;
+  overflow: hidden;
+}
+.auth-bg::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 25% 40%, rgba(99, 102, 241, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 25%, rgba(139, 92, 246, 0.09) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 75%, rgba(59, 130, 246, 0.06) 0%, transparent 55%);
+  animation: meshDrift 25s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes meshDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(2%, -3%) scale(1.02); }
+  66% { transform: translate(-1%, 2%) scale(0.99); }
+}
+
+/* ─── Dashboard card base ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 14px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+/* ─── Metric accent strip (left border) ─── */
+.metric-card {
+  position: relative;
+  overflow: hidden;
+  padding-left: calc(1.25rem + 3px);
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+}
+.metric-emerald::before { background: linear-gradient(180deg, #34d399, #059669); }
+.metric-blue::before    { background: linear-gradient(180deg, #60a5fa, #3b82f6); }
+.metric-amber::before   { background: linear-gradient(180deg, #fbbf24, #d97706); }
+.metric-purple::before  { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+.metric-teal::before    { background: linear-gradient(180deg, #2dd4bf, #0d9488); }
+
+/* ─── Primary button ─── */
 .btn-primary {
-  background: #ffffff;
-  color: #000000;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  font-weight: 600;
   font-size: 0.875rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  transition: background 150ms ease, opacity 150ms ease;
+  padding: 0.625rem 1.25rem;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 16px -4px rgba(99, 102, 241, 0.45);
 }
-
 .btn-primary:hover {
-  background: #e5e5e5;
+  box-shadow: 0 6px 24px -4px rgba(99, 102, 241, 0.55);
+  transform: translateY(-1px);
 }
-
+.btn-primary:active { transform: translateY(0); }
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.btn-secondary {
+/* ─── Ghost / outline button ─── */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   background: transparent;
-  color: #a1a1a1;
+  color: var(--text-secondary);
   font-weight: 500;
   font-size: 0.875rem;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  transition: all 150ms ease;
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
   cursor: pointer;
+  transition: all 0.2s ease;
 }
-
-.btn-secondary:hover {
-  color: #ffffff;
+.btn-ghost:hover {
+  color: var(--text-primary);
   border-color: var(--border-hover);
-  background: var(--card);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-/* Gradient border button effect - kept for backward compat */
+/* ─── Gradient border button (backward compat) ─── */
 .gradient-border-button {
   position: relative;
-  background: #ffffff;
-  color: #000000;
-  font-weight: 500;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: white;
+  font-weight: 600;
   border: none;
-  border-radius: 0.5rem;
-  transition: opacity 150ms ease;
+  border-radius: 10px;
+  transition: all 0.2s ease;
   cursor: pointer;
+  box-shadow: 0 2px 16px -4px rgba(99, 102, 241, 0.45);
 }
-
 .gradient-border-button:hover {
-  opacity: 0.9;
+  box-shadow: 0 6px 24px -4px rgba(99, 102, 241, 0.55);
+  transform: translateY(-1px);
+}
+.gradient-border-button::before { display: none; }
+
+/* ─── Input field ─── */
+.input {
+  width: 100%;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.input::placeholder { color: var(--text-faint); }
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.gradient-border-button::before {
-  display: none;
+/* ─── Shimmer loading animation ─── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-elevated) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+/* ─── Fade in animation ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
+/* ─── Glow dot (for status indicators) ─── */
+.glow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50% { box-shadow: 0 0 8px 2px currentColor; opacity: 0.7; }
 }
 
 /* ============================================

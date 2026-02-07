@@ -5,7 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 
 const inter = Inter({ 
   subsets: ["latin"],
-  variable: "--font-plus-jakarta-sans",
+  variable: "--font-inter",
   weight: ["300", "400", "500", "600", "700"],
 });
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
-        <body className={`${inter.variable} ${inter.className} bg-[#0a0a0a] text-[#ededed] antialiased`}>
+        <body className={`${inter.variable} ${inter.className} bg-[var(--bg-base)] text-[var(--text-primary)] antialiased`}>
           {children}
         </body>
       </html>
