@@ -17,9 +17,9 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import GraphVisualizer from "./Components/GraphVisualizer";
+import GraphVisualizer from "./components/GraphVisualizer";
 import { useOrganizationList } from "@clerk/nextjs";
-import Sidebar from "./Components/Sidebar";
+import Sidebar from "./components/Sidebar";
 
 interface Metrics {
   senior_deflection_rate: number;
