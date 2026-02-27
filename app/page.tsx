@@ -598,54 +598,34 @@ export default function Home() {
 
   if (!isLoaded) {
     return (
-      <div className="auth-bg flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4 animate-in">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-            <Sparkles size={20} className="text-white animate-pulse" />
-          </div>
-          <div className="h-1 w-16 rounded-full overflow-hidden bg-[var(--bg-elevated)]">
-            <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 animate-[shimmer_1.5s_ease-in-out_infinite]" />
-          </div>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-[var(--bg-base)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--text-primary)] border-t-transparent" />
       </div>
     );
   }
 
   if (viewState === 'onboarding' && isSignedIn) {
     return (
-      <main className="auth-bg min-h-screen flex items-center justify-center px-4">
-        <div className="relative z-10 w-full max-w-md animate-in">
-          <div className="card p-8 backdrop-blur-xl bg-[var(--bg-card)]/80">
-            <div className="text-center mb-8">
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-5 shadow-lg shadow-indigo-500/25">
-                <Sparkles size={24} className="text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Create your workspace</h2>
-              <p className="text-sm text-[var(--text-muted)] mt-2">Name your organization to get started with Jataka.</p>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Organization name</label>
-                <input
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="input"
-                  placeholder="Acme Corp"
-                />
-              </div>
-              <button
-                onClick={handleOnboarding}
-                disabled={loading}
-                className="btn-primary w-full py-3"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Creating...
-                  </span>
-                ) : 'Create Workspace'}
-              </button>
-            </div>
+      <main className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Create workspace</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-2">Set up your organization to continue</p>
+          </div>
+          <div className="space-y-4">
+            <input
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              className="input"
+              placeholder="Acme Inc"
+            />
+            <button
+              onClick={handleOnboarding}
+              disabled={loading}
+              className="btn-primary w-full"
+            >
+              {loading ? 'Creating...' : 'Create Workspace'}
+            </button>
           </div>
         </div>
       </main>
@@ -656,23 +636,15 @@ export default function Home() {
     <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       {!isSignedIn ? (
         /* ─── Sign-In Screen ─── */
-        <div className="auth-bg flex min-h-screen items-center justify-center px-4">
-          <div className="relative z-10 w-full max-w-md animate-in">
-            <div className="card p-8 backdrop-blur-xl bg-[var(--bg-card)]/80 text-center">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/25">
-                <Sparkles size={28} className="text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-[var(--text-primary)] tracking-tight mb-2">Jataka</h1>
-              <p className="text-[var(--text-muted)] text-sm mb-8 max-w-xs mx-auto">Developer context & guardrails for your engineering team.</p>
-              <SignInButton mode="modal">
-                <button className="btn-primary w-full py-3 text-[15px]">
-                  Get Started
-                </button>
-              </SignInButton>
-              <p className="mt-5 text-xs text-[var(--text-faint)]">
-                Sign in with Google or GitHub to continue.
-              </p>
-            </div>
+        <div className="flex min-h-screen items-center justify-center px-4 bg-[var(--bg-base)]">
+          <div className="w-full max-w-sm text-center">
+            <h1 className="text-3xl font-semibold text-[var(--text-primary)] mb-2">Jataka</h1>
+            <p className="text-sm text-[var(--text-secondary)] mb-8">Developer context & guardrails</p>
+            <SignInButton mode="modal">
+              <button className="btn-primary w-full">
+                Sign in to continue
+              </button>
+            </SignInButton>
           </div>
         </div>
       ) : (
@@ -682,52 +654,49 @@ export default function Home() {
 
           <div className="flex-1 overflow-y-auto">
             {/* ─── Top Bar ─── */}
-            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-base)]/80 backdrop-blur-xl px-6 lg:px-10 h-16">
+            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-base)] px-6 lg:px-10 h-14">
               <div>
-                <h1 className="text-[17px] font-semibold text-[var(--text-primary)] tracking-tight">Overview</h1>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                <h1 className="text-sm font-medium text-[var(--text-primary)]">Overview</h1>
+                <p className="text-xs text-[var(--text-muted)]">
                   {orgName ? `${orgName} · ` : ''}{user?.firstName && user?.lastName
                     ? `${user.firstName} ${user.lastName}`
                     : user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {userRole === 'ARCHITECT' && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
-                    <Crown size={12} /> Architect
+                  <span className="badge badge-amber">
+                    <Crown size={10} /> Architect
                   </span>
                 )}
                 {userRole === 'DEVELOPER' && (
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 text-xs font-semibold text-indigo-300">
-                    <Code2 size={12} /> Developer
+                  <span className="badge badge-indigo">
+                    <Code2 size={10} /> Developer
                   </span>
                 )}
               </div>
             </header>
 
-            <div className="px-6 lg:px-10 py-8 max-w-[1280px] mx-auto">
+            <div className="px-6 lg:px-10 py-6 max-w-6xl mx-auto">
               {/* ─── Metrics Section ─── */}
-              <section className="mb-10">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Team Brain Health</h2>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">Key metrics for your engineering knowledge base</p>
-                  </div>
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-title">Metrics</h2>
                   <div className="relative">
                     <button
                       onClick={() => setOpen(!open)}
-                      className="flex items-center gap-2 rounded-lg bg-[var(--bg-card)] px-3.5 py-2 text-xs font-medium text-[var(--text-secondary)] border border-[var(--border-default)] hover:border-[var(--border-hover)] transition-all duration-200"
+                      className="btn-secondary text-xs py-1.5"
                     >
                       {timePeriod}
-                      <ChevronDown size={13} className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                      <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
                     </button>
                     {open && (
-                      <div className="absolute right-0 z-50 mt-2 min-w-[160px] rounded-xl bg-[var(--bg-card)] border border-[var(--border-default)] shadow-2xl shadow-black/40 overflow-hidden backdrop-blur-xl">
+                      <div className="absolute right-0 z-50 mt-1 min-w-[140px] rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] shadow-lg overflow-hidden">
                         {timeOptions.filter((option) => option !== timePeriod).map((item) => (
                           <button
                             key={item}
                             onClick={() => { setTimePeriod(item); setOpen(false); }}
-                            className="block w-full px-4 py-2.5 text-left text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors duration-150"
+                            className="block w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-colors"
                           >
                             {item}
                           </button>
@@ -740,128 +709,51 @@ export default function Home() {
                 {metricsLoading && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     {[1, 2, 3, 4, 5].map((key) => (
-                      <div key={key} className="skeleton h-[120px]" />
+                      <div key={key} className="skeleton h-24" />
                     ))}
                   </div>
                 )}
 
-                {!metricsLoading && metrics && (() => {
-                  const metricCards = [
-                    {
-                      title: "Senior Deflection",
-                      value: `${metrics.senior_deflection_rate.toFixed(1)}%`,
-                      metricKey: 'senior_deflection_rate' as keyof Metrics,
-                      currentValue: metrics.senior_deflection_rate,
-                      icon: ShieldCheck,
-                      colorClass: "text-emerald-400",
-                      bgClass: "bg-emerald-500/10",
-                      stripClass: "metric-emerald",
-                    },
-                    {
-                      title: "Files Documented",
-                      value: metrics.knowledge_coverage_files.toString(),
-                      metricKey: 'knowledge_coverage_files' as keyof Metrics,
-                      currentValue: metrics.knowledge_coverage_files,
-                      icon: BookOpen,
-                      colorClass: "text-blue-400",
-                      bgClass: "bg-blue-500/10",
-                      stripClass: "metric-blue",
-                    },
-                    {
-                      title: "Knowledge Drift",
-                      value: `${metrics.drift_score.toFixed(1)}%`,
-                      metricKey: 'drift_score' as keyof Metrics,
-                      currentValue: metrics.drift_score,
-                      icon: AlertTriangle,
-                      colorClass: "text-amber-400",
-                      bgClass: "bg-amber-500/10",
-                      stripClass: "metric-amber",
-                    },
-                    {
-                      title: "Avg Mastery Time",
-                      value: `${metrics.avg_hours_to_mastery.toFixed(1)}h`,
-                      metricKey: 'avg_hours_to_mastery' as keyof Metrics,
-                      currentValue: metrics.avg_hours_to_mastery,
-                      icon: Clock,
-                      colorClass: "text-purple-400",
-                      bgClass: "bg-purple-500/10",
-                      stripClass: "metric-purple",
-                    },
-                    {
-                      title: "Context Success",
-                      value: `${metrics.context_injection_rate.toFixed(1)}%`,
-                      metricKey: 'context_injection_rate' as keyof Metrics,
-                      currentValue: metrics.context_injection_rate,
-                      icon: Activity,
-                      colorClass: "text-teal-400",
-                      bgClass: "bg-teal-500/10",
-                      stripClass: "metric-teal",
-                    }
-                  ];
-
-                  return (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                      {metricCards.map((card, idx) => {
-                        const trend = getTrend(card.metricKey, card.currentValue);
-                        const displayValue = card.metricKey === 'avg_hours_to_mastery'
-                          ? `${Math.round(card.currentValue)} hrs`
-                          : card.metricKey === 'knowledge_coverage_files'
-                          ? card.currentValue.toString()
-                          : card.value;
-                        const Icon = card.icon;
-                        const isPositive = card.metricKey === 'drift_score' ? trend.direction === 'down' : trend.direction === 'up';
-                        const TrendIcon = isPositive ? ArrowUpRight : ArrowDownRight;
-
-                        return (
-                          <div
-                            key={card.metricKey}
-                            className={`card metric-card ${card.stripClass} p-5 animate-in`}
-                            style={{ animationDelay: `${idx * 80}ms` }}
-                          >
-                            <div className="flex items-center justify-between mb-4">
-                              <div className={`w-8 h-8 rounded-lg ${card.bgClass} flex items-center justify-center`}>
-                                <Icon size={16} className={card.colorClass} />
-                              </div>
-                            </div>
-                            <p className="text-[26px] font-bold text-[var(--text-primary)] tracking-tight leading-none">{displayValue}</p>
-                            <p className="text-[11px] font-medium text-[var(--text-muted)] mt-1.5 mb-3">{card.title}</p>
-                            {trend.change > 0 && (
-                              <div className={`inline-flex items-center gap-1 text-[11px] font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                <TrendIcon size={12} />
-                                {trend.change}%
-                                <span className="text-[var(--text-faint)] font-normal ml-0.5">vs {trend.period}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                {!metricsLoading && metrics && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <div className="stat-card">
+                      <div className="stat-label">Deflection Rate</div>
+                      <div className="stat-value">{metrics.senior_deflection_rate.toFixed(1)}%</div>
                     </div>
-                  );
-                })()}
+                    <div className="stat-card">
+                      <div className="stat-label">Files</div>
+                      <div className="stat-value">{metrics.knowledge_coverage_files}</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Drift</div>
+                      <div className="stat-value">{metrics.drift_score.toFixed(1)}%</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Mastery</div>
+                      <div className="stat-value">{Math.round(metrics.avg_hours_to_mastery)}h</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Success</div>
+                      <div className="stat-value">{metrics.context_injection_rate.toFixed(1)}%</div>
+                    </div>
+                  </div>
+                )}
 
                 {metricsError && (
-                  <div className="mt-4 rounded-xl bg-amber-500/5 border border-amber-500/15 px-4 py-3 text-xs text-amber-300/80">
+                  <div className="mt-4 rounded-lg bg-[var(--warning)]/10 border border-[var(--warning)]/20 px-3 py-2 text-xs text-[var(--warning)]">
                     {metricsError}
                   </div>
                 )}
               </section>
 
               {/* ─── Brain Context + Actions ─── */}
-              <section className="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <section className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Active Brain */}
-                <div className="card p-6">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                      <Brain size={18} className="text-indigo-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">Active Brain</h3>
-                      <p className="text-[11px] text-[var(--text-muted)]">Current knowledge context</p>
-                    </div>
-                  </div>
-                  <div className="relative mb-4">
+                <div className="card p-5">
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Active Brain</h3>
+                  <div className="relative mb-3">
                     <select
-                      className="input appearance-none pr-9 cursor-pointer"
+                      className="input select"
                       value={activeBrain}
                       onChange={async (e) => {
                         const kb = e.target.value;
@@ -886,14 +778,13 @@ export default function Home() {
                       {brains.length > 0 ? (
                         brains.map((b) => (
                           <option key={b.id} value={b.knowledgeBaseId}>
-                            {b.name} ({b.knowledgeBaseId?.substring(0, 15)}...)
+                            {b.name}
                           </option>
                         ))
                       ) : (
                         <option value="">No brains available</option>
                       )}
                     </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" />
                   </div>
                   <button
                     onClick={handleConnectVsCode}
@@ -904,21 +795,13 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Create Brain / Dev Placeholder */}
+                {/* Create Brain */}
                 {userRole === 'ARCHITECT' ? (
-                  <div className="card p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                        <Plus size={18} className="text-violet-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">New Brain</h3>
-                        <p className="text-[11px] text-[var(--text-muted)]">Create a knowledge context</p>
-                      </div>
-                    </div>
+                  <div className="card p-5">
+                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">New Brain</h3>
                     <input
                       type="text"
-                      className="input mb-4"
+                      className="input mb-3"
                       placeholder="e.g. Mobile App V2"
                       value={newBrainName}
                       onChange={(e) => setNewBrainName(e.target.value)}
@@ -933,62 +816,41 @@ export default function Home() {
                     </button>
                   </div>
                 ) : (
-                  <div className="card p-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-elevated)] flex items-center justify-center mb-3">
-                      <Brain size={18} className="text-[var(--text-faint)]" />
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)]">Brain creation requires<br /><span className="text-[var(--text-secondary)] font-medium">Architect</span> role.</p>
+                  <div className="card p-5 flex items-center justify-center text-center">
+                    <p className="text-sm text-[var(--text-muted)]">Brain creation requires <span className="text-[var(--text-secondary)]">Architect</span> role</p>
                   </div>
                 )}
 
-                {/* Integrations / Slack Command */}
+                {/* Integrations */}
                 {userRole === 'ARCHITECT' ? (
-                  <div className="card p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-9 h-9 rounded-xl bg-sky-500/10 flex items-center justify-center">
-                        <Plug size={18} className="text-sky-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Integrations</h3>
-                        <p className="text-[11px] text-[var(--text-muted)]">Connect your tools</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2.5">
+                  <div className="card p-5">
+                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Integrations</h3>
+                    <div className="space-y-2">
                       <button
                         onClick={handleSlackInstall}
-                        className="w-full flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all duration-200"
+                        className="btn-secondary w-full justify-start"
                       >
-                        <img src="/slack-new.png" alt="Slack" className="w-5 h-5" />
-                        <span className="font-medium">Add to Slack</span>
-                        <ExternalLink size={13} className="ml-auto text-[var(--text-faint)]" />
+                        <img src="/slack-new.png" alt="Slack" className="w-4 h-4" />
+                        Add to Slack
                       </button>
                       <button
                         onClick={handleGithubInstall}
-                        className="w-full flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-input)] px-4 py-3 text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all duration-200"
+                        className="btn-secondary w-full justify-start"
                       >
-                        <img src="/github.png" alt="GitHub" className="w-5 h-5" />
-                        <span className="font-medium">Connect GitHub</span>
-                        <ExternalLink size={13} className="ml-auto text-[var(--text-faint)]" />
+                        <img src="/github.png" alt="GitHub" className="w-4 h-4" />
+                        Connect GitHub
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="card p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                        <Terminal size={18} className="text-emerald-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Slack Command</h3>
-                        <p className="text-[11px] text-[var(--text-muted)]">Connect your Slack account</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-input)] px-4 py-3 border border-[var(--border-default)]">
+                  <div className="card p-5">
+                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Slack Command</h3>
+                    <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
                       <code className="flex-1 text-xs text-[var(--text-secondary)] font-mono truncate">
                         /connect {user?.primaryEmailAddress?.emailAddress || 'user@example.com'}
                       </code>
-                      <button onClick={handleCopySlackCommand} className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors" title="Copy">
-                        {copiedSlackCommand ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                      <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                        {copiedSlackCommand ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
                       </button>
                     </div>
                   </div>
@@ -996,15 +858,12 @@ export default function Home() {
               </section>
 
               {/* ─── Graph Visualizer ─── */}
-              <section id="graph" className="mb-10">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Knowledge Graph</h2>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">Explore your codebase relationships</p>
-                  </div>
+              <section id="graph" className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="section-title mb-0">Knowledge Graph</h2>
                   <button
                     onClick={() => setIsGraphFullScreen(!isGraphFullScreen)}
-                    className="btn-ghost text-xs py-1.5 px-3"
+                    className="btn-secondary text-xs py-1.5"
                     title={isGraphFullScreen ? "Minimize" : "Full Screen"}
                   >
                     {isGraphFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -1025,7 +884,7 @@ export default function Home() {
                     <div className="absolute z-[110] bottom-4 right-4">
                       <button
                         onClick={() => setIsGraphFullScreen(false)}
-                        className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-medium text-white bg-[var(--bg-card)]/90 hover:bg-[var(--bg-elevated)] backdrop-blur-md border border-[var(--border-default)] transition-all duration-200"
+                        className="btn-secondary"
                       >
                         <Minimize2 size={14} />
                         Exit Full Screen
@@ -1036,19 +895,11 @@ export default function Home() {
               </section>
 
               {/* ─── Utility Cards ─── */}
-              <section className="mb-10 grid grid-cols-1 md:grid-cols-3 gap-5">
+              <section className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Invite Team */}
                 {userRole === 'ARCHITECT' ? (
-                  <div className="card p-6">
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                        <Users size={18} className="text-rose-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Invite Team</h3>
-                        <p className="text-[11px] text-[var(--text-muted)]">Add members to your org</p>
-                      </div>
-                    </div>
+                  <div className="card p-5">
+                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Invite Team</h3>
                     <div className="relative mb-3">
                       <input
                         type="email"
@@ -1059,85 +910,66 @@ export default function Home() {
                       />
                       <button
                         onClick={handleInvite}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-indigo-400 transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
                         title="Send invite"
                       >
-                        <Send size={15} />
+                        <Send size={14} />
                       </button>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => setInviteRole('developer')}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                        className={`flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                           inviteRole === 'developer'
-                            ? 'bg-indigo-500/10 border-indigo-500/25 text-indigo-300'
-                            : 'bg-[var(--bg-input)] border-[var(--border-default)] text-[var(--text-faint)] hover:text-[var(--text-secondary)]'
+                            ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50 text-[var(--accent-light)]'
+                            : 'bg-transparent border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                         }`}
                       >
                         Developer
                       </button>
                       <button
                         onClick={() => setInviteRole('architect')}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                        className={`flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors ${
                           inviteRole === 'architect'
-                            ? 'bg-amber-500/10 border-amber-500/25 text-amber-300'
-                            : 'bg-[var(--bg-input)] border-[var(--border-default)] text-[var(--text-faint)] hover:text-[var(--text-secondary)]'
+                            ? 'bg-[var(--warning)]/10 border-[var(--warning)]/50 text-[var(--warning)]'
+                            : 'bg-transparent border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                         }`}
                       >
                         Architect
                       </button>
                     </div>
                     {inviteStatus && (
-                      <p className="mt-3 text-xs text-[var(--text-muted)] bg-[var(--bg-input)] rounded-lg px-3 py-2">{inviteStatus}</p>
+                      <p className="mt-3 text-xs text-[var(--text-muted)]">{inviteStatus}</p>
                     )}
                   </div>
                 ) : (
-                  <div className="card p-6 flex flex-col items-center justify-center text-center">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-elevated)] flex items-center justify-center mb-3">
-                      <Users size={18} className="text-[var(--text-faint)]" />
-                    </div>
-                    <p className="text-xs text-[var(--text-muted)]">Contact an <span className="text-[var(--text-secondary)] font-medium">Architect</span> to invite team members.</p>
+                  <div className="card p-5 flex items-center justify-center text-center">
+                    <p className="text-sm text-[var(--text-muted)]">Contact an <span className="text-[var(--text-secondary)]">Architect</span> to invite team members</p>
                   </div>
                 )}
 
                 {/* Slack Command */}
-                <div className="card p-6">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <Terminal size={18} className="text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">Slack Command</h3>
-                      <p className="text-[11px] text-[var(--text-muted)]">Link your Slack identity</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-input)] px-4 py-3 border border-[var(--border-default)]">
+                <div className="card p-5">
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Slack Command</h3>
+                  <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
                     <code className="flex-1 text-xs text-[var(--text-secondary)] font-mono truncate">
                       /connect {user?.primaryEmailAddress?.emailAddress || 'user@example.com'}
                     </code>
-                    <button onClick={handleCopySlackCommand} className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors" title="Copy">
-                      {copiedSlackCommand ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                    <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                      {copiedSlackCommand ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
                     </button>
                   </div>
                 </div>
 
                 {/* Access Token */}
-                <div className="card p-6">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                      <Key size={18} className="text-amber-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-[var(--text-primary)]">Access Token</h3>
-                      <p className="text-[11px] text-[var(--text-muted)]">For CLI & API access</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-[var(--bg-input)] px-4 py-3 border border-[var(--border-default)]">
+                <div className="card p-5">
+                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Access Token</h3>
+                  <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
                     <code className="flex-1 truncate text-xs text-[var(--text-secondary)] font-mono">
                       {loading ? 'Loading...' : token ? `${token.substring(0, 24)}...` : 'No token'}
                     </code>
-                    <button onClick={handleCopy} className="text-[var(--text-faint)] hover:text-[var(--text-primary)] transition-colors" title="Copy token">
-                      {copied ? <Check size={15} className="text-emerald-400" /> : <Copy size={15} />}
+                    <button onClick={handleCopy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                      {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
                     </button>
                   </div>
                 </div>

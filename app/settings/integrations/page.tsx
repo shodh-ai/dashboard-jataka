@@ -8,6 +8,7 @@ import {
   Loader2,
   ExternalLink,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import {
   getJiraStatus,
@@ -20,6 +21,7 @@ import {
   getSalesforceStatus,
   connectSalesforce,
   disconnectSalesforce,
+  syncSalesforceSchema,
   type SalesforceConnectionResponse,
 } from "../../../lib/salesforce-api";
 
@@ -37,6 +39,7 @@ export default function IntegrationsPage() {
   const [salesforceConnected, setSalesforceConnected] = useState(false);
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
   const [salesforceInfo, setSalesforceInfo] = useState<SalesforceConnectionResponse | null>(null);
+  const [isSyncingSchema, setIsSyncingSchema] = useState(false);
 
   // Load existing config
   useEffect(() => {
@@ -186,6 +189,21 @@ export default function IntegrationsPage() {
       alert("Salesforce disconnected successfully");
     } catch (error: any) {
       alert(`Failed to disconnect Salesforce: ${error.message}`);
+    }
+  };
+
+  const handleSyncSchema = async () => {
+    const token = await getToken();
+    if (!token) return;
+
+    try {
+      setIsSyncingSchema(true);
+      await syncSalesforceSchema(token);
+      alert('Schema sync started! Standard and custom metadata are updating in the background.');
+    } catch (error: any) {
+      alert(`Failed to sync schema: ${error.message}`);
+    } finally {
+      setIsSyncingSchema(false);
     }
   };
 
@@ -391,12 +409,27 @@ export default function IntegrationsPage() {
                   Disconnect
                 </button>
                 <button
+                  onClick={handleSyncSchema}
+                  disabled={isSyncingSchema}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSyncingSchema ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  {isSyncingSchema ? "Syncing..." : "Sync Schema"}
+                </button>
+                <button
                   onClick={checkSalesforceConnection}
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition"
                 >
                   Refresh Status
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Click &quot;Sync Schema&quot; after adding Salesforce objects/fields so Jataka uses the latest metadata.
+              </p>
             </div>
           ) : (
             // Not connected state

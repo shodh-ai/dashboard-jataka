@@ -65,6 +65,24 @@ export async function connectSalesforce(authToken: string): Promise<void> {
 }
 
 /**
+ * Manually trigger Salesforce schema sync for the current organization
+ */
+export async function syncSalesforceSchema(authToken: string): Promise<void> {
+  const response = await fetch(`${BASE_API}/integrations/salesforce/sync-schema`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to sync schema');
+  }
+}
+
+/**
  * Disconnect Salesforce for the current organization
  */
 export async function disconnectSalesforce(authToken: string): Promise<void> {
