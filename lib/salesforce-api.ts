@@ -6,6 +6,7 @@ const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export interface SalesforceConnectionResponse {
   connected: boolean;
+  actorRole?: string; // NEW
   user_id?: string;
   org_id?: string;
   instance_url?: string;
@@ -17,7 +18,7 @@ export interface SalesforceConnectionResponse {
 /**
  * Check Salesforce connection status for the current organization
  */
-export async function getSalesforceStatus(authToken: string): Promise<SalesforceConnectionResponse> {
+export async function getSalesforceStatus(authToken: string): Promise<SalesforceConnectionResponse[]> {
   const response = await fetch(`${BASE_API}/integrations/salesforce/status`, {
     method: 'GET',
     headers: {
@@ -38,10 +39,10 @@ export async function getSalesforceStatus(authToken: string): Promise<Salesforce
  * Initiate Salesforce OAuth flow
  * Gets the authorization URL from backend and redirects user to Salesforce
  */
-export async function connectSalesforce(authToken: string): Promise<void> {
+export async function connectSalesforce(authToken: string, role: string = 'admin'): Promise<void> {
   try {
     // First, get the authorization URL from the backend (with auth header)
-    const response = await fetch(`${BASE_API}/integrations/salesforce/auth-url`, {
+    const response = await fetch(`${BASE_API}/integrations/salesforce/auth-url?role=${role}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -85,8 +86,8 @@ export async function syncSalesforceSchema(authToken: string): Promise<void> {
 /**
  * Disconnect Salesforce for the current organization
  */
-export async function disconnectSalesforce(authToken: string): Promise<void> {
-  const response = await fetch(`${BASE_API}/integrations/salesforce/disconnect`, {
+export async function disconnectSalesforce(authToken: string, role: string = 'admin'): Promise<void> {
+  const response = await fetch(`${BASE_API}/integrations/salesforce/disconnect?role=${role}`, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',

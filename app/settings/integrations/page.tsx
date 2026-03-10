@@ -36,9 +36,8 @@ export default function IntegrationsPage() {
   const [newProjectKey, setNewProjectKey] = useState("");
 
   // Salesforce state
-  const [salesforceConnected, setSalesforceConnected] = useState(false);
+  const [salesforceConnections, setSalesforceConnections] = useState<SalesforceConnectionResponse[]>([]);
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
-  const [salesforceInfo, setSalesforceInfo] = useState<SalesforceConnectionResponse | null>(null);
   const [isSyncingSchema, setIsSyncingSchema] = useState(false);
 
   // Load existing config
@@ -151,45 +150,27 @@ export default function IntegrationsPage() {
       if (!token) return;
 
       const data = await getSalesforceStatus(token);
-      setSalesforceConnected(data.connected);
-      if (data.connected) {
-        setSalesforceInfo(data);
-      }
+      setSalesforceConnections(data || []);
     } catch (error) {
-      console.error("Failed to check Salesforce connection:", error);
-      setSalesforceConnected(false);
+      console.error(error);
+      setSalesforceConnections([]);
     } finally {
       setCheckingSalesforce(false);
     }
   };
 
-  const handleConnectSalesforce = async () => {
+  const handleConnectSalesforce = async (role: string) => {
     const token = await getToken();
     if (!token) return;
-
-    try {
-      // Fetch auth URL and redirect to Salesforce
-      await connectSalesforce(token);
-    } catch (error) {
-      console.error('Failed to connect to Salesforce:', error);
-      alert('Failed to connect to Salesforce. Please try again.');
-    }
+    await connectSalesforce(token, role);
   };
 
-  const handleDisconnectSalesforce = async () => {
-    if (!confirm("Are you sure you want to disconnect Salesforce?")) return;
-
-    try {
-      const token = await getToken();
-      if (!token) return;
-
-      await disconnectSalesforce(token);
-      setSalesforceConnected(false);
-      setSalesforceInfo(null);
-      alert("Salesforce disconnected successfully");
-    } catch (error: any) {
-      alert(`Failed to disconnect Salesforce: ${error.message}`);
-    }
+  const handleDisconnectSalesforce = async (role: string) => {
+    if (!confirm("Disconnect this role?")) return;
+    const token = await getToken();
+    if (!token) return;
+    await disconnectSalesforce(token, role);
+    await checkSalesforceConnection();
   };
 
   const handleSyncSchema = async () => {
@@ -365,10 +346,10 @@ export default function IntegrationsPage() {
               </p>
             </div>
 
-            {salesforceConnected && (
+            {salesforceConnections.length > 0 && (
               <div className="flex items-center gap-2 text-green-400">
                 <CheckCircle className="w-5 h-5" />
-                <span>Connected</span>
+                <span>{salesforceConnections.length} Connected</span>
               </div>
             )}
           </div>
@@ -377,76 +358,36 @@ export default function IntegrationsPage() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
             </div>
-          ) : salesforceConnected && salesforceInfo ? (
-            // Connected state
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <label className="text-gray-400">Instance URL</label>
-                  <p className="text-white">{salesforceInfo.instance_url}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Username</label>
-                  <p className="text-white">{salesforceInfo.sf_username}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Org ID</label>
-                  <p className="text-white font-mono text-xs">{salesforceInfo.org_id}</p>
-                </div>
-                <div>
-                  <label className="text-gray-400">Connected</label>
-                  <p className="text-white">
-                    {salesforceInfo.connected_at && new Date(salesforceInfo.connected_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleDisconnectSalesforce}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
-                >
-                  Disconnect
-                </button>
-                <button
-                  onClick={handleSyncSchema}
-                  disabled={isSyncingSchema}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isSyncingSchema ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  {isSyncingSchema ? "Syncing..." : "Sync Schema"}
-                </button>
-                <button
-                  onClick={checkSalesforceConnection}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition"
-                >
-                  Refresh Status
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Click &quot;Sync Schema&quot; after adding Salesforce objects/fields so Jataka uses the latest metadata.
-              </p>
-            </div>
           ) : (
-            // Not connected state
-            <div className="space-y-4">
-              <div className="p-4 bg-blue-900/20 border border-blue-700 rounded-md">
-                <p className="text-blue-300 text-sm">
-                  Connect your Salesforce org to enable automated testing. You'll be redirected to Salesforce to authorize access.
-                </p>
-              </div>
-
-              <button
-                onClick={handleConnectSalesforce}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition font-semibold flex items-center gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Connect with Salesforce
-              </button>
+            <div className="space-y-4 mt-4">
+              {[
+                { id: 'admin', label: 'System Admin (Default)' },
+                { id: 'sales_rep', label: 'Sales Rep' },
+                { id: 'manager', label: 'Manager / Approver' }
+              ].map(role => {
+                const conn = salesforceConnections.find(c => c.actorRole === role.id);
+                return (
+                  <div key={role.id} className="p-4 bg-gray-900 border border-gray-700 rounded-lg flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-white">{role.label}</p>
+                      {conn ? (
+                        <p className="text-sm text-green-400">Connected: {conn.sf_username}</p>
+                      ) : (
+                        <p className="text-sm text-gray-500">Not connected</p>
+                      )}
+                    </div>
+                    {conn ? (
+                      <button onClick={() => handleDisconnectSalesforce(role.id)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition">
+                        Disconnect
+                      </button>
+                    ) : (
+                      <button onClick={() => handleConnectSalesforce(role.id)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition">
+                        Connect
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
