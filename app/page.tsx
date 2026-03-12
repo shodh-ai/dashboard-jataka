@@ -121,6 +121,7 @@ export default function Home() {
   const [viewState, setViewState] = useState<'loading' | 'dashboard' | 'onboarding'>('loading');
   const [companyName, setCompanyName] = useState("");
   const [orgName, setOrgName] = useState("");
+  const [billingTier, setBillingTier] = useState<string>("FREE");
   const [brains, setBrains] = useState<any[]>([]);
   const [activeBrain, setActiveBrain] = useState<string>("");
   const [newBrainName, setNewBrainName] = useState("");
@@ -187,9 +188,9 @@ export default function Home() {
           const data = await res.json();
 
           // Try multiple possible locations for org name
+          const orgData = data.org || data.organization || {}; // <--- Helper for org data
           const orgNameValue = 
-            data.org?.name || 
-            data.organization?.name || 
+            orgData.name || 
             data.orgName || 
             data.organizationName ||
             data.company?.name ||
@@ -198,14 +199,11 @@ export default function Home() {
 
           if (orgNameValue) {
             setOrgName(orgNameValue);
-          } else {
-            // Log the response structure for debugging
-            console.log('Sync API response (no org name found):', JSON.stringify(data, null, 2));
-            // Check if response has organization data at all
-            if (data.org) {
-              console.log('data.org structure:', JSON.stringify(data.org, null, 2));
-            }
-          }
+          } 
+          
+          // ---> ADD THESE TWO LINES <---
+          const tier = orgData.billingTier || 'FREE';
+          setBillingTier(tier);
 
           const rawRole = data.user?.role || data.orgRole || ''; 
           if (rawRole === 'senior' || rawRole === 'org:admin' || rawRole === 'admin' || rawRole === 'teacher') {
@@ -664,6 +662,11 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {/* ---> ADD THIS NEW TIER BADGE <--- */}
+                <span className={`badge ${['ENTERPRISE', 'VIP_BETA', 'PRO'].includes(billingTier) ? 'badge-emerald' : 'badge-indigo'}`}>
+                  {billingTier === 'FREE' ? 'Free Tier' : billingTier}
+                </span>
+
                 {userRole === 'ARCHITECT' && (
                   <span className="badge badge-amber">
                     <Crown size={10} /> Architect
