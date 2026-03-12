@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Network,
   Settings,
+  Activity,
   ChevronsLeft,
   ChevronsRight,
   Hexagon,
@@ -31,6 +32,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
     { label: "Knowledge Graph", href: "/#graph", icon: Network },
+    { label: "Audit Logs", href: "/audit-logs", icon: Activity },
     { label: "Settings", href: "/settings/integrations", icon: Settings, architectOnly: true },
   ];
 
