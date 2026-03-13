@@ -26,8 +26,12 @@ import {
   Brain,
   Terminal,
   ExternalLink,
+  Play,
+  X,
+  Database,
 } from "lucide-react";
 import GraphVisualizer from "./components/GraphVisualizer";
+import ReplayPlayer from "./components/ReplayPlayer";
 import { useOrganizationList } from "@clerk/nextjs";
 import Sidebar from "./components/Sidebar";
 
@@ -133,6 +137,14 @@ export default function Home() {
   const [previousMetrics, setPreviousMetrics] = useState<Metrics | null>(null);
   const [isGraphFullScreen, setIsGraphFullScreen] = useState(false);
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
+  const [selectedReplay, setSelectedReplay] = useState<string | null>(null);
+
+  const MOCK_PR_SCANS = [
+    { id: 'pr-108', name: 'fix/revenue-schedule-trigger', branch: 'main', status: 'Blocked', limits: '102/100 SOQL', eventsUrl: '/mock-replay.json', time: '10 mins ago' },
+    { id: 'pr-107', name: 'feat/cpq-discount-automation', branch: 'main', status: 'Passed', limits: '45/100 SOQL', eventsUrl: null, time: '2 hours ago' },
+    { id: 'pr-106', name: 'chore/update-api-version', branch: 'main', status: 'Passed', limits: '12/100 SOQL', eventsUrl: null, time: '5 hours ago' },
+    { id: 'pr-105', name: 'feat/batch-lead-routing', branch: 'main', status: 'Blocked', limits: '150/100 SOQL', eventsUrl: '/mock-replay-2.json', time: '1 day ago' },
+  ];
   
   useEffect(() => {
     if (!isLoaded || !isOrgListLoaded || !isSignedIn) return;
@@ -681,183 +693,97 @@ export default function Home() {
             </header>
 
             <div className="px-6 lg:px-10 py-6 max-w-6xl mx-auto">
-              {/* ─── Metrics Section ─── */}
+              {/* ─── Command Center Wallet ─── */}
               <section className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="section-title">Metrics</h2>
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpen(!open)}
-                      className="btn-secondary text-xs py-1.5"
-                    >
-                      {timePeriod}
-                      <ChevronDown size={12} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-                    </button>
-                    {open && (
-                      <div className="absolute right-0 z-50 mt-1 min-w-[140px] rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] shadow-lg overflow-hidden">
-                        {timeOptions.filter((option) => option !== timePeriod).map((item) => (
-                          <button
-                            key={item}
-                            onClick={() => { setTimePeriod(item); setOpen(false); }}
-                            className="block w-full px-3 py-2 text-left text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-card)] hover:text-[var(--text-primary)] transition-colors"
-                          >
-                            {item}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">Command Center</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="card p-6 border-l-4 border-[var(--accent)] flex flex-col justify-center">
+                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">PRs Protected This Month</div>
+                    <div className="text-4xl font-bold text-[var(--text-primary)]">124</div>
+                  </div>
+                  <div className="card p-6 border-l-4 border-emerald-500 flex flex-col justify-center">
+                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">Governor Limits Prevented</div>
+                    <div className="text-4xl font-bold text-[var(--text-primary)]">18</div>
+                  </div>
+                  <div className="card p-6 border-l-4 border-amber-500 flex flex-col justify-center">
+                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">Credits Remaining</div>
+                    <div className="flex items-end justify-between mt-1 mb-2">
+                       <span className="text-4xl font-bold text-[var(--text-primary)]">85<span className="text-xl text-[var(--text-muted)] font-normal">/100</span></span>
+                       <span className="text-sm font-medium text-amber-500 mb-2">85%</span>
+                    </div>
+                    <div className="w-full bg-[var(--bg-base)] rounded-full h-2">
+                      <div className="bg-amber-500 h-2 rounded-full transition-all duration-1000" style={{ width: '85%' }}></div>
+                    </div>
                   </div>
                 </div>
-
-                {metricsLoading && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {[1, 2, 3, 4, 5].map((key) => (
-                      <div key={key} className="skeleton h-24" />
-                    ))}
-                  </div>
-                )}
-
-                {!metricsLoading && metrics && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div className="stat-card">
-                      <div className="stat-label">Deflection Rate</div>
-                      <div className="stat-value">{metrics.senior_deflection_rate.toFixed(1)}%</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-label">Files</div>
-                      <div className="stat-value">{metrics.knowledge_coverage_files}</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-label">Drift</div>
-                      <div className="stat-value">{metrics.drift_score.toFixed(1)}%</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-label">Mastery</div>
-                      <div className="stat-value">{Math.round(metrics.avg_hours_to_mastery)}h</div>
-                    </div>
-                    <div className="stat-card">
-                      <div className="stat-label">Success</div>
-                      <div className="stat-value">{metrics.context_injection_rate.toFixed(1)}%</div>
-                    </div>
-                  </div>
-                )}
-
-                {metricsError && (
-                  <div className="mt-4 rounded-lg bg-[var(--warning)]/10 border border-[var(--warning)]/20 px-3 py-2 text-xs text-[var(--warning)]">
-                    {metricsError}
-                  </div>
-                )}
               </section>
 
-              {/* ─── Brain Context + Actions ─── */}
-              <section className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Active Brain */}
-                <div className="card p-5">
-                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Active Brain</h3>
-                  <div className="relative mb-3">
-                    <select
-                      className="input select"
-                      value={activeBrain}
-                      onChange={async (e) => {
-                        const kb = e.target.value;
-                        setActiveBrain(kb);
-                        const brain = brains.find((b: any) => b.knowledgeBaseId === kb);
-                        if (brain && token && BASE_API) {
-                          try {
-                            await fetch(`${BASE_API}/curriculum/switch`, {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                Authorization: `Bearer ${token}`,
-                              },
-                              body: JSON.stringify({ curriculumId: brain.id }),
-                            });
-                          } catch (err) {
-                            console.error('Failed to switch brain', err);
-                          }
-                        }
-                      }}
-                    >
-                      {brains.length > 0 ? (
-                        brains.map((b) => (
-                          <option key={b.id} value={b.knowledgeBaseId}>
-                            {b.name}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="">No brains available</option>
-                      )}
-                    </select>
+              {/* ─── Recent PR Scans Table ─── */}
+              <section className="mb-8">
+                <div className="card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-surface)]">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-[var(--accent)]" />
+                      Recent PR Scans
+                    </h3>
+                    <button className="text-xs btn-secondary py-1 px-3">View All</button>
                   </div>
-                  <button
-                    onClick={handleConnectVsCode}
-                    className="btn-primary w-full"
-                  >
-                    <ExternalLink size={14} />
-                    Connect VS Code
-                  </button>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm whitespace-nowrap">
+                      <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] uppercase text-[11px] tracking-wider">
+                        <tr>
+                          <th className="px-5 py-3 font-medium">PR Name / Branch</th>
+                          <th className="px-5 py-3 font-medium">Status</th>
+                          <th className="px-5 py-3 font-medium">SOQL Limits</th>
+                          <th className="px-5 py-3 font-medium text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--border-default)]">
+                        {MOCK_PR_SCANS.map(scan => (
+                          <tr key={scan.id} className="hover:bg-[var(--bg-base)]/50 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="font-medium text-[var(--text-primary)] flex items-center gap-2">
+                                {scan.name}
+                                <span className="text-[11px] text-[var(--text-muted)] font-normal">{scan.time}</span>
+                              </div>
+                              <div className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-1 font-mono">
+                                <Code2 size={12} /> {scan.branch}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              {scan.status === 'Passed' ? (
+                                <span className="badge badge-emerald bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"><Check size={12} className="mr-1"/> Passed</span>
+                              ) : (
+                                <span className="badge badge-rose bg-rose-500/10 text-rose-500 border border-rose-500/20"><AlertTriangle size={12} className="mr-1"/> Blocked</span>
+                              )}
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-1.5">
+                                <Database size={14} className={scan.status === 'Blocked' ? 'text-rose-500' : 'text-[var(--text-muted)]'} />
+                                <span className={`font-mono text-xs ${scan.status === 'Blocked' ? 'text-rose-500 font-semibold' : 'text-[var(--text-secondary)]'}`}>
+                                  {scan.limits}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                              {scan.status === 'Blocked' && (
+                                 <button 
+                                   onClick={() => setSelectedReplay(scan.eventsUrl || '/mock-replay.json')}
+                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-[var(--bg-base)]"
+                                 >
+                                   <Play size={14} fill="currentColor" /> Play Video
+                                 </button>
+                              )}
+                              {scan.status === 'Passed' && (
+                                 <button className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 font-medium">Details</button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-
-                {/* Create Brain */}
-                {userRole === 'ARCHITECT' ? (
-                  <div className="card p-5">
-                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">New Brain</h3>
-                    <input
-                      type="text"
-                      className="input mb-3"
-                      placeholder="e.g. Mobile App V2"
-                      value={newBrainName}
-                      onChange={(e) => setNewBrainName(e.target.value)}
-                    />
-                    <button
-                      onClick={handleCreateBrain}
-                      disabled={!newBrainName.trim()}
-                      className="btn-primary w-full"
-                    >
-                      <Plus size={14} />
-                      Create Brain
-                    </button>
-                  </div>
-                ) : (
-                  <div className="card p-5 flex items-center justify-center text-center">
-                    <p className="text-sm text-[var(--text-muted)]">Brain creation requires <span className="text-[var(--text-secondary)]">Architect</span> role</p>
-                  </div>
-                )}
-
-                {/* Integrations */}
-                {userRole === 'ARCHITECT' ? (
-                  <div className="card p-5">
-                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Integrations</h3>
-                    <div className="space-y-2">
-                      <button
-                        onClick={handleSlackInstall}
-                        className="btn-secondary w-full justify-start"
-                      >
-                        <img src="/slack-new.png" alt="Slack" className="w-4 h-4" />
-                        Add to Slack
-                      </button>
-                      <button
-                        onClick={handleGithubInstall}
-                        className="btn-secondary w-full justify-start"
-                      >
-                        <img src="/github.png" alt="GitHub" className="w-4 h-4" />
-                        Connect GitHub
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="card p-5">
-                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Slack Command</h3>
-                    <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
-                      <code className="flex-1 text-xs text-[var(--text-secondary)] font-mono truncate">
-                        /connect {user?.primaryEmailAddress?.emailAddress || 'user@example.com'}
-                      </code>
-                      <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-                        {copiedSlackCommand ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </section>
 
               {/* ─── Graph Visualizer ─── */}
@@ -897,88 +823,107 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* ─── Utility Cards ─── */}
-              <section className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Invite Team */}
-                {userRole === 'ARCHITECT' ? (
-                  <div className="card p-5">
-                    <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Invite Team</h3>
-                    <div className="relative mb-3">
-                      <input
-                        type="email"
-                        className="input pr-10"
-                        placeholder="team@company.com"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                      />
-                      <button
-                        onClick={handleInvite}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-                        title="Send invite"
-                      >
-                        <Send size={14} />
+              {/* ─── Developer Tools / Integrations (Compact) ─── */}
+              <section className="mb-8">
+                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">Developer Tools</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Active Brain */}
+                  <div className="card p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Brain size={12}/> Active Base</h3>
+                    </div>
+                    <select
+                      className="input select text-xs py-1 px-2 min-h-0 h-7 mb-2"
+                      value={activeBrain}
+                      onChange={async (e) => {
+                        const kb = e.target.value;
+                        setActiveBrain(kb);
+                        const brain = brains.find((b: any) => b.knowledgeBaseId === kb);
+                        if (brain && token && BASE_API) {
+                          try {
+                            await fetch(`${BASE_API}/curriculum/switch`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ curriculumId: brain.id }),
+                            });
+                          } catch (err) {}
+                        }
+                      }}
+                    >
+                      {brains.length > 0 ? brains.map((b) => (<option key={b.id} value={b.knowledgeBaseId}>{b.name}</option>)) : <option value="">No brains</option>}
+                    </select>
+                    <button onClick={handleConnectVsCode} className="btn-secondary text-[11px] w-full py-1"><ExternalLink size={10} /> VS Code</button>
+                  </div>
+                  
+                  {/* Integrations */}
+                  {userRole === 'ARCHITECT' && (
+                    <div className="card p-3 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Plug size={12}/> Install</h3>
+                      </div>
+                      <div className="flex gap-2 h-full flex-col justify-end">
+                        <button onClick={handleSlackInstall} className="btn-secondary w-full text-[11px] py-1 px-0 justify-center"><img src="/slack-new.png" alt="Slack" className="w-3 h-3 mr-1" /> Slack</button>
+                        <button onClick={handleGithubInstall} className="btn-secondary w-full text-[11px] py-1 px-0 justify-center"><img src="/github.png" alt="GitHub" className="w-3 h-3 mr-1" /> GitHub</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Slack Command */}
+                  <div className="card p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Terminal size={12}/> Slack Connect</h3>
+                    </div>
+                    <div className="flex items-center gap-2 rounded bg-[var(--bg-base)] px-2 py-1.5 border border-[var(--border-default)] mt-auto">
+                      <code className="flex-1 text-[10px] text-[var(--text-secondary)] font-mono truncate">/connect {user?.primaryEmailAddress?.emailAddress || 'user'}</code>
+                      <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                        {copiedSlackCommand ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
                       </button>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setInviteRole('developer')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                          inviteRole === 'developer'
-                            ? 'bg-[var(--accent)]/10 border-[var(--accent)]/50 text-[var(--accent-light)]'
-                            : 'bg-transparent border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                        }`}
-                      >
-                        Developer
-                      </button>
-                      <button
-                        onClick={() => setInviteRole('architect')}
-                        className={`flex-1 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-                          inviteRole === 'architect'
-                            ? 'bg-[var(--warning)]/10 border-[var(--warning)]/50 text-[var(--warning)]'
-                            : 'bg-transparent border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                        }`}
-                      >
-                        Architect
+                  </div>
+
+                  {/* Access Token */}
+                  <div className="card p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Key size={12}/> API Token</h3>
+                    </div>
+                    <div className="flex items-center gap-2 rounded bg-[var(--bg-base)] px-2 py-1.5 border border-[var(--border-default)] mt-auto">
+                      <code className="flex-1 truncate text-[10px] text-[var(--text-secondary)] font-mono">
+                        {loading ? '...' : token ? `${token.substring(0, 16)}...` : 'None'}
+                      </code>
+                      <button onClick={handleCopy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
+                        {copied ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
                       </button>
                     </div>
-                    {inviteStatus && (
-                      <p className="mt-3 text-xs text-[var(--text-muted)]">{inviteStatus}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="card p-5 flex items-center justify-center text-center">
-                    <p className="text-sm text-[var(--text-muted)]">Contact an <span className="text-[var(--text-secondary)]">Architect</span> to invite team members</p>
-                  </div>
-                )}
-
-                {/* Slack Command */}
-                <div className="card p-5">
-                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Slack Command</h3>
-                  <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
-                    <code className="flex-1 text-xs text-[var(--text-secondary)] font-mono truncate">
-                      /connect {user?.primaryEmailAddress?.emailAddress || 'user@example.com'}
-                    </code>
-                    <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-                      {copiedSlackCommand ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Access Token */}
-                <div className="card p-5">
-                  <h3 className="text-sm font-medium text-[var(--text-primary)] mb-3">Access Token</h3>
-                  <div className="flex items-center gap-2 rounded-lg bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
-                    <code className="flex-1 truncate text-xs text-[var(--text-secondary)] font-mono">
-                      {loading ? 'Loading...' : token ? `${token.substring(0, 24)}...` : 'No token'}
-                    </code>
-                    <button onClick={handleCopy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-                      {copied ? <Check size={14} className="text-[var(--success)]" /> : <Copy size={14} />}
-                    </button>
                   </div>
                 </div>
               </section>
             </div>
           </div>
+
+          {/* ─── Replay Modal ─── */}
+          {selectedReplay && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-[var(--bg-surface)] w-full max-w-5xl rounded-xl shadow-2xl border border-[var(--border-default)] flex flex-col max-h-[90vh] overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)] bg-[var(--bg-base)]">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-rose-500/10 rounded-lg">
+                      <AlertTriangle className="text-rose-500" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[var(--text-primary)]">Incident Replay</h3>
+                      <p className="text-xs text-[var(--text-secondary)]">Watch the AI bot trace execution and crash in Sandbox</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedReplay(null)} className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface)] rounded-lg transition-colors">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-black relative p-0 min-h-[500px]">
+                   <ReplayPlayer eventsUrl={selectedReplay} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </main>
