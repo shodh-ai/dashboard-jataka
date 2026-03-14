@@ -62,6 +62,8 @@ export default function IntegrationsPage() {
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedSlack, setCopiedSlack] = useState(false);
 
+  const isSalesforceAdminConnected = salesforceConnections.some((c) => c.actorRole === "admin");
+
   const refreshBrains = async (token: string) => {
     if (!BASE_API) return;
     const brainsRes = await fetch(`${BASE_API}/curriculum/list`, {
@@ -247,6 +249,10 @@ export default function IntegrationsPage() {
   };
 
   const handleGithubInstall = () => {
+    if (!isSalesforceAdminConnected) {
+      alert("Connect Salesforce (System Admin) first, then install GitHub.");
+      return;
+    }
     window.location.href = GITHUB_INSTALL_URL;
   };
 
@@ -335,9 +341,18 @@ export default function IntegrationsPage() {
 
             <div className="card p-4">
               <div className="flex items-center gap-2 text-sm font-medium mb-2"><Github size={14} /> GitHub</div>
-              <button onClick={handleGithubInstall} className="btn-secondary w-full text-xs">
+              <button
+                onClick={handleGithubInstall}
+                disabled={!isSalesforceAdminConnected}
+                className="btn-secondary w-full text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <ExternalLink size={14} /> Install GitHub App
               </button>
+              {!isSalesforceAdminConnected && (
+                <p className="mt-2 text-[10px] text-amber-500 flex items-center gap-1">
+                  <AlertCircle size={11} /> Connect Salesforce System Admin first
+                </p>
+              )}
             </div>
 
             <div className="card p-4">
@@ -479,7 +494,7 @@ export default function IntegrationsPage() {
                     })}
                   </div>
 
-                  {salesforceConnections.some((c) => c.actorRole === "admin") && (
+                  {isSalesforceAdminConnected && (
                     <div className="mt-4 pt-4 border-t border-[var(--border-default)] grid grid-cols-1 md:grid-cols-2 gap-3">
                       <button onClick={handleSyncSchema} disabled={isSyncingSchema} className="btn-secondary text-xs justify-center">
                         {isSyncingSchema ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
