@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import Sidebar from "../Components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import { AlertTriangle, CheckCircle, Database, Server, ExternalLink, GitPullRequest, Loader2 } from "lucide-react";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -14,7 +14,10 @@ export default function PRRadarDashboard() {
 
   useEffect(() => {
     async function fetchRadarData() {
-      if (!isSignedIn) return;
+      if (!isSignedIn || !BASE_API) {
+        setLoading(false);
+        return;
+      }
       try {
         const token = await getToken();
         const res = await fetch(`${BASE_API}/integrations/github/active-pr-health`, {
@@ -29,9 +32,22 @@ export default function PRRadarDashboard() {
       }
     }
     fetchRadarData();
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, getToken, BASE_API]);
 
   if (!isLoaded || !isSignedIn) return null;
+  
+  if (!BASE_API) {
+    return (
+      <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+        <Sidebar orgName="Your Org" userRole="ARCHITECT" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-[var(--text-secondary)]">API endpoint not configured</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Bucket the data
   const criticalPRs = reports.filter(pr => pr.overallStatus === "CRITICAL");
