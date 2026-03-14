@@ -228,7 +228,7 @@ export default function IntegrationsPage() {
 
     try {
       setIsSyncingDependencies(true);
-      const res = await fetch(`${BASE_API}/api/integrations/salesforce/sync-dependencies`, {
+      const res = await fetch(`${BASE_API}/integrations/salesforce/sync-dependencies`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
