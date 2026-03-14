@@ -56,9 +56,29 @@ export default function IntegrationsPage() {
 
   const [brains, setBrains] = useState<any[]>([]);
   const [activeBrain, setActiveBrain] = useState("");
+  const [newBrainName, setNewBrainName] = useState("");
+  const [creatingBrain, setCreatingBrain] = useState(false);
   const [tokenPreview, setTokenPreview] = useState("");
   const [copiedToken, setCopiedToken] = useState(false);
   const [copiedSlack, setCopiedSlack] = useState(false);
+
+  const refreshBrains = async (token: string) => {
+    if (!BASE_API) return;
+    const brainsRes = await fetch(`${BASE_API}/curriculum/list`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!brainsRes.ok) return;
+
+    const brainsData = await brainsRes.json();
+    const list = Array.isArray(brainsData.brains) ? brainsData.brains : [];
+    setBrains(list);
+    if (list.length > 0) {
+      const current = list.find((b: any) => b.id === brainsData.activeBrainId);
+      const selected = current || list[0];
+      setActiveBrain(selected.knowledgeBaseId);
+    }
+  };
 
   const checkJiraConnection = async () => {
     try {
@@ -106,9 +126,8 @@ export default function IntegrationsPage() {
 
       if (BASE_API) {
         try {
-          const [syncRes, brainsRes] = await Promise.all([
+          const [syncRes] = await Promise.all([
             fetch(`${BASE_API}/auth/sync`, { headers: { Authorization: `Bearer ${token}` } }),
-            fetch(`${BASE_API}/curriculum/list`, { headers: { Authorization: `Bearer ${token}` } }),
           ]);
 
           if (syncRes.ok) {
@@ -123,16 +142,7 @@ export default function IntegrationsPage() {
             }
           }
 
-          if (brainsRes.ok) {
-            const brainsData = await brainsRes.json();
-            const list = Array.isArray(brainsData.brains) ? brainsData.brains : [];
-            setBrains(list);
-            if (list.length > 0) {
-              const current = list.find((b: any) => b.id === brainsData.activeBrainId);
-              const selected = current || list[0];
-              setActiveBrain(selected.knowledgeBaseId);
-            }
-          }
+          await refreshBrains(token);
         } catch (e) {
           console.error("Failed to bootstrap integrations page", e);
         }
@@ -249,6 +259,31 @@ export default function IntegrationsPage() {
     window.location.href = `vscode://${extensionId}/auth?${params.toString()}`;
   };
 
+  const handleCreateBrain = async () => {
+    const token = await getToken();
+    if (!token || !newBrainName.trim() || !BASE_API) return;
+
+    try {
+      setCreatingBrain(true);
+      const res = await fetch(`${BASE_API}/curriculum/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newBrainName.trim() }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create brain");
+      setNewBrainName("");
+      await refreshBrains(token);
+    } catch (error: any) {
+      alert(error?.message || "Failed to create brain");
+    } finally {
+      setCreatingBrain(false);
+    }
+  };
+
   const copyToken = async () => {
     const token = await getToken();
     if (!token) return;
@@ -334,6 +369,21 @@ export default function IntegrationsPage() {
               <button onClick={handleConnectVsCode} className="btn-secondary w-full text-xs">
                 <ExternalLink size={14} /> Connect VS Code
               </button>
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={newBrainName}
+                  onChange={(e) => setNewBrainName(e.target.value)}
+                  className="input text-xs h-8"
+                  placeholder="New brain name"
+                />
+                <button
+                  onClick={handleCreateBrain}
+                  disabled={creatingBrain || !newBrainName.trim()}
+                  className="btn-secondary text-xs whitespace-nowrap"
+                >
+                  {creatingBrain ? "Creating..." : "Create"}
+                </button>
+              </div>
               <div className="mt-3 flex items-center gap-2 rounded bg-[var(--bg-base)] px-2 py-1.5 border border-[var(--border-default)]">
                 <Key size={12} className="text-[var(--text-muted)]" />
                 <code className="flex-1 truncate text-[10px] text-[var(--text-secondary)] font-mono">{tokenPreview || "No token"}</code>
