@@ -23,6 +23,7 @@ import {
   Sparkles,
   Users,
   Plug,
+  Network,
   Brain,
   Terminal,
   ExternalLink,
@@ -34,6 +35,7 @@ import GraphVisualizer from "./components/GraphVisualizer";
 import ReplayPlayer from "./components/ReplayPlayer";
 import { useOrganizationList } from "@clerk/nextjs";
 import Sidebar from "./components/Sidebar";
+import Link from "next/link";
 
 interface Metrics {
   senior_deflection_rate: number;
@@ -139,13 +141,6 @@ export default function Home() {
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [selectedReplay, setSelectedReplay] = useState<string | null>(null);
 
-  const MOCK_PR_SCANS = [
-    { id: 'pr-108', name: 'fix/revenue-schedule-trigger', branch: 'main', status: 'Blocked', limits: '102/100 SOQL', eventsUrl: '/mock-replay.json', time: '10 mins ago' },
-    { id: 'pr-107', name: 'feat/cpq-discount-automation', branch: 'main', status: 'Passed', limits: '45/100 SOQL', eventsUrl: null, time: '2 hours ago' },
-    { id: 'pr-106', name: 'chore/update-api-version', branch: 'main', status: 'Passed', limits: '12/100 SOQL', eventsUrl: null, time: '5 hours ago' },
-    { id: 'pr-105', name: 'feat/batch-lead-routing', branch: 'main', status: 'Blocked', limits: '150/100 SOQL', eventsUrl: '/mock-replay-2.json', time: '1 day ago' },
-  ];
-  
   useEffect(() => {
     if (!isLoaded || !isOrgListLoaded || !isSignedIn) return;
 
@@ -693,208 +688,144 @@ export default function Home() {
             </header>
 
             <div className="px-6 lg:px-10 py-6 max-w-6xl mx-auto">
-              {/* ─── Command Center Wallet ─── */}
+              {/* ─── Real Snapshot ─── */}
               <section className="mb-8">
-                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">Command Center</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="card p-6 border-l-4 border-[var(--accent)] flex flex-col justify-center">
-                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">PRs Protected This Month</div>
-                    <div className="text-4xl font-bold text-[var(--text-primary)]">124</div>
+                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">System Snapshot</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="card p-5 border-l-4 border-[var(--accent)]">
+                    <div className="text-sm text-[var(--text-secondary)]">Total Workflows</div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">{workflows.length}</div>
                   </div>
-                  <div className="card p-6 border-l-4 border-emerald-500 flex flex-col justify-center">
-                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">Governor Limits Prevented</div>
-                    <div className="text-4xl font-bold text-[var(--text-primary)]">18</div>
+                  <div className="card p-5 border-l-4 border-emerald-500">
+                    <div className="text-sm text-[var(--text-secondary)]">Healthy Workflows</div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">
+                      {
+                        workflows.filter((wf) =>
+                          ["healthy", "verified", "success", "ok"].includes(
+                            String(wf.status || "").toLowerCase(),
+                          ),
+                        ).length
+                      }
+                    </div>
                   </div>
-                  <div className="card p-6 border-l-4 border-amber-500 flex flex-col justify-center">
-                    <div className="text-sm text-[var(--text-secondary)] font-medium mb-1">Credits Remaining</div>
-                    <div className="flex items-end justify-between mt-1 mb-2">
-                       <span className="text-4xl font-bold text-[var(--text-primary)]">85<span className="text-xl text-[var(--text-muted)] font-normal">/100</span></span>
-                       <span className="text-sm font-medium text-amber-500 mb-2">85%</span>
+                  <div className="card p-5 border-l-4 border-amber-500">
+                    <div className="text-sm text-[var(--text-secondary)]">Needs Attention</div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">
+                      {
+                        workflows.filter((wf) =>
+                          ["drifted", "broken", "failed", "warning", "critical"].includes(
+                            String(wf.status || "").toLowerCase(),
+                          ),
+                        ).length
+                      }
                     </div>
-                    <div className="w-full bg-[var(--bg-base)] rounded-full h-2">
-                      <div className="bg-amber-500 h-2 rounded-full transition-all duration-1000" style={{ width: '85%' }}></div>
-                    </div>
+                  </div>
+                  <div className="card p-5 border-l-4 border-indigo-500">
+                    <div className="text-sm text-[var(--text-secondary)]">Healer Patches</div>
+                    <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">{healerLog.length}</div>
                   </div>
                 </div>
               </section>
 
-              {/* ─── Recent PR Scans Table ─── */}
+              <section className="mb-8">
+                <div className="card p-4 flex flex-wrap items-center gap-3">
+                  <Link href="/dependency-graph" className="btn-secondary text-xs py-1.5">
+                    <Network size={14} /> Dependency Graph
+                  </Link>
+                  <Link href="/integrations" className="btn-secondary text-xs py-1.5">
+                    <Plug size={14} /> Integrations
+                  </Link>
+                  <Link href="/active-tests" className="btn-secondary text-xs py-1.5">
+                    <Activity size={14} /> Active Tests
+                  </Link>
+                  <button
+                    onClick={refreshQaData}
+                    className="btn-secondary text-xs py-1.5"
+                    disabled={qaLoading}
+                  >
+                    {qaLoading ? "Refreshing..." : "Refresh Live Data"}
+                  </button>
+                </div>
+              </section>
+
+              {/* ─── Live Workflows Table ─── */}
               <section className="mb-8">
                 <div className="card overflow-hidden">
                   <div className="px-5 py-4 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-surface)]">
                     <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
                       <ShieldCheck size={16} className="text-[var(--accent)]" />
-                      Recent PR Scans
+                      Workflow Health (Live)
                     </h3>
-                    <button className="text-xs btn-secondary py-1 px-3">View All</button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] uppercase text-[11px] tracking-wider">
                         <tr>
-                          <th className="px-5 py-3 font-medium">PR Name / Branch</th>
+                          <th className="px-5 py-3 font-medium">Workflow</th>
                           <th className="px-5 py-3 font-medium">Status</th>
-                          <th className="px-5 py-3 font-medium">SOQL Limits</th>
-                          <th className="px-5 py-3 font-medium text-right">Action</th>
+                          <th className="px-5 py-3 font-medium">Steps</th>
+                          <th className="px-5 py-3 font-medium">Files</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--border-default)]">
-                        {MOCK_PR_SCANS.map(scan => (
-                          <tr key={scan.id} className="hover:bg-[var(--bg-base)]/50 transition-colors">
-                            <td className="px-5 py-4">
-                              <div className="font-medium text-[var(--text-primary)] flex items-center gap-2">
-                                {scan.name}
-                                <span className="text-[11px] text-[var(--text-muted)] font-normal">{scan.time}</span>
-                              </div>
-                              <div className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-1 font-mono">
-                                <Code2 size={12} /> {scan.branch}
-                              </div>
-                            </td>
-                            <td className="px-5 py-4">
-                              {scan.status === 'Passed' ? (
-                                <span className="badge badge-emerald bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"><Check size={12} className="mr-1"/> Passed</span>
-                              ) : (
-                                <span className="badge badge-rose bg-rose-500/10 text-rose-500 border border-rose-500/20"><AlertTriangle size={12} className="mr-1"/> Blocked</span>
-                              )}
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-1.5">
-                                <Database size={14} className={scan.status === 'Blocked' ? 'text-rose-500' : 'text-[var(--text-muted)]'} />
-                                <span className={`font-mono text-xs ${scan.status === 'Blocked' ? 'text-rose-500 font-semibold' : 'text-[var(--text-secondary)]'}`}>
-                                  {scan.limits}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4 text-right">
-                              {scan.status === 'Blocked' && (
-                                 <button 
-                                   onClick={() => setSelectedReplay(scan.eventsUrl || '/mock-replay.json')}
-                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-md transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-[var(--bg-base)]"
-                                 >
-                                   <Play size={14} fill="currentColor" /> Play Video
-                                 </button>
-                              )}
-                              {scan.status === 'Passed' && (
-                                 <button className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-3 py-1.5 font-medium">Details</button>
-                              )}
+                        {workflows.slice(0, 10).map((wf) => {
+                          const status = String(wf.status || "unknown").toLowerCase();
+                          const good = ["healthy", "verified", "success", "ok"].includes(status);
+                          return (
+                            <tr key={wf.name} className="hover:bg-[var(--bg-base)]/50 transition-colors">
+                              <td className="px-5 py-4">
+                                <div className="font-medium text-[var(--text-primary)]">{wf.name}</div>
+                                {wf.drift_reason ? (
+                                  <div className="text-xs text-[var(--text-muted)] mt-1 truncate max-w-[420px]">
+                                    {wf.drift_reason}
+                                  </div>
+                                ) : null}
+                              </td>
+                              <td className="px-5 py-4">
+                                {good ? (
+                                  <span className="badge badge-emerald bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                    <Check size={12} className="mr-1" /> {wf.status || "healthy"}
+                                  </span>
+                                ) : (
+                                  <span className="badge badge-rose bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                    <AlertTriangle size={12} className="mr-1" /> {wf.status || "unknown"}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.step_count ?? "—"}</td>
+                              <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.file_count ?? "—"}</td>
+                            </tr>
+                          );
+                        })}
+                        {workflows.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-5 py-8 text-center text-[var(--text-muted)]">
+                              {qaError || "No workflow data yet. Seed tests from Integrations to populate this."}
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
                 </div>
               </section>
 
-              {/* ─── Graph Visualizer ─── */}
-              <section id="graph" className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="section-title mb-0">Knowledge Graph</h2>
-                  <button
-                    onClick={() => setIsGraphFullScreen(!isGraphFullScreen)}
-                    className="btn-secondary text-xs py-1.5"
-                    title={isGraphFullScreen ? "Minimize" : "Full Screen"}
-                  >
-                    {isGraphFullScreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                    <span className="hidden sm:inline">{isGraphFullScreen ? "Minimize" : "Expand"}</span>
-                  </button>
-                </div>
-                <div
-                  className={`${
-                    isGraphFullScreen
-                      ? "fixed inset-0 z-[100] bg-[var(--bg-base)] flex flex-col"
-                      : "relative card overflow-hidden"
-                  } transition-all duration-200`}
-                >
-                  <div className={`w-full ${isGraphFullScreen ? "flex-1 h-full [&>div]:h-full" : ""}`}>
-                    <GraphVisualizer baseUrl={BASE_API} activeBrainId={activeBrain} />
-                  </div>
-                  {isGraphFullScreen && (
-                    <div className="absolute z-[110] bottom-4 right-4">
-                      <button
-                        onClick={() => setIsGraphFullScreen(false)}
-                        className="btn-secondary"
-                      >
-                        <Minimize2 size={14} />
-                        Exit Full Screen
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* ─── Developer Tools / Integrations (Compact) ─── */}
+              {/* ─── Recent Healer Patches ─── */}
               <section className="mb-8">
-                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">Developer Tools</h2>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {/* Active Brain */}
-                  <div className="card p-3 flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Brain size={12}/> Active Base</h3>
-                    </div>
-                    <select
-                      className="input select text-xs py-1 px-2 min-h-0 h-7 mb-2"
-                      value={activeBrain}
-                      onChange={async (e) => {
-                        const kb = e.target.value;
-                        setActiveBrain(kb);
-                        const brain = brains.find((b: any) => b.knowledgeBaseId === kb);
-                        if (brain && token && BASE_API) {
-                          try {
-                            await fetch(`${BASE_API}/curriculum/switch`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                              body: JSON.stringify({ curriculumId: brain.id }),
-                            });
-                          } catch (err) {}
-                        }
-                      }}
-                    >
-                      {brains.length > 0 ? brains.map((b) => (<option key={b.id} value={b.knowledgeBaseId}>{b.name}</option>)) : <option value="">No brains</option>}
-                    </select>
-                    <button onClick={handleConnectVsCode} className="btn-secondary text-[11px] w-full py-1"><ExternalLink size={10} /> VS Code</button>
-                  </div>
-                  
-                  {/* Integrations */}
-                  {userRole === 'ARCHITECT' && (
-                    <div className="card p-3 flex flex-col justify-between">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Plug size={12}/> Install</h3>
-                      </div>
-                      <div className="flex gap-2 h-full flex-col justify-end">
-                        <button onClick={handleSlackInstall} className="btn-secondary w-full text-[11px] py-1 px-0 justify-center"><img src="/slack-new.png" alt="Slack" className="w-3 h-3 mr-1" /> Slack</button>
-                        <button onClick={handleGithubInstall} className="btn-secondary w-full text-[11px] py-1 px-0 justify-center"><img src="/github.png" alt="GitHub" className="w-3 h-3 mr-1" /> GitHub</button>
-                      </div>
+                <div className="card p-4">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Recent Healer Activity</h3>
+                  {healerLog.length === 0 ? (
+                    <p className="text-sm text-[var(--text-muted)]">No self-healing updates recorded yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {healerLog.slice(0, 5).map((entry, idx) => (
+                        <div key={`${entry.workflow_name || "wf"}-${idx}`} className="rounded border border-[var(--border-default)] p-3">
+                          <div className="text-sm font-medium text-[var(--text-primary)]">{entry.workflow_name || "Workflow"}</div>
+                          <div className="text-xs text-[var(--text-secondary)] mt-1">{entry.new_step}</div>
+                        </div>
+                      ))}
                     </div>
                   )}
-
-                  {/* Slack Command */}
-                  <div className="card p-3 flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Terminal size={12}/> Slack Connect</h3>
-                    </div>
-                    <div className="flex items-center gap-2 rounded bg-[var(--bg-base)] px-2 py-1.5 border border-[var(--border-default)] mt-auto">
-                      <code className="flex-1 text-[10px] text-[var(--text-secondary)] font-mono truncate">/connect {user?.primaryEmailAddress?.emailAddress || 'user'}</code>
-                      <button onClick={handleCopySlackCommand} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-                        {copiedSlackCommand ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Access Token */}
-                  <div className="card p-3 flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-[11px] font-medium text-[var(--text-primary)] flex items-center gap-1.5 uppercase tracking-wide"><Key size={12}/> API Token</h3>
-                    </div>
-                    <div className="flex items-center gap-2 rounded bg-[var(--bg-base)] px-2 py-1.5 border border-[var(--border-default)] mt-auto">
-                      <code className="flex-1 truncate text-[10px] text-[var(--text-secondary)] font-mono">
-                        {loading ? '...' : token ? `${token.substring(0, 16)}...` : 'None'}
-                      </code>
-                      <button onClick={handleCopy} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">
-                        {copied ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </section>
             </div>

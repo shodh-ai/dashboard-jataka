@@ -5,8 +5,8 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Network,
-  Settings,
   Activity,
+  Plug,
   ChevronsLeft,
   ChevronsRight,
   Hexagon,
@@ -31,14 +31,11 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
 
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
-    { label: "Knowledge Graph", href: "/#graph", icon: Network },
+    { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
+    { label: "Active Tests", href: "/active-tests", icon: Activity },
+    { label: "Integrations", href: "/integrations", icon: Plug },
     { label: "Audit Logs", href: "/audit-logs", icon: Activity },
-    { label: "Settings", href: "/settings/integrations", icon: Settings, architectOnly: true },
   ];
-
-  const filteredNav = navItems.filter(
-    (item) => !item.architectOnly || userRole === "ARCHITECT"
-  );
 
   const initials = user?.firstName && user?.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
@@ -91,7 +88,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-3 space-y-0.5">
-        {filteredNav.map((item) => {
+        {navItems.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0]);
           return (
             <Link
