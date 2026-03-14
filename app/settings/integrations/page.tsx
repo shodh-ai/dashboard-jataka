@@ -39,6 +39,29 @@ export default function IntegrationsPage() {
   const [salesforceConnections, setSalesforceConnections] = useState<SalesforceConnectionResponse[]>([]);
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
   const [isSyncingSchema, setIsSyncingSchema] = useState(false);
+  const [isSyncingDependencies, setIsSyncingDependencies] = useState(false);
+
+  const handleSyncDependencies = async () => {
+    const token = await getToken();
+    if (!token) return;
+
+    try {
+      setIsSyncingDependencies(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/integrations/salesforce/sync-dependencies`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) throw new Error("Failed to start dependency sync");
+      alert('Impact Graph sync started! Navigating millions of connections in the background. 🕸️');
+    } catch (error: any) {
+      alert(`Failed to sync impact graph: ${error.message}`);
+    } finally {
+      setIsSyncingDependencies(false);
+    }
+  };
 
   // Load existing config
   useEffect(() => {
@@ -359,36 +382,76 @@ export default function IntegrationsPage() {
               <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
             </div>
           ) : (
-            <div className="space-y-4 mt-4">
-              {[
-                { id: 'admin', label: 'System Admin (Default)' },
-                { id: 'sales_rep', label: 'Sales Rep' },
-                { id: 'manager', label: 'Manager / Approver' }
-              ].map(role => {
-                const conn = salesforceConnections.find(c => c.actorRole === role.id);
-                return (
-                  <div key={role.id} className="p-4 bg-gray-900 border border-gray-700 rounded-lg flex justify-between items-center">
-                    <div>
-                      <p className="font-semibold text-white">{role.label}</p>
+            <>
+              <div className="space-y-4 mt-4">
+                {[
+                  { id: 'admin', label: 'System Admin (Default)' },
+                  { id: 'sales_rep', label: 'Sales Rep' },
+                  { id: 'manager', label: 'Manager / Approver' }
+                ].map(role => {
+                  const conn = salesforceConnections.find(c => c.actorRole === role.id);
+                  return (
+                    <div key={role.id} className="p-4 bg-gray-900 border border-gray-700 rounded-lg flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-white">{role.label}</p>
+                        {conn ? (
+                          <p className="text-sm text-green-400">Connected: {conn.sf_username}</p>
+                        ) : (
+                          <p className="text-sm text-gray-500">Not connected</p>
+                        )}
+                      </div>
                       {conn ? (
-                        <p className="text-sm text-green-400">Connected: {conn.sf_username}</p>
+                        <button onClick={() => handleDisconnectSalesforce(role.id)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition">
+                          Disconnect
+                        </button>
                       ) : (
-                        <p className="text-sm text-gray-500">Not connected</p>
+                        <button onClick={() => handleConnectSalesforce(role.id)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition">
+                          Connect
+                        </button>
                       )}
                     </div>
-                    {conn ? (
-                      <button onClick={() => handleDisconnectSalesforce(role.id)} className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition">
-                        Disconnect
+                  );
+                })}
+              </div>
+
+              {/* Advanced Metadata Controls (Only visible if Admin is connected) */}
+              {salesforceConnections.some(c => c.actorRole === 'admin') && (
+                <div className="mt-8 pt-6 border-t border-gray-700">
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-gray-400" />
+                    Org Intelligence Sync
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                      <h4 className="text-white font-medium mb-1">Standard Schema</h4>
+                      <p className="text-xs text-gray-400 mb-4 h-8">Syncs Objects, Fields, and Types so the AI knows your forms.</p>
+                      <button
+                        onClick={handleSyncSchema}
+                        disabled={isSyncingSchema}
+                        className="w-full py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded text-sm transition flex justify-center items-center gap-2"
+                      >
+                        {isSyncingSchema ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Sync Schema
                       </button>
-                    ) : (
-                      <button onClick={() => handleConnectSalesforce(role.id)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition">
-                        Connect
+                    </div>
+
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                      <h4 className="text-white font-medium mb-1">Impact Graph</h4>
+                      <p className="text-xs text-gray-400 mb-4 h-8">Syncs MetadataComponentDependencies for deep regression routing.</p>
+                      <button
+                        onClick={handleSyncDependencies}
+                        disabled={isSyncingDependencies}
+                        className="w-full py-2 bg-blue-900/40 hover:bg-blue-800/60 border border-blue-800 disabled:opacity-50 text-blue-300 rounded text-sm transition flex justify-center items-center gap-2"
+                      >
+                        {isSyncingDependencies ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Sync Impact Graph
                       </button>
-                    )}
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
