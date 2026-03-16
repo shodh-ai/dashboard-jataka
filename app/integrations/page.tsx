@@ -98,6 +98,11 @@ export default function IntegrationsPage() {
       if (!res.ok) throw new Error("Failed to fetch GitHub status");
       const data = await res.json();
       setGithubConnected(Boolean(data?.connected));
+      console.log("[3-KEY-LOCK][UI] GitHub key status", {
+        connected: Boolean(data?.connected),
+        connectedBrains: data?.connected_brains,
+        totalBrains: data?.total_brains,
+      });
     } catch (error) {
       console.error("Failed to check GitHub connection:", error);
       setGithubConnected(false);
@@ -134,6 +139,12 @@ export default function IntegrationsPage() {
 
       const data = await getSalesforceStatus(token);
       setSalesforceConnections(data || []);
+      console.log("[3-KEY-LOCK][UI] Salesforce status", {
+        totalConnections: Array.isArray(data) ? data.length : 0,
+        hasAdmin: Array.isArray(data)
+          ? data.some((c: any) => c.actorRole === "admin")
+          : false,
+      });
     } catch (error) {
       console.error(error);
       setSalesforceConnections([]);
@@ -227,10 +238,7 @@ export default function IntegrationsPage() {
   };
 
   const handleConnectSalesforce = async (role: string) => {
-    if (!githubConnected) {
-      alert("Install GitHub App first. Salesforce unlocks after GitHub is connected.");
-      return;
-    }
+    console.log("[3-KEY-LOCK][UI] Initiating Salesforce connect", { role });
     const token = await getToken();
     if (!token) return;
     await connectSalesforce(token, role);
@@ -281,6 +289,9 @@ export default function IntegrationsPage() {
   };
 
   const handleGithubInstall = () => {
+    console.log("[3-KEY-LOCK][UI] Redirecting to GitHub installation", {
+      salesforceAdminConnected: isSalesforceAdminConnected,
+    });
     window.location.href = GITHUB_INSTALL_URL;
   };
 
@@ -377,7 +388,7 @@ export default function IntegrationsPage() {
               </button>
               <p className="mt-2 text-[10px] text-[var(--text-secondary)] flex items-center gap-1">
                 {checkingGithub ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} className={githubConnected ? "text-emerald-500" : "text-[var(--text-muted)]"} />}
-                Step 1: Connect GitHub first
+                Step 2: Connect GitHub App
               </p>
             </div>
 
@@ -493,13 +504,13 @@ export default function IntegrationsPage() {
                 {salesforceConnections.length > 0 && <span className="badge badge-emerald"><CheckCircle size={12} /> {salesforceConnections.length} Connected</span>}
               </div>
 
-              {!githubConnected && (
+              {!isSalesforceAdminConnected && (
                 <div className="mb-3 p-2 rounded border border-amber-500/30 text-amber-500 text-xs flex items-center gap-2">
-                  <AlertCircle size={13} /> Step 2 locked: Install GitHub App first.
+                  <AlertCircle size={13} /> Step 1: Connect Salesforce System Admin.
                 </div>
               )}
 
-              {githubConnected && isSalesforceAdminConnected && (
+              {isSalesforceAdminConnected && githubConnected && (
                 <div className="mb-3 p-2 rounded border border-[var(--border-default)] text-xs text-[var(--text-secondary)] flex items-center gap-2">
                   <Loader2 size={13} className="animate-spin" /> Step 3: Analyzing Enterprise Architecture...
                 </div>
@@ -527,8 +538,7 @@ export default function IntegrationsPage() {
                           ) : (
                             <button
                               onClick={() => handleConnectSalesforce(role.id)}
-                              disabled={!githubConnected}
-                              className="btn-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="btn-secondary text-xs"
                             >
                               Connect
                             </button>
