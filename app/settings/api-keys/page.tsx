@@ -13,7 +13,7 @@ type ApiKeyRecord = {
   keyPreview: string;
 };
 
-const BASE_API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function ApiKeysSettingsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();

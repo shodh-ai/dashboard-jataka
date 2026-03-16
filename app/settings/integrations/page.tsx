@@ -48,7 +48,7 @@ export default function IntegrationsPage() {
     try {
       setIsSyncingDependencies(true);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/integrations/salesforce/sync-dependencies`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/integrations/salesforce/sync-dependencies`,
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
