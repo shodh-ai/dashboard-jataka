@@ -7,6 +7,7 @@ import {
   Network,
   Activity,
   Plug,
+  Key,
   ChevronsLeft,
   ChevronsRight,
   Hexagon,
@@ -37,6 +38,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Active Tests", href: "/active-tests", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck }, // <-- ADDED THIS
     { label: "Integrations", href: "/integrations", icon: Plug },
+    { label: "API Keys", href: "/settings/api-keys", icon: Key },
     { label: "Audit Logs", href: "/audit-logs", icon: Activity },
   ];
 

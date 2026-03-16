@@ -49,6 +49,9 @@ export default function IntegrationsPage() {
   const [editingProjectKey, setEditingProjectKey] = useState(false);
   const [newProjectKey, setNewProjectKey] = useState("");
 
+  const [githubConnected, setGithubConnected] = useState(false);
+  const [checkingGithub, setCheckingGithub] = useState(false);
+
   const [salesforceConnections, setSalesforceConnections] = useState<SalesforceConnectionResponse[]>([]);
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
   const [isSyncingSchema, setIsSyncingSchema] = useState(false);
@@ -79,6 +82,27 @@ export default function IntegrationsPage() {
       const current = list.find((b: any) => b.id === brainsData.activeBrainId);
       const selected = current || list[0];
       setActiveBrain(selected.knowledgeBaseId);
+    }
+  };
+
+  const checkGithubConnection = async () => {
+    if (!BASE_API) return;
+    try {
+      setCheckingGithub(true);
+      const token = await getToken();
+      if (!token) return;
+
+      const res = await fetch(`${BASE_API}/integrations/github/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch GitHub status");
+      const data = await res.json();
+      setGithubConnected(Boolean(data?.connected));
+    } catch (error) {
+      console.error("Failed to check GitHub connection:", error);
+      setGithubConnected(false);
+    } finally {
+      setCheckingGithub(false);
     }
   };
 
@@ -150,7 +174,11 @@ export default function IntegrationsPage() {
         }
       }
 
-      await Promise.all([checkJiraConnection(), checkSalesforceConnection()]);
+      await Promise.all([
+        checkJiraConnection(),
+        checkSalesforceConnection(),
+        checkGithubConnection(),
+      ]);
 
       const params = new URLSearchParams(window.location.search);
       const jiraStatus = params.get("jira");
@@ -199,6 +227,10 @@ export default function IntegrationsPage() {
   };
 
   const handleConnectSalesforce = async (role: string) => {
+    if (!githubConnected) {
+      alert("Install GitHub App first. Salesforce unlocks after GitHub is connected.");
+      return;
+    }
     const token = await getToken();
     if (!token) return;
     await connectSalesforce(token, role);
@@ -249,10 +281,6 @@ export default function IntegrationsPage() {
   };
 
   const handleGithubInstall = () => {
-    if (!isSalesforceAdminConnected) {
-      alert("Connect Salesforce (System Admin) first, then install GitHub.");
-      return;
-    }
     window.location.href = GITHUB_INSTALL_URL;
   };
 
@@ -343,16 +371,14 @@ export default function IntegrationsPage() {
               <div className="flex items-center gap-2 text-sm font-medium mb-2"><Github size={14} /> GitHub</div>
               <button
                 onClick={handleGithubInstall}
-                disabled={!isSalesforceAdminConnected}
-                className="btn-secondary w-full text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-secondary w-full text-xs"
               >
                 <ExternalLink size={14} /> Install GitHub App
               </button>
-              {!isSalesforceAdminConnected && (
-                <p className="mt-2 text-[10px] text-amber-500 flex items-center gap-1">
-                  <AlertCircle size={11} /> Connect Salesforce System Admin first
-                </p>
-              )}
+              <p className="mt-2 text-[10px] text-[var(--text-secondary)] flex items-center gap-1">
+                {checkingGithub ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} className={githubConnected ? "text-emerald-500" : "text-[var(--text-muted)]"} />}
+                Step 1: Connect GitHub first
+              </p>
             </div>
 
             <div className="card p-4">
@@ -467,6 +493,18 @@ export default function IntegrationsPage() {
                 {salesforceConnections.length > 0 && <span className="badge badge-emerald"><CheckCircle size={12} /> {salesforceConnections.length} Connected</span>}
               </div>
 
+              {!githubConnected && (
+                <div className="mb-3 p-2 rounded border border-amber-500/30 text-amber-500 text-xs flex items-center gap-2">
+                  <AlertCircle size={13} /> Step 2 locked: Install GitHub App first.
+                </div>
+              )}
+
+              {githubConnected && isSalesforceAdminConnected && (
+                <div className="mb-3 p-2 rounded border border-[var(--border-default)] text-xs text-[var(--text-secondary)] flex items-center gap-2">
+                  <Loader2 size={13} className="animate-spin" /> Step 3: Analyzing Enterprise Architecture...
+                </div>
+              )}
+
               {checkingSalesforce ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
@@ -487,7 +525,13 @@ export default function IntegrationsPage() {
                           {conn ? (
                             <button onClick={() => handleDisconnectSalesforce(role.id)} className="btn-secondary text-xs">Disconnect</button>
                           ) : (
-                            <button onClick={() => handleConnectSalesforce(role.id)} className="btn-secondary text-xs">Connect</button>
+                            <button
+                              onClick={() => handleConnectSalesforce(role.id)}
+                              disabled={!githubConnected}
+                              className="btn-secondary text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Connect
+                            </button>
                           )}
                         </div>
                       );
