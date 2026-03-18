@@ -11,9 +11,11 @@ const WORKFLOWS_URL = BASE_API ? `${BASE_API}/brum-proxy/workflows` : undefined;
 interface WorkflowSummary {
   name: string;
   status?: string;
+  health?: string;
   drift_reason?: string;
   last_drift_detected?: string;
   step_count?: number;
+  total_steps?: number;
   file_count?: number;
 }
 
@@ -25,6 +27,7 @@ export default function ActiveTestsPage() {
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("ARCHITECT");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
+  const [totalTests, setTotalTests] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +63,9 @@ export default function ActiveTestsPage() {
       }
 
       const wfJson = await wfRes.json();
-      setWorkflows(Array.isArray(wfJson?.workflows) ? wfJson.workflows : []);
+      const parsedWorkflows = Array.isArray(wfJson?.workflows) ? wfJson.workflows : [];
+      setWorkflows(parsedWorkflows);
+      setTotalTests(Number(wfJson?.total_tests) || parsedWorkflows.length);
     } catch (e: any) {
       setError(e?.message || "Failed to load active tests");
     } finally {
@@ -75,17 +80,20 @@ export default function ActiveTestsPage() {
   }, [isLoaded, isSignedIn, load]);
 
   const healthyTests = useMemo(
-    () => workflows.filter((wf) => HEALTHY.includes(String(wf.status || "").toLowerCase())),
+    () => workflows.filter((wf) => HEALTHY.includes(String(wf.health || wf.status || "").toLowerCase())),
     [workflows],
   );
 
   const activeTests = useMemo(
-    () => workflows.filter((wf) => ACTIVE.includes(String(wf.status || "").toLowerCase())),
+    () => workflows.filter((wf) => ACTIVE.includes(String(wf.health || wf.status || "").toLowerCase())),
     [workflows],
   );
 
   const needsAttention = useMemo(
-    () => workflows.filter((wf) => !HEALTHY.includes(String(wf.status || "").toLowerCase()) && !ACTIVE.includes(String(wf.status || "").toLowerCase())),
+    () => workflows.filter((wf) => {
+      const status = String(wf.health || wf.status || "").toLowerCase();
+      return !HEALTHY.includes(status) && !ACTIVE.includes(status);
+    }),
     [workflows],
   );
 
@@ -129,6 +137,10 @@ export default function ActiveTestsPage() {
               <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">Needs Attention</div>
               <div className="text-3xl font-bold mt-1">{needsAttention.length}</div>
             </div>
+            <div className="card p-4 border-l-4 border-cyan-500">
+              <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">Tests in Brain</div>
+              <div className="text-3xl font-bold mt-1">{totalTests}</div>
+            </div>
           </div>
 
           <div className="card overflow-hidden">
@@ -156,7 +168,7 @@ export default function ActiveTestsPage() {
                   </thead>
                   <tbody className="divide-y divide-[var(--border-default)]">
                     {workflows.map((wf) => {
-                      const status = String(wf.status || "unknown").toLowerCase();
+                      const status = String(wf.health || wf.status || "draft").toLowerCase();
                       const isHealthy = HEALTHY.includes(status);
                       const isActive = ACTIVE.includes(status);
                       return (
@@ -164,14 +176,14 @@ export default function ActiveTestsPage() {
                           <td className="px-5 py-4 font-medium">{wf.name}</td>
                           <td className="px-5 py-4">
                             {isHealthy ? (
-                              <span className="badge badge-emerald"><CheckCircle2 size={12} /> {wf.status || "healthy"}</span>
+                              <span className="badge badge-emerald"><CheckCircle2 size={12} /> {status}</span>
                             ) : isActive ? (
-                              <span className="badge badge-indigo"><Clock3 size={12} /> {wf.status || "running"}</span>
+                              <span className="badge badge-indigo"><Clock3 size={12} /> {status}</span>
                             ) : (
-                              <span className="badge badge-rose"><AlertTriangle size={12} /> {wf.status || "unknown"}</span>
+                              <span className="badge badge-rose"><AlertTriangle size={12} /> {status}</span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.step_count ?? "—"}</td>
+                          <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.step_count ?? wf.total_steps ?? "—"}</td>
                           <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.file_count ?? "—"}</td>
                           <td className="px-5 py-4 text-xs text-[var(--text-muted)] max-w-[360px] truncate">
                             {wf.drift_reason || "—"}
