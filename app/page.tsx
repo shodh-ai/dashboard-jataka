@@ -566,7 +566,7 @@ export default function Home() {
     // Optional: implement deep linking later using NEXT_PUBLIC_VSCODE_URI_SCHEME
     // if (token) {
     //   window.location.href = `${process.env.NEXT_PUBLIC_VSCODE_URI_SCHEME}/auth?token=${encodeURIComponent(token)}`;
-    // }
+    // } Empty commit 
   };
 
   const handleConnectVsCode = async () => {

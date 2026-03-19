@@ -11,7 +11,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Hexagon,
-  ShieldCheck // <-- 1. IMPORT ADDED HERE
+  ShieldCheck,
+  Terminal
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -31,12 +32,12 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList(orgListParams);
 
-  // 2. NEW MENU ITEM ADDED HERE
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
     { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
     { label: "Active Tests", href: "/active-tests", icon: Activity },
-    { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck }, // <-- ADDED THIS
+    { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
+    { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Integrations", href: "/integrations", icon: Plug },
     { label: "API Keys", href: "/settings/api-keys", icon: Key },
     { label: "Audit Logs", href: "/audit-logs", icon: Activity },
