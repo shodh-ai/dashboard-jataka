@@ -94,7 +94,7 @@ export default function IntegrationsAndSetupPage() {
     copiedYaml,
     jiraConnected 
   ].filter(Boolean).length;
-  const progressPercentage = (completedSteps / 4) * 100; // Tracking core 4 steps for 100%
+  const progressPercentage = (completedSteps / 5) * 100; // Tracking all 5 steps for 100%
 
   // --- Initialization & Fetching ---
   useEffect(() => {
