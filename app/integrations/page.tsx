@@ -26,14 +26,14 @@ import {
   updateJiraProjectKey,
   disconnectJira,
   type JiraConnectionResponse,
-} from "../../../lib/jira-api";
+} from "../../lib/jira-api";
 import {
   getSalesforceStatus,
   connectSalesforce,
   disconnectSalesforce,
   syncSalesforceSchema,
   type SalesforceConnectionResponse,
-} from "../../../lib/salesforce-api";
+} from "../../lib/salesforce-api";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const GITHUB_APP_NAME = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "jataka-ai";
@@ -319,7 +319,7 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = `${BASE_API || 'https://api.jataka.ai'}/integrations/github/trigger`;
+  const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
