@@ -103,18 +103,24 @@ export default function IntegrationsAndSetupPage() {
       checkSalesforceConnection();
       fetchKeys();
       
-      // Check for installation_id in URL parameters after GitHub callback
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlInstallationId = urlParams.get('installation_id');
-      if (urlInstallationId) {
-        console.log("Found installation_id in URL:", urlInstallationId);
-        setInstallationId(urlInstallationId);
-        setIsGithubConnected(true);
-      }
-      
       const params = new URLSearchParams(window.location.search);
       if (params.get("jira") === "connected") alert("✅ Jira connected!");
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
+      
+      if (params.has("jira") || params.has("salesforce")) {
+        window.history.replaceState({}, "", "/integrations");
+      }
+    }
+  }, [isLoaded, isSignedIn]);
+
+  // --- Handle GitHub Callback Installation ID ---
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlInstallationId = urlParams.get('installation_id');
+    if (urlInstallationId) {
+      console.log("Found installation_id in URL:", urlInstallationId);
+      setInstallationId(urlInstallationId);
+      setIsGithubConnected(true);
       
       // Clean up the URL to remove the installation_id and setup_action parameters
       const cleanupUrl = () => {
@@ -126,7 +132,12 @@ export default function IntegrationsAndSetupPage() {
       
       cleanupUrl();
     }
-  }, [isLoaded, isSignedIn]);
+  }, []); // Run only once on mount
+
+  // --- Debug installationId changes ---
+  useEffect(() => {
+    console.log("installationId changed to:", installationId);
+  }, [installationId]);
 
   // --- API Functions (GitHub) ---
   const checkGithubConnection = async () => {
