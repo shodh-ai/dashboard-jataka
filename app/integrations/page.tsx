@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle,
   Circle,
@@ -19,7 +19,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-// Assuming these API helpers exist in your project
 import {
   getJiraStatus,
   connectJira,
@@ -104,14 +103,12 @@ export default function IntegrationsAndSetupPage() {
       checkSalesforceConnection();
       fetchKeys();
       
-      // Check for OAuth callbacks in URL
       const params = new URLSearchParams(window.location.search);
       if (params.get("jira") === "connected") alert("✅ Jira connected!");
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
       
-      // Clean up URL parameters after reading
       if (params.has("jira") || params.has("salesforce")) {
-        window.history.replaceState({}, "", "/settings/integrations");
+        window.history.replaceState({}, "", "/integrations");
       }
     }
   }, [isLoaded, isSignedIn]);
@@ -130,8 +127,11 @@ export default function IntegrationsAndSetupPage() {
       if (res.ok) {
         const data = await res.json();
         setIsGithubConnected(data.connected);
-        if (data.installationId) {
-          setInstallationId(data.installationId);
+        
+        // Fix: Ensure we capture both naming conventions from backend
+        const fetchedId = data.installationId || data.installation_id;
+        if (fetchedId) {
+          setInstallationId(String(fetchedId));
         }
       }
     } catch (error) {
@@ -320,6 +320,10 @@ export default function IntegrationsAndSetupPage() {
   };
 
   const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
+  
+  // FIX: Robustly parse installationId for the snippet preview
+  const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
+  
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
@@ -327,7 +331,7 @@ export default function IntegrationsAndSetupPage() {
       -H "Authorization: Bearer \${{ secrets.JATAKA_API_KEY }}" \\
       -H "Content-Type: application/json" \\
       -d '{
-        "installation_id": ${installationId || '"YOUR_INSTALLATION_ID"'}, 
+        "installation_id": ${displayInstallId}, 
         "repo_full_name": "\${{ github.repository }}",
         "branch": "\${{ github.head_ref || github.ref_name }}",
         "pr_number": \${{ github.event.pull_request.number || 'null' }},
