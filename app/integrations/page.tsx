@@ -103,13 +103,28 @@ export default function IntegrationsAndSetupPage() {
       checkSalesforceConnection();
       fetchKeys();
       
+      // Check for installation_id in URL parameters after GitHub callback
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlInstallationId = urlParams.get('installation_id');
+      if (urlInstallationId) {
+        console.log("Found installation_id in URL:", urlInstallationId);
+        setInstallationId(urlInstallationId);
+        setIsGithubConnected(true);
+      }
+      
       const params = new URLSearchParams(window.location.search);
       if (params.get("jira") === "connected") alert("✅ Jira connected!");
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
       
-      if (params.has("jira") || params.has("salesforce")) {
-        window.history.replaceState({}, "", "/integrations");
-      }
+      // Clean up the URL to remove the installation_id and setup_action parameters
+      const cleanupUrl = () => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('installation_id');
+        url.searchParams.delete('setup_action');
+        window.history.replaceState({}, document.title, url.toString());
+      };
+      
+      cleanupUrl();
     }
   }, [isLoaded, isSignedIn]);
 
@@ -126,10 +141,12 @@ export default function IntegrationsAndSetupPage() {
       
       if (res.ok) {
         const data = await res.json();
+        console.log("GitHub status data:", data); // Debug log
         setIsGithubConnected(data.connected);
         
         // Fix: Ensure we capture both naming conventions from backend
         const fetchedId = data.installationId || data.installation_id;
+        console.log("Fetched Installation ID:", fetchedId); // Debug log
         if (fetchedId) {
           setInstallationId(String(fetchedId));
         }
@@ -323,6 +340,8 @@ export default function IntegrationsAndSetupPage() {
   
   // FIX: Robustly parse installationId for the snippet preview
   const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
+  console.log("Current installationId state:", installationId); // Debug log
+  console.log("Display install ID:", displayInstallId); // Debug log
   
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
