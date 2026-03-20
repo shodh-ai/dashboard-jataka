@@ -128,7 +128,7 @@ export default function IntegrationsAndSetupPage() {
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
       
       if (params.has("jira") || params.has("salesforce")) {
-        window.history.replaceState({}, {}, "/integrations");
+        window.history.replaceState({}, '', "/integrations");
       }
     }
   }, [isLoaded, isSignedIn]);
