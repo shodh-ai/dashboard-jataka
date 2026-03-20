@@ -245,6 +245,20 @@ export default function IntegrationsAndSetupPage() {
     if (token) await connectSalesforce(token, role);
   };
 
+  // 👇 ADD THIS NEW FUNCTION 👇
+  const handleDisconnectSalesforce = async (role: string) => {
+    if (!confirm("Are you sure you want to disconnect this role?")) return;
+    const token = await getToken();
+    if (!token) return;
+    try {
+      await disconnectSalesforce(token, role);
+      await checkSalesforceConnection();
+    } catch (error) {
+      console.error("Failed to disconnect Salesforce role", error);
+      alert("Failed to disconnect role.");
+    }
+  };
+
   const handleSyncSchemaData = async () => {
     const token = await getToken();
     if (!token) return;
@@ -489,34 +503,57 @@ export default function IntegrationsAndSetupPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-3">
                       <Cloud className="w-7 h-7 text-blue-400" /> Connect Salesforce
                     </h2>
-                    <button onClick={checkSalesforceConnection} disabled={checkingSalesforce} className="text-xs flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                    <button onClick={checkSalesforceConnection} disabled={checkingSalesforce} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition-colors">
                       <RefreshCw className={`w-3 h-3 ${checkingSalesforce ? "animate-spin" : ""}`} /> Refresh Status
                     </button>
                   </div>
-                  <p className="text-gray-400 mb-6">
-                    Authenticate the Salesforce environment where tests will be executed.
+                  <p className="text-slate-400 mb-6">
+                    Authenticate the Salesforce environment where tests will be executed. Connect multiple roles to test different permissions.
                   </p>
 
-                  <div className="bg-gray-900 border border-gray-700 rounded-xl p-5 mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h3 className="font-semibold text-white">System Admin</h3>
-                        <p className="text-xs text-gray-400">Required for reading Metadata & Executing Tests</p>
-                      </div>
-                      {checkingSalesforce ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                      ) : isSfAdminConnected ? (
-                        <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full text-sm">
-                          <CheckCircle className="w-4 h-4" /> Connected
+                  {/* 👇 MULTI-ROLE CARDS 👇 */}
+                  <div className="space-y-4 mb-6">
+                    {[
+                      { id: "admin", title: "System Admin (Default)", desc: "Required for reading Metadata & Executing Tests" },
+                      { id: "sales_rep", title: "Sales Rep", desc: "Standard user for executing sales workflows" },
+                      { id: "manager", title: "Manager / Approver", desc: "Required for testing approval processes" },
+                    ].map((role) => {
+                      const conn = salesforceConnections.find((c) => c.actorRole === role.id);
+                      return (
+                        <div key={role.id} className="bg-slate-950 border border-slate-700 rounded-xl p-5">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                            <div>
+                              <h3 className="font-semibold text-white">{role.title}</h3>
+                              {conn ? (
+                                <p className="text-xs text-green-400 mt-1">Connected: {conn.sf_username}</p>
+                              ) : (
+                                <p className="text-xs text-slate-400 mt-1">{role.desc}</p>
+                              )}
+                            </div>
+                            {checkingSalesforce ? (
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                            ) : conn ? (
+                              <button 
+                                onClick={() => handleDisconnectSalesforce(role.id)} 
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg text-sm font-medium transition border border-slate-700 whitespace-nowrap"
+                              >
+                                Disconnect
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleConnectSalesforce(role.id)} 
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
+                              >
+                                Connect Org
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <button onClick={() => handleConnectSalesforce("admin")} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition">
-                          Connect Org
-                        </button>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
 
+                  {/* Important Action Required Block - Only shows if Admin is connected */}
                   {isSfAdminConnected && (
                     <div className="p-5 border border-yellow-700/50 bg-yellow-900/20 rounded-xl relative overflow-hidden">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500"></div>
@@ -527,26 +564,26 @@ export default function IntegrationsAndSetupPage() {
                         Ensure your GitHub Actions workflow is authenticated with Salesforce. Generate your SFDX Auth URL locally and add it to your GitHub Repository Secrets.
                       </p>
                       
-                      <div className="bg-black/50 p-3 rounded border border-gray-700 flex items-center justify-between font-mono text-xs">
-                        <span className="text-gray-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
+                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-center justify-between font-mono text-xs">
+                        <span className="text-slate-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
                         <button 
                           onClick={() => copyToClipboard("sfdx force:org:display -u <alias> --verbose", setCopiedSfdx)}
-                          className="p-2 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                          className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
                         >
                           {copiedSfdx ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-slate-400 mt-2">
                         Save the resulting URL as <strong className="text-white">SFDX_AUTH_URL</strong> in your GitHub Secrets.
                       </p>
-
-                      <div className="mt-6 flex justify-end">
-                        <button onClick={() => setActiveStep(3)} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
-                          Continue to Step 3
-                        </button>
-                      </div>
                     </div>
                   )}
+
+                  <div className="mt-6 flex justify-end">
+                    <button onClick={() => setActiveStep(3)} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
+                      Continue to Step 3
+                    </button>
+                  </div>
                 </div>
               )}
 
