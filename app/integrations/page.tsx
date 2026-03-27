@@ -240,9 +240,9 @@ export default function IntegrationsAndSetupPage() {
     }
   };
 
-  const handleConnectSalesforce = async (role: string) => {
+  const handleConnectSalesforce = async (role: string, isSandbox: boolean = false) => {
     const token = await getToken();
-    if (token) await connectSalesforce(token, role);
+    if (token) await connectSalesforce(token, role, isSandbox);
   };
 
   // 👇 ADD THIS NEW FUNCTION 👇
@@ -540,12 +540,22 @@ export default function IntegrationsAndSetupPage() {
                                 Disconnect
                               </button>
                             ) : (
-                              <button 
-                                onClick={() => handleConnectSalesforce(role.id)} 
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
-                              >
-                                Connect Org
-                              </button>
+                              <div className="flex gap-2">
+                                {/* Production Button */}
+                                <button 
+                                  onClick={() => handleConnectSalesforce(role.id, false)} 
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
+                                >
+                                  Connect Prod
+                                </button>
+                                {/* Sandbox Button */}
+                                <button 
+                                  onClick={() => handleConnectSalesforce(role.id, true)} 
+                                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 rounded-lg text-sm font-medium transition whitespace-nowrap"
+                                >
+                                  Connect Sandbox
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>
