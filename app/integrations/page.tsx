@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle,
   Circle,
@@ -26,14 +26,15 @@ import {
   updateJiraProjectKey,
   disconnectJira,
   type JiraConnectionResponse,
-} from "../../../lib/jira-api";
+} from "../../lib/jira-api";
 import {
   getSalesforceStatus,
   connectSalesforce,
   disconnectSalesforce,
   syncSalesforceSchema,
   type SalesforceConnectionResponse,
-} from "../../../lib/salesforce-api";
+} from "../../lib/salesforce-api";
+import Sidebar from "../components/Sidebar";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const GITHUB_APP_NAME = process.env.NEXT_PUBLIC_GITHUB_APP_NAME || "jataka-ai";
@@ -50,6 +51,9 @@ type ApiKeyRecord = {
 
 export default function IntegrationsAndSetupPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  
+  const [orgName, setOrgName] = useState("");
+  const[userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
 
   // --- UI & Wizard State ---
   const [activeStep, setActiveStep] = useState(1);
@@ -94,24 +98,37 @@ export default function IntegrationsAndSetupPage() {
     copiedYaml,
     jiraConnected 
   ].filter(Boolean).length;
-  const progressPercentage = (completedSteps / 4) * 100; // Tracking core 4 steps for 100%
+  const progressPercentage = (completedSteps / 5) * 100; // Tracking all 5 steps for 100%
 
   // --- Initialization & Fetching ---
   useEffect(() => {
     if (isLoaded && isSignedIn) {
+      const fetchOrg = async () => {
+        const token = await getToken();
+        if (token && BASE_API) {
+          const syncRes = await fetch(`${BASE_API}/auth/sync`, { headers: { Authorization: `Bearer ${token}` } });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            const orgData = syncData.org || syncData.organization || {};
+            const rawRole = syncData.user?.role || syncData.orgRole || "";
+            setOrgName(orgData.name || syncData.orgName || syncData.organizationName || "Jataka");
+            setUserRole(rawRole === "senior" || rawRole === "org:admin" || rawRole === "admin" ? "ARCHITECT" : "DEVELOPER");
+          }
+        }
+      };
+      
+      fetchOrg();
       checkGithubConnection();
       checkJiraConnection();
       checkSalesforceConnection();
       fetchKeys();
       
-      // Check for OAuth callbacks in URL
       const params = new URLSearchParams(window.location.search);
       if (params.get("jira") === "connected") alert("✅ Jira connected!");
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
       
-      // Clean up URL parameters after reading
       if (params.has("jira") || params.has("salesforce")) {
-        window.history.replaceState({}, "", "/settings/integrations");
+        window.history.replaceState({}, '', "/integrations");
       }
     }
   }, [isLoaded, isSignedIn]);
@@ -129,9 +146,9 @@ export default function IntegrationsAndSetupPage() {
       
       if (res.ok) {
         const data = await res.json();
-        setIsGithubConnected(data.connected);
+        setIsGithubConnected(Boolean(data.connected));
         if (data.installationId) {
-          setInstallationId(data.installationId);
+          setInstallationId(String(data.installationId));
         }
       }
     } catch (error) {
@@ -223,9 +240,23 @@ export default function IntegrationsAndSetupPage() {
     }
   };
 
-  const handleConnectSalesforce = async (role: string) => {
+  const handleConnectSalesforce = async (role: string, env: 'production' | 'sandbox' = 'production') => {
     const token = await getToken();
-    if (token) await connectSalesforce(token, role);
+    if (token) await connectSalesforce(token, role, env);
+  };
+
+  // 👇 ADD THIS NEW FUNCTION 👇
+  const handleDisconnectSalesforce = async (role: string) => {
+    if (!confirm("Are you sure you want to disconnect this role?")) return;
+    const token = await getToken();
+    if (!token) return;
+    try {
+      await disconnectSalesforce(token, role);
+      await checkSalesforceConnection();
+    } catch (error) {
+      console.error("Failed to disconnect Salesforce role", error);
+      alert("Failed to disconnect role.");
+    }
   };
 
   const handleSyncSchemaData = async () => {
@@ -319,7 +350,9 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = `${BASE_API || 'https://api.jataka.ai'}/integrations/github/trigger`;
+  const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
+  const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
+  
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
@@ -327,7 +360,7 @@ export default function IntegrationsAndSetupPage() {
       -H "Authorization: Bearer \${{ secrets.JATAKA_API_KEY }}" \\
       -H "Content-Type: application/json" \\
       -d '{
-        "installation_id": ${installationId || '"YOUR_INSTALLATION_ID"'}, 
+        "installation_id": ${displayInstallId}, 
         "repo_full_name": "\${{ github.repository }}",
         "branch": "\${{ github.head_ref || github.ref_name }}",
         "pr_number": \${{ github.event.pull_request.number || 'null' }},
@@ -343,32 +376,34 @@ export default function IntegrationsAndSetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 p-4 md:p-8 text-white">
-      <div className="max-w-6xl mx-auto">
-        
-        {/* Header & Progress Bar */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Setup & Integrations</h1>
-          <p className="text-gray-400 text-sm md:text-base">Complete these steps to fully automate your AI testing pipeline.</p>
+    <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <Sidebar orgName={orgName} userRole={userRole} />
+      
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <div className="max-w-6xl mx-auto">
           
-          <div className="mt-6 bg-gray-800/50 rounded-full h-3 w-full border border-gray-700 overflow-hidden">
-            <div 
-              className="h-full bg-blue-500 transition-all duration-500 ease-in-out relative"
-              style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-            >
-              <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Setup & Integrations</h1>
+            <p className="text-slate-400 text-sm md:text-base">Complete these steps to fully automate your AI testing pipeline.</p>
+            
+            <div className="mt-6 bg-slate-800/50 rounded-full h-3 w-full border border-slate-700 overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 transition-all duration-500 ease-in-out relative"
+                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
             </div>
+            <p className="text-xs text-blue-400 mt-2 font-medium tracking-wide">
+              SETUP PROGRESS: {Math.round(Math.min(progressPercentage, 100))}%
+            </p>
           </div>
-          <p className="text-xs text-blue-400 mt-2 font-medium tracking-wide">
-            SETUP PROGRESS: {Math.round(Math.min(progressPercentage, 100))}%
-          </p>
-        </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           
           {/* Sidebar / Stepper */}
           <div className="lg:w-1/3 flex-shrink-0">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 sticky top-8">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 sticky top-8">
               <nav className="space-y-2">
                 {[
                   { id: 1, title: "1. Connect GitHub", icon: Github, isDone: isGithubConnected },
@@ -381,7 +416,7 @@ export default function IntegrationsAndSetupPage() {
                     key={step.id}
                     onClick={() => setActiveStep(step.id)}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left
-                      ${activeStep === step.id ? "bg-blue-600/20 border border-blue-500/50 text-blue-300" : "hover:bg-gray-700/50 text-gray-400 border border-transparent"}
+                        ${activeStep === step.id ? "bg-blue-600/20 border border-blue-500/50 text-blue-300" : "hover:bg-slate-800/50 text-slate-400 border border-transparent"}
                     `}
                   >
                     {step.isDone ? (
@@ -399,7 +434,7 @@ export default function IntegrationsAndSetupPage() {
 
           {/* Main Content Area */}
           <div className="lg:w-2/3">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 md:p-8 shadow-2xl min-h-[500px]">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 md:p-8 shadow-2xl min-h-[500px]">
               
               {/* --- STEP 1: GITHUB --- */}
               {activeStep === 1 && (
@@ -412,37 +447,52 @@ export default function IntegrationsAndSetupPage() {
                       <RefreshCw className={`w-3 h-3 ${checkingGithub ? "animate-spin" : ""}`} /> Refresh Status
                     </button>
                   </div>
-                  <p className="text-gray-400 mb-6">
+                  <p className="text-slate-400 mb-6">
                     Install the Jataka App on your GitHub repository to allow us to read PR details, monitor your branch health, and post test results back to your PRs.
                   </p>
-                  
-                  <div className="p-6 border border-gray-700 bg-gray-900 rounded-xl flex flex-col items-center justify-center text-center gap-4">
-                    {checkingGithub ? (
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                    ) : isGithubConnected ? (
-                      <>
-                        <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-2">
-                          <CheckCircle className="w-8 h-8 text-green-400" />
+
+                    <div className="bg-slate-950 border border-slate-700 rounded-xl p-5 mb-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <div>
+                          <h3 className="font-semibold text-white">GitHub App</h3>
+                          <p className="text-xs text-slate-400">Required for reading PRs and posting status checks</p>
                         </div>
-                        <h3 className="text-xl font-semibold text-white">GitHub is Connected!</h3>
-                        <p className="text-sm text-gray-400">Installation ID: <span className="font-mono text-white">{installationId}</span></p>
-                        <button onClick={() => setActiveStep(2)} className="mt-4 px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
-                          Continue to Step 2
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Github className="w-12 h-12 text-gray-500 mb-2" />
-                        <h3 className="text-xl font-semibold text-white">Authorize Repository Access</h3>
-                        <button 
-                          onClick={handleInstallGithub} 
-                          className="px-6 py-3 bg-white text-black hover:bg-gray-200 rounded-lg font-bold transition-colors flex items-center gap-2"
-                        >
-                          <ExternalLink className="w-5 h-5" /> Install GitHub App
-                        </button>
-                      </>
-                    )}
-                  </div>
+                        {checkingGithub ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                        ) : isGithubConnected ? (
+                          <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full text-sm">
+                            <CheckCircle className="w-4 h-4" /> Connected
+                          </div>
+                        ) : (
+                          <button onClick={handleInstallGithub} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition">
+                            Connect App
+                          </button>
+                        )}
+                      </div>
+
+                      {isGithubConnected && (
+                        <div className="bg-black/50 p-4 rounded-lg border border-slate-700 flex flex-col gap-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-slate-400">Installation ID</span>
+                            <span className="font-mono text-white text-xs bg-slate-800 px-2 py-1 rounded border border-slate-600">
+                              {installationId || "Loading..."}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={handleInstallGithub} 
+                            className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-sm transition flex items-center justify-center gap-2 border border-slate-600"
+                          >
+                            <ExternalLink className="w-4 h-4" /> Manage Repositories (GitHub)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                      <button onClick={() => setActiveStep(2)} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
+                        Continue to Step 2
+                      </button>
+                    </div>
                 </div>
               )}
 
@@ -453,34 +503,65 @@ export default function IntegrationsAndSetupPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-3">
                       <Cloud className="w-7 h-7 text-blue-400" /> Connect Salesforce
                     </h2>
-                    <button onClick={checkSalesforceConnection} disabled={checkingSalesforce} className="text-xs flex items-center gap-1 text-gray-400 hover:text-white transition-colors">
+                    <button onClick={checkSalesforceConnection} disabled={checkingSalesforce} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition-colors">
                       <RefreshCw className={`w-3 h-3 ${checkingSalesforce ? "animate-spin" : ""}`} /> Refresh Status
                     </button>
                   </div>
-                  <p className="text-gray-400 mb-6">
-                    Authenticate the Salesforce environment where tests will be executed.
+                  <p className="text-slate-400 mb-6">
+                    Authenticate the Salesforce environment where tests will be executed. Connect multiple roles to test different permissions.
                   </p>
 
-                  <div className="bg-gray-900 border border-gray-700 rounded-xl p-5 mb-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h3 className="font-semibold text-white">System Admin</h3>
-                        <p className="text-xs text-gray-400">Required for reading Metadata & Executing Tests</p>
-                      </div>
-                      {checkingSalesforce ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-                      ) : isSfAdminConnected ? (
-                        <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full text-sm">
-                          <CheckCircle className="w-4 h-4" /> Connected
+                  {/* 👇 MULTI-ROLE CARDS 👇 */}
+                  <div className="space-y-4 mb-6">
+                    {[
+                      { id: "admin", title: "System Admin (Default)", desc: "Required for reading Metadata & Executing Tests" },
+                      { id: "sales_rep", title: "Sales Rep", desc: "Standard user for executing sales workflows" },
+                      { id: "manager", title: "Manager / Approver", desc: "Required for testing approval processes" },
+                    ].map((role) => {
+                      const conn = salesforceConnections.find((c) => c.actorRole === role.id);
+                      return (
+                        <div key={role.id} className="bg-slate-950 border border-slate-700 rounded-xl p-5">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                            <div>
+                              <h3 className="font-semibold text-white">{role.title}</h3>
+                              {conn ? (
+                                <p className="text-xs text-green-400 mt-1">Connected: {conn.sf_username}</p>
+                              ) : (
+                                <p className="text-xs text-slate-400 mt-1">{role.desc}</p>
+                              )}
+                            </div>
+                            {checkingSalesforce ? (
+                              <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                            ) : conn ? (
+                              <button 
+                                onClick={() => handleDisconnectSalesforce(role.id)} 
+                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg text-sm font-medium transition border border-slate-700 whitespace-nowrap"
+                              >
+                                Disconnect
+                              </button>
+                            ) : (
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => handleConnectSalesforce(role.id, 'production')} 
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
+                                >
+                                  Prod
+                                </button>
+                                <button 
+                                  onClick={() => handleConnectSalesforce(role.id, 'sandbox')} 
+                                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 rounded-lg text-sm font-medium transition whitespace-nowrap"
+                                >
+                                  Sandbox
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <button onClick={() => handleConnectSalesforce("admin")} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition">
-                          Connect Org
-                        </button>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
 
+                  {/* Important Action Required Block - Only shows if Admin is connected */}
                   {isSfAdminConnected && (
                     <div className="p-5 border border-yellow-700/50 bg-yellow-900/20 rounded-xl relative overflow-hidden">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-500"></div>
@@ -491,26 +572,26 @@ export default function IntegrationsAndSetupPage() {
                         Ensure your GitHub Actions workflow is authenticated with Salesforce. Generate your SFDX Auth URL locally and add it to your GitHub Repository Secrets.
                       </p>
                       
-                      <div className="bg-black/50 p-3 rounded border border-gray-700 flex items-center justify-between font-mono text-xs">
-                        <span className="text-gray-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
+                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-center justify-between font-mono text-xs">
+                        <span className="text-slate-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
                         <button 
                           onClick={() => copyToClipboard("sfdx force:org:display -u <alias> --verbose", setCopiedSfdx)}
-                          className="p-2 hover:bg-gray-700 rounded text-gray-400 hover:text-white"
+                          className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
                         >
                           {copiedSfdx ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-slate-400 mt-2">
                         Save the resulting URL as <strong className="text-white">SFDX_AUTH_URL</strong> in your GitHub Secrets.
                       </p>
-
-                      <div className="mt-6 flex justify-end">
-                        <button onClick={() => setActiveStep(3)} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
-                          Continue to Step 3
-                        </button>
-                      </div>
                     </div>
                   )}
+
+                  <div className="mt-6 flex justify-end">
+                    <button onClick={() => setActiveStep(3)} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition-colors">
+                      Continue to Step 3
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -766,5 +847,6 @@ export default function IntegrationsAndSetupPage() {
 
       </div>
     </div>
+  </div>
   );
 }

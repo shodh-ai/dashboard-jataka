@@ -75,6 +75,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => 
 // --- Interfaces ---
 interface GraphVisualizerProps {
   baseUrl: string | undefined;
+  activeBrainId?: string;
 }
 
 interface ApiNode {
@@ -92,7 +93,7 @@ interface ApiEdge {
 }
 
 // --- Main Component ---
-export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
+export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisualizerProps) {
   const { getToken } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -107,6 +108,7 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
   
   const [nodes, setNodes, onNodesChange] = useNodesState<GlassNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<AnimatedEdgeData>([]);
+  
 
   // Get connected node IDs for spotlight effect
   const connectedNodeIds = useMemo(() => {
@@ -258,7 +260,7 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${freshToken}` 
           },
-          body: JSON.stringify({ query: searchTerm }),
+          body: JSON.stringify({ query: searchTerm, curriculumId: activeBrainId }),
         });
         setAiStatus(null);
       } else {
@@ -269,7 +271,7 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${freshToken}` 
           },
-          body: JSON.stringify({ field_name: searchTerm }),
+          body: JSON.stringify({ field_name: searchTerm , curriculumId: activeBrainId }),
         });
       }
 
@@ -346,7 +348,7 @@ export default function GraphVisualizer({ baseUrl }: GraphVisualizerProps) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${freshToken}` 
         },
-        body: JSON.stringify({ query: generatedCypher }),
+        body: JSON.stringify({ query: generatedCypher , curriculumId: activeBrainId }),
       });
 
       if (!res.ok) {
