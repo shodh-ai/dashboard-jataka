@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, CheckCircle2, Clock3, Loader2, AlertTriangle, GitBranch } from "lucide-react";
+import { Activity, CheckCircle2, Clock3, Loader2, AlertTriangle } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -17,13 +17,6 @@ interface WorkflowSummary {
   step_count?: number;
   total_steps?: number;
   file_count?: number;
-  github_repo?: string;
-}
-
-interface Repository {
-  id: number;
-  full_name: string;
-  brain_id: string;
 }
 
 const HEALTHY = ["healthy", "verified", "success", "ok"];
@@ -34,8 +27,6 @@ export default function ActiveTestsPage() {
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("ARCHITECT");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
-  const [repos, setRepos] = useState<Repository[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState("");
   const [totalTests, setTotalTests] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,15 +41,9 @@ export default function ActiveTestsPage() {
       if (!token) return;
       const headers = { Authorization: `Bearer ${token}` };
 
-      let fetchUrl = `${WORKFLOWS_URL}?branch=main&limit=200`;
-      if (selectedRepo) {
-        fetchUrl += `&github_repo=${encodeURIComponent(selectedRepo)}`;
-      }
-
-      const [syncRes, reposRes, wfRes] = await Promise.all([
+      const [syncRes, wfRes] = await Promise.all([
         fetch(`${BASE_API}/auth/sync`, { headers }),
-        fetch(`${BASE_API}/integrations/github/linked-repos`, { headers }),
-        fetch(fetchUrl, { headers }),
+        fetch(`${WORKFLOWS_URL}?branch=main&limit=200`, { headers }),
       ]);
 
       if (syncRes.ok) {
@@ -71,11 +56,6 @@ export default function ActiveTestsPage() {
         } else {
           setUserRole("DEVELOPER");
         }
-      }
-
-      if (reposRes.ok) {
-        const reposData = await reposRes.json();
-        setRepos(reposData.repositories || []);
       }
 
       if (!wfRes.ok) {
@@ -91,7 +71,7 @@ export default function ActiveTestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, getToken, selectedRepo]);
+  }, [isSignedIn, getToken]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -130,7 +110,7 @@ export default function ActiveTestsPage() {
       <Sidebar orgName={orgName} userRole={userRole} />
       <div className="flex-1 overflow-y-auto px-6 lg:px-10 py-6">
         <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-semibold flex items-center gap-2">
                 <Activity size={18} /> Active Tests
@@ -139,28 +119,9 @@ export default function ActiveTestsPage() {
                 Real-time seeded test visibility from workflow status.
               </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <select
-                  value={selectedRepo}
-                  onChange={(e) => setSelectedRepo(e.target.value)}
-                  className="input select text-sm py-1.5 pl-8 pr-8 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">All Repositories</option>
-                  {repos.map((repo) => (
-                    <option key={repo.id} value={repo.full_name}>
-                      {repo.full_name}
-                    </option>
-                  ))}
-                </select>
-                <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-              </div>
-
-              <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
-                {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
-              </button>
-            </div>
+            <button onClick={load} className="btn-secondary text-xs" disabled={loading}>
+              {loading ? "Refreshing..." : "Refresh"}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -184,9 +145,7 @@ export default function ActiveTestsPage() {
 
           <div className="card overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)]">
-              <h2 className="text-sm font-semibold">
-                {selectedRepo ? `Tests for ${selectedRepo}` : "All Seeded Tests Status"}
-              </h2>
+              <h2 className="text-sm font-semibold">Seeded Tests Status</h2>
             </div>
 
             {loading ? (
@@ -194,11 +153,7 @@ export default function ActiveTestsPage() {
             ) : error ? (
               <div className="p-6 text-sm text-rose-500">{error}</div>
             ) : workflows.length === 0 ? (
-              <div className="p-6 text-sm text-[var(--text-muted)]">
-                {selectedRepo
-                  ? `No tests found for repository: ${selectedRepo}.`
-                  : "No test workflows found yet. Seed from Integrations → Salesforce Impact Graph sync."}
-              </div>
+              <div className="p-6 text-sm text-[var(--text-muted)]">No test workflows found yet. Seed from Integrations → Salesforce Impact Graph sync.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
@@ -218,14 +173,7 @@ export default function ActiveTestsPage() {
                       const isActive = ACTIVE.includes(status);
                       return (
                         <tr key={wf.name} className="hover:bg-[var(--bg-base)]/50 transition-colors">
-                          <td className="px-5 py-4 font-medium flex flex-col">
-                            {wf.name}
-                            {!selectedRepo && wf.github_repo && (
-                              <span className="text-[10px] text-[var(--text-muted)] flex items-center mt-1">
-                                <GitBranch size={10} className="mr-1" /> {wf.github_repo}
-                              </span>
-                            )}
-                          </td>
+                          <td className="px-5 py-4 font-medium">{wf.name}</td>
                           <td className="px-5 py-4">
                             {isHealthy ? (
                               <span className="badge badge-emerald"><CheckCircle2 size={12} /> {status}</span>
