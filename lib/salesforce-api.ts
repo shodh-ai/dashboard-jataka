@@ -39,10 +39,10 @@ export async function getSalesforceStatus(authToken: string): Promise<Salesforce
  * Initiate Salesforce OAuth flow
  * Gets the authorization URL from backend and redirects user to Salesforce
  */
-export async function connectSalesforce(authToken: string, role: string = 'admin'): Promise<void> {
+export async function connectSalesforce(authToken: string, role: string = 'admin', env: 'production' | 'sandbox' = 'production'): Promise<void> {
   try {
     // First, get the authorization URL from the backend (with auth header)
-    const response = await fetch(`${BASE_API}/integrations/salesforce/auth-url?role=${role}`, {
+    const response = await fetch(`${BASE_API}/integrations/salesforce/auth-url?role=${role}&env=${env}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
