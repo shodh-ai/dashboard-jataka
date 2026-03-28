@@ -5,7 +5,7 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-// ReplayPage.tsx
+// ReplayPage.tsx 1
 export default async function ReplayPage(props: Props) {
   const searchParams = await props.searchParams;
   const eventsUrl = typeof searchParams.data === 'string' ? searchParams.data : '';
