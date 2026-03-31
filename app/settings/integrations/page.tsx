@@ -185,8 +185,9 @@ export default function IntegrationsAndSetupPage() {
       setGeneratedKey(data?.key || null);
       setCopiedKey(false);
       await fetchKeys();
-    } catch (error) {
-      alert("Failed to create API key");
+    } catch (error: any) {
+      console.error('Failed to create API key:', error);
+      alert("We encountered a problem creating your API key. Please try again later.");
     } finally {
       setCreatingKey(false);
     }
@@ -204,8 +205,9 @@ export default function IntegrationsAndSetupPage() {
       });
       if (!res.ok) throw new Error("Failed to revoke key");
       await fetchKeys();
-    } catch (error) {
-      alert("Failed to revoke API key");
+    } catch (error: any) {
+      console.error('Failed to revoke API key:', error);
+      alert("We encountered a problem revoking your API key. Please try again later.");
     }
   };
 
@@ -629,14 +631,12 @@ export default function IntegrationsAndSetupPage() {
                     </div>
                     <div className="p-4 overflow-x-auto">
                       <pre className="text-sm font-mono leading-relaxed text-gray-300">
-                        <code dangerouslySetInnerHTML={{ 
-                          __html: yamlSnippet
-                            .replace(
-                              installationId ? String(installationId) : '"YOUR_INSTALLATION_ID"', 
-                              `<span class="text-blue-400 font-bold">${installationId || '"YOUR_INSTALLATION_ID"'}</span>`
-                            )
-                            .replace(/\${{ secrets.JATAKA_API_KEY }}/g, `<span class="text-emerald-400">\${{ secrets.JATAKA_API_KEY }}</span>`) 
-                        }} />
+                        <code>
+                          {yamlSnippet.replace(
+                            installationId ? String(installationId) : '"YOUR_INSTALLATION_ID"', 
+                            String(installationId || '"YOUR_INSTALLATION_ID"')
+                          )}
+                        </code>
                       </pre>
                     </div>
                   </div>

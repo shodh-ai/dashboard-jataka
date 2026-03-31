@@ -22,6 +22,23 @@ export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
+  // Define allowed domains for replay data
+  const ALLOWED_DOMAINS = [
+    "api.shodh.ai",
+    "staging-api.shodh.ai",
+    "your-s3-bucket.amazonaws.com",
+    ...(process.env.NODE_ENV === 'development' ? ['localhost', '127.0.0.1'] : [])
+  ];
+
+  const validateUrl = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return ALLOWED_DOMAINS.includes(urlObj.hostname);
+    } catch (e) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (!containerRef.current || !eventsUrl) return;
 
@@ -29,6 +46,11 @@ export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
 
     const fetchAndPlay = async () => {
       try {
+        // Validate URL before fetching
+        if (!validateUrl(eventsUrl)) {
+          throw new Error("Unauthorized domain for replay data.");
+        }
+
          const res = await fetch(eventsUrl, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch recording data");
 
