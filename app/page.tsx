@@ -252,7 +252,7 @@ export default function Home() {
           }
 
           // Fetch current metrics
-          const res = await fetch(`${METRICS_URL}?endpoint=dashboard-metrics`, {
+          const res = await fetch(METRICS_URL, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
@@ -369,9 +369,9 @@ export default function Home() {
       }
 
       const [wfRes, logRes, bfRes] = await Promise.all([
-        fetch(`${WORKFLOWS_URL}?endpoint=workflows&branch=main&limit=50`, { headers }),
-        fetch(`${HEALER_LOG_URL}?endpoint=healer-log&limit=25`, { headers }),
-        fetch(`${BUS_FACTOR_URL}?endpoint=bus-factor&branch=main&limit=50`, { headers }),
+        fetch(`${WORKFLOWS_URL}?branch=main&limit=50`, { headers }),
+        fetch(`${HEALER_LOG_URL}?limit=25`, { headers }),
+        fetch(`${BUS_FACTOR_URL}?branch=main&limit=50`, { headers }),
       ]);
 
       if (wfRes.ok) {
