@@ -90,8 +90,7 @@ export default function DeveloperToolsPage() {
       setNewBrainName("");
       window.location.reload(); // Quick refresh to grab new brains
     } catch (error: any) {
-      console.error('Failed to create brain:', error);
-      alert("We encountered a problem creating the brain. Please try again later.");
+      alert(error?.message || "Failed to create brain");
     } finally {
       setCreatingBrain(false);
     }

@@ -39,8 +39,7 @@ export default function ApiKeysSettingsPage() {
       const data = await res.json();
       setKeys(Array.isArray(data?.keys) ? data.keys : []);
     } catch (error: any) {
-      console.error('Failed to load API keys:', error);
-      alert("We encountered a problem loading your API keys. Please try again later.");
+      alert(error?.message || "Failed to load API keys");
     } finally {
       setLoading(false);
     }
@@ -78,8 +77,7 @@ export default function ApiKeysSettingsPage() {
       setCopied(false);
       await fetchKeys();
     } catch (error: any) {
-      console.error('Failed to create API key:', error);
-      alert("We encountered a problem creating your API key. Please try again later.");
+      alert(error?.message || "Failed to create API key");
     } finally {
       setCreating(false);
     }
@@ -108,8 +106,7 @@ export default function ApiKeysSettingsPage() {
       if (!res.ok) throw new Error("Failed to revoke API key");
       await fetchKeys();
     } catch (error: any) {
-      console.error('Failed to revoke API key:', error);
-      alert("We encountered a problem revoking your API key. Please try again later.");
+      alert(error?.message || "Failed to revoke API key");
     }
   };
 
