@@ -137,6 +137,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
                   Sign out
                 </button>
               </SignOutButton>
+              
             </div>
           )}
         </div>
