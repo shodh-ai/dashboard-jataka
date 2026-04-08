@@ -12,7 +12,8 @@ import {
   ChevronsRight,
   Hexagon,
   ShieldCheck,
-  Terminal
+  Terminal,
+  Wrench
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Active Tests", href: "/active-tests", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
+    { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
     { label: "Integrations", href: "/integrations", icon: Plug },
     { label: "API Keys", href: "/settings/api-keys", icon: Key },
     { label: "Audit Logs", href: "/audit-logs", icon: Activity },
