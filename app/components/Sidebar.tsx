@@ -34,6 +34,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList(orgListParams);
 
+  
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
     { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
