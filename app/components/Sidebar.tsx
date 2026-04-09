@@ -13,7 +13,8 @@ import {
   Hexagon,
   ShieldCheck,
   Terminal,
-  Wrench
+  Wrench,
+  Shield
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,6 +39,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
     { label: "Active Tests", href: "/active-tests", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
+    { label: "Security & Compliance", href: "/compliance", icon: Shield },
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
     { label: "Integrations", href: "/integrations", icon: Plug },
