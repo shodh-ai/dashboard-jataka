@@ -155,7 +155,7 @@ export default function CompliancePage() {
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 print:hidden">
           <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
             <Shield className="text-indigo-500" size={28} />
             Compliance X-Ray
@@ -245,7 +245,7 @@ export default function CompliancePage() {
         {/* Results Table (This section is targeted by print media queries for PDF) */}
         {accessList && (
           <div
-            className="card overflow-hidden print:border-none print:shadow-none print:bg-white print:text-black"
+            className="card overflow-hidden print:overflow-visible print:border-none print:shadow-none print:bg-white print:text-black"
             id="printable-audit-report"
           >
             <div className="px-5 py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)] print:bg-white print:border-gray-300 flex justify-between items-center">
@@ -265,42 +265,44 @@ export default function CompliancePage() {
               </button>
             </div>
             
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] print:bg-white print:text-gray-700 uppercase text-[11px] tracking-wider">
-                <tr>
-                  <th className="px-5 py-3 font-medium">Security Entity</th>
-                  <th className="px-5 py-3 font-medium">Type</th>
-                  <th className="px-5 py-3 font-medium text-center">Read Access</th>
-                  <th className="px-5 py-3 font-medium text-center">Edit Access</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-default)] print:divide-gray-300">
-                {accessList.length === 0 ? (
+            <div className="overflow-x-auto print:overflow-visible print:w-full">
+              <table className="w-full text-left text-sm whitespace-nowrap print:whitespace-normal print:table-fixed">
+                <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] print:bg-white print:text-gray-700 uppercase text-[11px] tracking-wider">
                   <tr>
-                    <td colSpan={4} className="p-8 text-center text-[var(--text-muted)] print:text-gray-700">
-                      No access found for this field.
-                    </td>
+                    <th className="px-5 py-3 font-medium">Security Entity</th>
+                    <th className="px-5 py-3 font-medium">Type</th>
+                    <th className="px-5 py-3 font-medium text-center">Read Access</th>
+                    <th className="px-5 py-3 font-medium text-center">Edit Access</th>
                   </tr>
-                ) : (
-                  accessList.map((record, idx) => (
-                    <tr key={idx} className="hover:bg-[var(--bg-base)]/50 print:hover:bg-transparent">
-                      <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black">{record.name}</td>
-                      <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black">
-                        <span className={`badge ${record.type === 'Profile' ? 'badge-amber' : 'badge-indigo'}`}>
-                          {record.type}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        {record.can_read ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
-                      </td>
-                      <td className="px-5 py-3 text-center">
-                        {record.can_edit ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
+                </thead>
+                <tbody className="divide-y divide-[var(--border-default)] print:divide-gray-300">
+                  {accessList.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-[var(--text-muted)] print:text-gray-700">
+                        No access found for this field.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    accessList.map((record, idx) => (
+                      <tr key={idx} className="hover:bg-[var(--bg-base)]/50 print:hover:bg-transparent">
+                        <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black">{record.name}</td>
+                        <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black">
+                          <span className={`badge ${record.type === 'Profile' ? 'badge-amber' : 'badge-indigo'}`}>
+                            {record.type}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          {record.can_read ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          {record.can_edit ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
