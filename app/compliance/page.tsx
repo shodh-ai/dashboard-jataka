@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { Shield, Search, Download, Check, X } from "lucide-react";
+import { Shield, Download, Check, X } from "lucide-react";
 
 interface AccessRecord {
   type: string;
@@ -14,6 +14,10 @@ interface AccessRecord {
 export default function CompliancePage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [repoId, setRepoId] = useState<string | null>(null);
+  const [objects, setObjects] = useState<string[]>([]);
+  const [selectedObject, setSelectedObject] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestedFields, setSuggestedFields] = useState<string[]>([]);
   const [fieldName, setFieldName] = useState("");
   const [loading, setLoading] = useState(false);
   const [accessList, setAccessList] = useState<AccessRecord[] | null>(null);
@@ -42,9 +46,71 @@ export default function CompliancePage() {
     fetchActiveBrain();
   }, [isSignedIn, getToken]);
 
+  useEffect(() => {
+    async function fetchObjects() {
+      if (!repoId) return;
+
+      try {
+        const token = await getToken();
+        const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (!BASE_API) return;
+
+        const res = await fetch(
+          `${BASE_API}/brum-proxy/compliance/objects?repo_id=${encodeURIComponent(repoId)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch objects");
+
+        const data = await res.json();
+        if (data.status === "success") {
+          setObjects(data.objects ?? []);
+        }
+      } catch (e) {
+        console.error("Failed to load compliance objects", e);
+      }
+    }
+
+    fetchObjects();
+  }, [repoId, getToken]);
+
+  useEffect(() => {
+    if (!repoId || !selectedObject) {
+      setSuggestedFields([]);
+      return;
+    }
+
+    const debounce = setTimeout(async () => {
+      try {
+        const token = await getToken();
+        const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (!BASE_API) return;
+
+        const params = new URLSearchParams({
+          repo_id: repoId,
+          object_name: selectedObject,
+          search_term: searchQuery,
+        });
+        const res = await fetch(`${BASE_API}/brum-proxy/compliance/search_fields?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch field suggestions");
+
+        const data = await res.json();
+        if (data.status === "success") {
+          setSuggestedFields(data.fields ?? []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch field suggestions", e);
+      }
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [repoId, selectedObject, searchQuery, getToken]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!repoId || !fieldName.trim()) return;
+    if (!repoId || !searchQuery.trim()) return;
     
     setLoading(true);
     setError(null);
@@ -53,13 +119,15 @@ export default function CompliancePage() {
       const token = await getToken();
       const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
       
-      const res = await fetch(`${BASE_API}/brum-proxy/compliance/xray?repo_id=${repoId}&field_name=${fieldName.trim()}`, {
+      const resolvedField = searchQuery.trim();
+      const res = await fetch(`${BASE_API}/brum-proxy/compliance/xray?repo_id=${encodeURIComponent(repoId)}&field_name=${encodeURIComponent(resolvedField)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error("Field not found or scan failed.");
       
       const data = await res.json();
+      setFieldName(resolvedField);
       setAccessList(data.access_list);
     } catch (err: any) {
       setError(err.message);
@@ -91,22 +159,79 @@ export default function CompliancePage() {
           </p>
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="card p-6 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" size={18} />
-            <input 
-              type="text" 
-              value={fieldName}
-              onChange={(e) => setFieldName(e.target.value)}
-              placeholder="Enter Field API Name (e.g., AnnualRevenue, SSN__c)" 
-              className="input pl-10 w-full"
+        {/* Search Controls */}
+        <form
+          onSubmit={handleSearch}
+          className="card p-6 md:p-7 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start rounded-xl shadow-[0_8px_32px_rgba(8,12,28,0.35)]"
+        >
+          <div className="flex flex-col w-full lg:w-1/3">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+              1. Select Object
+            </label>
+            <select
+              className="input w-full h-11"
+              value={selectedObject}
+              onChange={(e) => {
+                setSelectedObject(e.target.value);
+                setSearchQuery("");
+                setSuggestedFields([]);
+                setAccessList(null);
+                setError(null);
+              }}
+            >
+              <option value="">-- Choose an Object --</option>
+              {objects.map((obj) => (
+                <option key={obj} value={obj}>
+                  {obj}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-[var(--text-muted)] mt-2">
+              {objects.length > 0 ? `${objects.length} objects available` : "Loading available objects..."}
+            </p>
+          </div>
+
+          <div className="flex flex-col w-full lg:w-1/3">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+              2. Search Field
+            </label>
+            <input
+              type="text"
+              list="field-suggestions"
+              className="input w-full h-11 disabled:opacity-60"
+              placeholder={selectedObject ? "e.g. Industry, Name..." : "Select an object first..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={!selectedObject}
               required
             />
+            <datalist id="field-suggestions">
+              {suggestedFields.map((field) => (
+                <option key={field} value={field} />
+              ))}
+            </datalist>
+            <p className="text-xs text-[var(--text-muted)] mt-2">
+              {selectedObject
+                ? "Type to see matching fields"
+                : "Choose an object to enable field search"}
+            </p>
           </div>
-          <button type="submit" disabled={loading} className="btn-primary whitespace-nowrap">
-            {loading ? "Scanning Graph..." : "Generate Audit Report"}
-          </button>
+
+          <div className="w-full lg:w-auto lg:min-w-[220px]">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2 block">
+              3. Run Report
+            </label>
+            <button
+              type="submit"
+              disabled={loading || !searchQuery.trim()}
+              className="btn-primary whitespace-nowrap w-full h-11 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? "Scanning Graph..." : "Generate Audit Report"}
+            </button>
+            <p className="text-xs mt-2 invisible">
+              alignment spacer
+            </p>
+          </div>
         </form>
 
         {error && <div className="text-rose-500 mb-6">{error}</div>}
