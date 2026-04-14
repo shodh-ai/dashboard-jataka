@@ -155,7 +155,7 @@ export default function CompliancePage() {
       <div className="max-w-5xl mx-auto">
         
         {/* Header */}
-        <div className="mb-8 print:hidden">
+        <div className="mb-8">
           <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
             <Shield className="text-indigo-500" size={28} />
             Compliance X-Ray
@@ -260,19 +260,19 @@ export default function CompliancePage() {
                   Target Environment: Knowledge Scope ID ({scopeId || "Unavailable"})
                 </p>
               </div>
-              <button onClick={handleExportPDF} className="btn-secondary print:hidden flex items-center gap-2 text-xs">
+              <button onClick={handleExportPDF} className="btn-secondary print:!hidden flex items-center gap-2 text-xs">
                 <Download size={14} /> Export to PDF
               </button>
             </div>
             
             <div className="overflow-x-auto print:overflow-visible print:w-full">
-              <table className="w-full text-left text-sm whitespace-nowrap print:whitespace-normal print:table-fixed">
+              <table className="w-full text-left text-sm print:table-fixed">
                 <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] print:bg-white print:text-gray-700 uppercase text-[11px] tracking-wider">
                   <tr>
-                    <th className="px-5 py-3 font-medium">Security Entity</th>
-                    <th className="px-5 py-3 font-medium">Type</th>
-                    <th className="px-5 py-3 font-medium text-center">Read Access</th>
-                    <th className="px-5 py-3 font-medium text-center">Edit Access</th>
+                    <th className="px-5 py-3 font-medium w-[52%] print:w-[56%]">Security Entity</th>
+                    <th className="px-5 py-3 font-medium w-[24%] print:w-[22%]">Type</th>
+                    <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">Read Access</th>
+                    <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">Edit Access</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-default)] print:divide-gray-300">
@@ -285,8 +285,10 @@ export default function CompliancePage() {
                   ) : (
                     accessList.map((record, idx) => (
                       <tr key={idx} className="hover:bg-[var(--bg-base)]/50 print:hover:bg-transparent">
-                        <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black">{record.name}</td>
-                        <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black">
+                        <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black whitespace-normal break-words print:break-all">
+                          {record.name}
+                        </td>
+                        <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black whitespace-nowrap">
                           <span className={`badge ${record.type === 'Profile' ? 'badge-amber' : 'badge-indigo'}`}>
                             {record.type}
                           </span>
