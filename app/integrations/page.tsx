@@ -89,10 +89,10 @@ export default function IntegrationsAndSetupPage() {
 
   // --- Progress Calculation ---
   const isSfAdminConnected = salesforceConnections.some(
-    (c) => c.actorRole === "admin" && c.connected !== false,
+    (c) => c.actorRole === "admin" && c.status !== "EXPIRED",
   );
   const expiredSalesforceConnections = salesforceConnections.filter(
-    (c) => c.connected === false || c.status === "EXPIRED",
+    (c) => c.status === "EXPIRED",
   );
   const hasExpiredSalesforceConnection = expiredSalesforceConnections.length > 0;
   const hasActiveKeys = keys.some((k) => k.isActive);
@@ -531,7 +531,7 @@ export default function IntegrationsAndSetupPage() {
                       { id: "manager", title: "Manager / Approver", desc: "Required for testing approval processes" },
                     ].map((role) => {
                       const conn = salesforceConnections.find((c) => c.actorRole === role.id);
-                      const isExpired = Boolean(conn && (conn.connected === false || conn.status === "EXPIRED"));
+                      const isExpired = Boolean(conn && conn.status === "EXPIRED");
                       return (
                         <div key={role.id} className="bg-slate-950 border border-slate-700 rounded-xl p-5">
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">

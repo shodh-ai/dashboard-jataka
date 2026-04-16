@@ -338,7 +338,7 @@ export default function Home() {
       try {
         const statuses = await getSalesforceStatus(token);
         const expired = (statuses || []).some(
-          (conn) => conn.connected === false || conn.status === "EXPIRED",
+          (conn) => conn.status === "EXPIRED",
         );
         setHasExpiredSalesforceConnection(expired);
       } catch {

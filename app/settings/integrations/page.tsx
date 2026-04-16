@@ -84,18 +84,17 @@ export default function IntegrationsAndSetupPage() {
 
   // --- Progress Calculation ---
   const isSfAdminConnected = salesforceConnections.some(
-    (c) => c.actorRole === "admin" && c.connected !== false,
+    (c) => c.actorRole === "admin" && c.status !== "EXPIRED",
   );
   const adminSalesforceConnection = salesforceConnections.find(
     (c) => c.actorRole === "admin",
   );
   const isSfAdminExpired = Boolean(
     adminSalesforceConnection &&
-      (adminSalesforceConnection.connected === false ||
-        adminSalesforceConnection.status === "EXPIRED"),
+      adminSalesforceConnection.status === "EXPIRED",
   );
   const hasExpiredSalesforceConnection = salesforceConnections.some(
-    (c) => c.connected === false || c.status === "EXPIRED",
+    (c) => c.status === "EXPIRED",
   );
   const hasActiveKeys = keys.some((k) => k.isActive);
   
