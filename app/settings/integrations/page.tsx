@@ -30,7 +30,6 @@ import {
 import {
   getSalesforceStatus,
   connectSalesforce,
-  disconnectSalesforce,
   syncSalesforceSchema,
   type SalesforceConnectionResponse,
 } from "../../../lib/salesforce-api";
@@ -84,7 +83,19 @@ export default function IntegrationsAndSetupPage() {
   const [updatingJira, setUpdatingJira] = useState(false);
 
   // --- Progress Calculation ---
-  const isSfAdminConnected = salesforceConnections.some((c) => c.actorRole === "admin");
+  const isSfAdminConnected = salesforceConnections.some(
+    (c) => c.actorRole === "admin" && c.status !== "EXPIRED",
+  );
+  const adminSalesforceConnection = salesforceConnections.find(
+    (c) => c.actorRole === "admin",
+  );
+  const isSfAdminExpired = Boolean(
+    adminSalesforceConnection &&
+      adminSalesforceConnection.status === "EXPIRED",
+  );
+  const hasExpiredSalesforceConnection = salesforceConnections.some(
+    (c) => c.status === "EXPIRED",
+  );
   const hasActiveKeys = keys.some((k) => k.isActive);
   
   const completedSteps =[
@@ -350,6 +361,12 @@ export default function IntegrationsAndSetupPage() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Setup & Integrations</h1>
           <p className="text-gray-400 text-sm md:text-base">Complete these steps to fully automate your AI testing pipeline.</p>
+          {hasExpiredSalesforceConnection && (
+            <div className="mt-4 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm text-red-200">
+              <span className="font-semibold">Salesforce authentication expired.</span>{" "}
+              Automated tests are paused until an admin reconnects Salesforce.
+            </div>
+          )}
           
           <div className="mt-6 bg-gray-800/50 rounded-full h-3 w-full border border-gray-700 overflow-hidden">
             <div 
@@ -465,10 +482,18 @@ export default function IntegrationsAndSetupPage() {
                     <div className="flex justify-between items-center mb-4">
                       <div>
                         <h3 className="font-semibold text-white">System Admin</h3>
-                        <p className="text-xs text-gray-400">Required for reading Metadata & Executing Tests</p>
+                        <p className={`text-xs ${isSfAdminExpired ? "text-amber-300" : "text-gray-400"}`}>
+                          {isSfAdminExpired
+                            ? "Action required: reconnect Salesforce to resume automation."
+                            : "Required for reading Metadata & Executing Tests"}
+                        </p>
                       </div>
                       {checkingSalesforce ? (
                         <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                      ) : isSfAdminExpired ? (
+                        <button onClick={() => handleConnectSalesforce("admin")} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition">
+                          Reconnect Org
+                        </button>
                       ) : isSfAdminConnected ? (
                         <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1.5 rounded-full text-sm">
                           <CheckCircle className="w-4 h-4" /> Connected

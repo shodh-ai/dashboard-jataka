@@ -88,7 +88,13 @@ export default function IntegrationsAndSetupPage() {
   const [updatingJira, setUpdatingJira] = useState(false);
 
   // --- Progress Calculation ---
-  const isSfAdminConnected = salesforceConnections.some((c) => c.actorRole === "admin");
+  const isSfAdminConnected = salesforceConnections.some(
+    (c) => c.actorRole === "admin" && c.status !== "EXPIRED",
+  );
+  const expiredSalesforceConnections = salesforceConnections.filter(
+    (c) => c.status === "EXPIRED",
+  );
+  const hasExpiredSalesforceConnection = expiredSalesforceConnections.length > 0;
   const hasActiveKeys = keys.some((k) => k.isActive);
   
   const completedSteps =[
@@ -385,6 +391,12 @@ export default function IntegrationsAndSetupPage() {
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Setup & Integrations</h1>
             <p className="text-slate-400 text-sm md:text-base">Complete these steps to fully automate your AI testing pipeline.</p>
+            {hasExpiredSalesforceConnection && (
+              <div className="mt-4 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm text-red-200">
+                <span className="font-semibold">Salesforce authentication expired.</span>{" "}
+                Automated tests are paused until an admin reconnects Salesforce.
+              </div>
+            )}
             
             <div className="mt-6 bg-slate-800/50 rounded-full h-3 w-full border border-slate-700 overflow-hidden">
               <div 
@@ -519,13 +531,18 @@ export default function IntegrationsAndSetupPage() {
                       { id: "manager", title: "Manager / Approver", desc: "Required for testing approval processes" },
                     ].map((role) => {
                       const conn = salesforceConnections.find((c) => c.actorRole === role.id);
+                      const isExpired = Boolean(conn && conn.status === "EXPIRED");
                       return (
                         <div key={role.id} className="bg-slate-950 border border-slate-700 rounded-xl p-5">
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div>
                               <h3 className="font-semibold text-white">{role.title}</h3>
                               {conn ? (
-                                <p className="text-xs text-green-400 mt-1">Connected: {conn.sf_username}</p>
+                                <p className={`text-xs mt-1 ${isExpired ? "text-amber-300" : "text-green-400"}`}>
+                                  {isExpired
+                                    ? `Action Required: Reconnect ${role.title}`
+                                    : `Connected: ${conn.sf_username}`}
+                                </p>
                               ) : (
                                 <p className="text-xs text-slate-400 mt-1">{role.desc}</p>
                               )}
@@ -533,12 +550,22 @@ export default function IntegrationsAndSetupPage() {
                             {checkingSalesforce ? (
                               <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                             ) : conn ? (
-                              <button 
-                                onClick={() => handleDisconnectSalesforce(role.id)} 
-                                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg text-sm font-medium transition border border-slate-700 whitespace-nowrap"
-                              >
-                                Disconnect
-                              </button>
+                              <div className="flex gap-2">
+                                {isExpired && (
+                                  <button
+                                    onClick={() => handleConnectSalesforce(role.id, true)}
+                                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium transition whitespace-nowrap"
+                                  >
+                                    Reconnect
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => handleDisconnectSalesforce(role.id)} 
+                                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg text-sm font-medium transition border border-slate-700 whitespace-nowrap"
+                                >
+                                  Disconnect
+                                </button>
+                              </div>
                             ) : (
                               <div className="flex gap-2">
                                 <button 
@@ -571,11 +598,25 @@ export default function IntegrationsAndSetupPage() {
                       <p className="text-sm text-yellow-100/80 mb-4">
                         Ensure your GitHub Actions workflow is authenticated with Salesforce. Generate your SFDX Auth URL locally and add it to your GitHub Repository Secrets.
                       </p>
-                      
-                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-center justify-between font-mono text-xs">
-                        <span className="text-slate-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
-                        <button 
-                          onClick={() => copyToClipboard("sfdx force:org:display -u <alias> --verbose", setCopiedSfdx)}
+
+                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-start justify-between font-mono text-xs">
+                        <div className="flex-1 pr-3 flex flex-col gap-3">
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">login to salesforce account through this command</p>
+                            <span className="text-slate-300">sf org login web --alias staging-org</span>
+                          </div>
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">then run this command for sfdx auth url </p>
+                            <span className="text-slate-300">sf org display --target-org staging-org --verbose</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              "sf org login web --alias staging-org\nsf org display --target-org staging-org --verbose",
+                              setCopiedSfdx
+                            )
+                          }
                           className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
                         >
                           {copiedSfdx ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}

@@ -36,6 +36,7 @@ import ReplayPlayer from "./components/ReplayPlayer";
 import { useOrganizationList } from "@clerk/nextjs";
 import Sidebar from "./components/Sidebar";
 import Link from "next/link";
+import { getSalesforceStatus } from "../lib/salesforce-api";
 
 interface Metrics {
   senior_deflection_rate: number;
@@ -140,6 +141,8 @@ export default function Home() {
   const [isGraphFullScreen, setIsGraphFullScreen] = useState(false);
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [selectedReplay, setSelectedReplay] = useState<string | null>(null);
+  const [hasExpiredSalesforceConnection, setHasExpiredSalesforceConnection] =
+    useState(false);
 
   useEffect(() => {
     if (!isLoaded || !isOrgListLoaded || !isSignedIn) return;
@@ -324,6 +327,27 @@ export default function Home() {
     }
     fetchMetrics();
   }, [isSignedIn, token, viewState, timePeriod, orgId]);
+
+  useEffect(() => {
+    async function fetchSalesforceStatus() {
+      if (!isSignedIn || !token || viewState !== "dashboard") {
+        setHasExpiredSalesforceConnection(false);
+        return;
+      }
+
+      try {
+        const statuses = await getSalesforceStatus(token);
+        const expired = (statuses || []).some(
+          (conn) => conn.status === "EXPIRED",
+        );
+        setHasExpiredSalesforceConnection(expired);
+      } catch {
+        setHasExpiredSalesforceConnection(false);
+      }
+    }
+
+    fetchSalesforceStatus();
+  }, [isSignedIn, token, viewState]);
 
   // Load available brains (curriculums) for the org
   useEffect(() => {
@@ -688,6 +712,19 @@ export default function Home() {
             </header>
 
             <div className="px-6 lg:px-10 py-6 max-w-6xl mx-auto">
+              {hasExpiredSalesforceConnection && (
+                <section className="mb-6 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm text-red-200">
+                  <span className="font-semibold">
+                    Salesforce connection expired.
+                  </span>{" "}
+                  Automated tests are paused until an admin reconnects in{" "}
+                  <Link href="/integrations" className="underline underline-offset-2">
+                    Integrations
+                  </Link>
+                  .
+                </section>
+              )}
+
               {/* ─── Real Snapshot ─── */}
               <section className="mb-8">
                 <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">System Snapshot</h2>

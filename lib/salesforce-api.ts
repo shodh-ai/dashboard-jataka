@@ -13,6 +13,10 @@ export interface SalesforceConnectionResponse {
   sf_username?: string;
   connected_at?: string;
   last_used_at?: string;
+  status?: "ACTIVE" | "EXPIRED" | string;
+  is_valid?: boolean;
+  auth_error_message?: string | null;
+  auth_expired_at?: string | null;
 }
 
 /**
