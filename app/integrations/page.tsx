@@ -598,11 +598,25 @@ export default function IntegrationsAndSetupPage() {
                       <p className="text-sm text-yellow-100/80 mb-4">
                         Ensure your GitHub Actions workflow is authenticated with Salesforce. Generate your SFDX Auth URL locally and add it to your GitHub Repository Secrets.
                       </p>
-                      
-                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-center justify-between font-mono text-xs">
-                        <span className="text-slate-300">sfdx force:org:display -u &lt;alias&gt; --verbose</span>
-                        <button 
-                          onClick={() => copyToClipboard("sfdx force:org:display -u <alias> --verbose", setCopiedSfdx)}
+
+                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-start justify-between font-mono text-xs">
+                        <div className="flex-1 pr-3 flex flex-col gap-3">
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">login to salesforce account through this command</p>
+                            <span className="text-slate-300">sf org login web --alias staging-org</span>
+                          </div>
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">then run this command for sfdx auth url </p>
+                            <span className="text-slate-300">sf org display --target-org staging-org --verbose</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              "sf org login web --alias staging-org\nsf org display --target-org staging-org --verbose",
+                              setCopiedSfdx
+                            )
+                          }
                           className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
                         >
                           {copiedSfdx ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
