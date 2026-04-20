@@ -356,13 +356,13 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
+  //const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
   const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
   
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
-    curl --fail-with-body --show-error -X POST "${webhookUrl}" \\
+    curl -X POST "\${{ secrets.JATAKA_API_URL }}/api/integrations/github/trigger" \\
       -H "Authorization: Bearer \${{ secrets.JATAKA_API_KEY }}" \\
       -H "Content-Type: application/json" \\
       -d '{
@@ -370,7 +370,9 @@ export default function IntegrationsAndSetupPage() {
         "repo_full_name": "\${{ github.repository }}",
         "branch": "\${{ github.head_ref || github.ref_name }}",
         "pr_number": \${{ github.event.pull_request.number || 'null' }},
-        "user_email": "\${{ github.actor }}"
+        "test_mode": "\${{ vars.JATAKA_TEST_MODE || 'auto' }}",
+        "action": "\${{ github.event.action }}",
+        "before_sha": "\${{ github.event.before }}"
       }'`;
 
   if (!isLoaded || !isSignedIn) {
