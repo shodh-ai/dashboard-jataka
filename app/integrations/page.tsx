@@ -356,13 +356,13 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
+  //const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
   const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
   
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
-    curl --fail-with-body --show-error -X POST "${webhookUrl}" \\
+    curl -X POST "\${{ secrets.JATAKA_API_URL }}/api/integrations/github/trigger" \\
       -H "Authorization: Bearer \${{ secrets.JATAKA_API_KEY }}" \\
       -H "Content-Type: application/json" \\
       -d '{
@@ -370,7 +370,9 @@ export default function IntegrationsAndSetupPage() {
         "repo_full_name": "\${{ github.repository }}",
         "branch": "\${{ github.head_ref || github.ref_name }}",
         "pr_number": \${{ github.event.pull_request.number || 'null' }},
-        "user_email": "\${{ github.actor }}"
+        "test_mode": "\${{ vars.JATAKA_TEST_MODE || 'auto' }}",
+        "action": "\${{ github.event.action }}",
+        "before_sha": "\${{ github.event.before }}"
       }'`;
 
   if (!isLoaded || !isSignedIn) {
@@ -760,6 +762,37 @@ export default function IntegrationsAndSetupPage() {
                             .replace(/\${{ secrets.JATAKA_API_KEY }}/g, `<span class="text-emerald-400">\${{ secrets.JATAKA_API_KEY }}</span>`) 
                         }} />
                       </pre>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 p-4 bg-sky-900/20 border border-sky-700/50 rounded-xl">
+                    <h4 className="font-semibold text-sky-200 mb-1.5">Required GitHub variable</h4>
+                    <p className="text-sm text-sky-100/90 mb-3">
+                      Add <code className="bg-black/40 px-1 rounded">JATAKA_TEST_MODE</code> in your GitHub Actions variables.
+                    </p>
+                    <div className="overflow-x-auto rounded-lg border border-sky-700/50">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-sky-900/40 text-sky-200">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold">Value</th>
+                            <th className="px-3 py-2 font-semibold">Runs</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sky-100/90">
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">ui</td>
+                            <td className="px-3 py-2">UI-only tests</td>
+                          </tr>
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">backend</td>
+                            <td className="px-3 py-2">Backend-only tests</td>
+                          </tr>
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">hybrid</td>
+                            <td className="px-3 py-2">Both UI and backend tests</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 

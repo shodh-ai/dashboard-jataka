@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import { Wrench, Search, Trash2, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
 interface OrphanField {
   api_name: string;
@@ -76,7 +77,9 @@ export default function TechDebtPage() {
   if (!isLoaded) return <div className="p-8 text-[var(--text-muted)]">Loading...</div>;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[var(--bg-base)] min-h-screen">
+    <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <Sidebar orgName="Jataka" userRole="ARCHITECT" />
+      <div className="flex-1 overflow-y-auto bg-[var(--bg-base)]">
       <header className="sticky top-0 z-30 flex items-center border-b border-[var(--border-default)] bg-[var(--bg-base)] px-6 lg:px-10 h-14">
         <h1 className="text-sm font-medium text-[var(--text-primary)] flex items-center gap-2">
           <Wrench size={16} className="text-[var(--accent)]" />
@@ -207,6 +210,7 @@ export default function TechDebtPage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useMemo, useState } from "react";
 import { KeyRound, Loader2, Copy, ShieldAlert, Trash2, CheckCircle } from "lucide-react";
+import Sidebar from "../../components/Sidebar";
 
 type ApiKeyRecord = {
   id: string;
@@ -111,7 +112,10 @@ export default function ApiKeysSettingsPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <Sidebar orgName="Jataka" userRole="ARCHITECT" />
+      <div className="flex-1 overflow-y-auto">
+    <div className="p-6 md:p-8 max-w-4xl space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">API Keys</h1>
@@ -212,6 +216,8 @@ export default function ApiKeysSettingsPage() {
             ))}
           </div>
         )}
+      </div>
+    </div>
       </div>
     </div>
   );
