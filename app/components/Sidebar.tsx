@@ -59,7 +59,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
 
   return (
     <aside
-      className={`flex flex-col h-screen bg-[var(--bg-surface)] border-r border-[var(--border-default)] transition-all duration-200 ${
+      className={`sticky top-0 self-start flex flex-col h-screen bg-[var(--bg-surface)] border-r border-[var(--border-default)] transition-all duration-200 ${
         collapsed ? "w-[64px]" : "w-[240px]"
       }`}
     >

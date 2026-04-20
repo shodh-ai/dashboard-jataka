@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Activity, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
 const HEALTH_URL = "https://api.jataka.io/health";
 
@@ -48,8 +49,10 @@ export default function StatusPage() {
   const isHealthy = (health?.status || "").toLowerCase() === "healthy";
 
   return (
-    <main className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
-      <div className="mx-auto max-w-3xl px-6 py-12">
+    <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <Sidebar orgName="Jataka" userRole="ARCHITECT" />
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-6 py-12">
         <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-8 shadow-sm">
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <Activity size={22} />
@@ -110,6 +113,7 @@ export default function StatusPage() {
           )}
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

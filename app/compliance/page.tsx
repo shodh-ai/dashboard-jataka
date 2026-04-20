@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import { Shield, Download, Check, X } from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
 interface AccessRecord {
   type: string;
@@ -151,8 +152,10 @@ export default function CompliancePage() {
   if (!isLoaded) return <div>Loading...</div>;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[var(--bg-base)] min-h-screen p-6 lg:p-10">
-      <div className="max-w-5xl mx-auto">
+    <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
+      <Sidebar orgName="Jataka" userRole="ARCHITECT" />
+      <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+      <div className="max-w-5xl">
         
         {/* Header */}
         <div className="mb-8">
@@ -308,6 +311,7 @@ export default function CompliancePage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
