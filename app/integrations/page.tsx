@@ -765,6 +765,37 @@ export default function IntegrationsAndSetupPage() {
                     </div>
                   </div>
 
+                  <div className="mt-5 p-4 bg-sky-900/20 border border-sky-700/50 rounded-xl">
+                    <h4 className="font-semibold text-sky-200 mb-1.5">Required GitHub variable</h4>
+                    <p className="text-sm text-sky-100/90 mb-3">
+                      Add <code className="bg-black/40 px-1 rounded">JATAKA_TEST_MODE</code> in your GitHub Actions variables.
+                    </p>
+                    <div className="overflow-x-auto rounded-lg border border-sky-700/50">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-sky-900/40 text-sky-200">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold">Value</th>
+                            <th className="px-3 py-2 font-semibold">Runs</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sky-100/90">
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">ui</td>
+                            <td className="px-3 py-2">UI-only tests</td>
+                          </tr>
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">backend</td>
+                            <td className="px-3 py-2">Backend-only tests</td>
+                          </tr>
+                          <tr className="border-t border-sky-700/40">
+                            <td className="px-3 py-2 font-mono">hybrid</td>
+                            <td className="px-3 py-2">Both UI and backend tests</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
                   {!installationId && (
                     <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg flex gap-2">
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
