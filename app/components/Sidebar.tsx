@@ -7,7 +7,6 @@ import {
   Network,
   Activity,
   Plug,
-  Key,
   ChevronsLeft,
   ChevronsRight,
   Hexagon,
@@ -45,7 +44,6 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
     { label: "Integrations", href: "/integrations", icon: Plug },
-    { label: "API Keys", href: "/settings/api-keys", icon: Key },
     { label: "Audit Logs", href: "/audit-logs", icon: Activity },
   ];
 
