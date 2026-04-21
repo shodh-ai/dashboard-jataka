@@ -57,7 +57,7 @@ export default function IntegrationsAndSetupPage() {
 
   // --- UI & Wizard State ---
   const [activeStep, setActiveStep] = useState(1);
-  const [copiedSfdxCommand, setCopiedSfdxCommand] = useState<string | null>(null);
+  const[copiedSfdx, setCopiedSfdx] = useState(false);
   const [copiedYaml, setCopiedYaml] = useState(false);
 
   // --- GitHub State ---
@@ -147,15 +147,18 @@ export default function IntegrationsAndSetupPage() {
       if (!token) return;
       
       const res = await fetch(`${BASE_API}/integrations/github/status`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
       });
       
       if (res.ok) {
         const data = await res.json();
         setIsGithubConnected(Boolean(data.connected));
-        if (data.installationId) {
-          setInstallationId(String(data.installationId));
-        }
+        const resolvedInstallationId =
+          data.installationId ?? data.installation_id ?? null;
+        setInstallationId(
+          resolvedInstallationId ? String(resolvedInstallationId) : null,
+        );
       }
     } catch (error) {
       console.error("Failed to fetch GitHub status", error);
@@ -601,57 +604,28 @@ export default function IntegrationsAndSetupPage() {
                         Ensure your GitHub Actions workflow is authenticated with Salesforce. Generate your SFDX Auth URL locally and add it to your GitHub Repository Secrets.
                       </p>
 
-                      <div className="bg-black/50 p-3 rounded border border-slate-700 font-mono text-xs space-y-3">
-                        <div>
-                          <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">login to salesforce account through this command</p>
-                          <div className="flex items-center justify-between gap-3">
+                      <div className="bg-black/50 p-3 rounded border border-slate-700 flex items-start justify-between font-mono text-xs">
+                        <div className="flex-1 pr-3 flex flex-col gap-3">
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">login to salesforce account through this command</p>
                             <span className="text-slate-300">sf org login web --alias staging-org</span>
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  "sf org login web --alias staging-org",
-                                  (value) => {
-                                    if (value) setCopiedSfdxCommand("sf org login web --alias staging-org");
-                                    setTimeout(() => setCopiedSfdxCommand(null), 3000);
-                                  }
-                                )
-                              }
-                              className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                              aria-label="Copy Salesforce login command"
-                            >
-                              {copiedSfdxCommand === "sf org login web --alias staging-org" ? (
-                                <CheckCircle className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
                           </div>
-                        </div>
-                        <div>
-                          <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">then run this command for sfdx auth url </p>
-                          <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-amber-100/80 mb-1 font-sans text-xs font-medium">then run this command for sfdx auth url </p>
                             <span className="text-slate-300">sf org display --target-org staging-org --verbose</span>
-                            <button
-                              onClick={() =>
-                                copyToClipboard(
-                                  "sf org display --target-org staging-org --verbose",
-                                  (value) => {
-                                    if (value) setCopiedSfdxCommand("sf org display --target-org staging-org --verbose");
-                                    setTimeout(() => setCopiedSfdxCommand(null), 3000);
-                                  }
-                                )
-                              }
-                              className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                              aria-label="Copy SFDX auth URL command"
-                            >
-                              {copiedSfdxCommand === "sf org display --target-org staging-org --verbose" ? (
-                                <CheckCircle className="w-4 h-4 text-green-400" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </button>
                           </div>
                         </div>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              "sf org login web --alias staging-org\nsf org display --target-org staging-org --verbose",
+                              setCopiedSfdx
+                            )
+                          }
+                          className="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
+                        >
+                          {copiedSfdx ? <CheckCircle className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                        </button>
                       </div>
                       <p className="text-xs text-slate-400 mt-2">
                         Save the resulting URL as <strong className="text-white">SFDX_AUTH_URL</strong> in your GitHub Secrets.
