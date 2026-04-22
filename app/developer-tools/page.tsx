@@ -99,7 +99,11 @@ export default function DeveloperToolsPage() {
   const copyToken = async () => {
     const token = await getToken();
     if (!token) return;
-    await navigator.clipboard.writeText(token);
+    // Include selected brain so IDE manual paste can initialize the correct knowledge base.
+    const payload = activeBrain
+      ? JSON.stringify({ token, curriculumId: activeBrain })
+      : token;
+    await navigator.clipboard.writeText(payload);
     setCopiedToken(true);
     setTimeout(() => setCopiedToken(false), 1500);
   };

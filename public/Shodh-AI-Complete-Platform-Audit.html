@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shodh AI — Complete Platform Audit</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ffffff;--bg2:#f8f9fb;--bg3:#f1f3f5;--text:#1a1a2e;--text2:#495057;--text3:#868e96;--blue:#2563eb;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--pink:#db2777;--border:#e5e7eb;--card:#ffffff;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.8;-webkit-font-smoothing:antialiased;}
+.container{max-width:1000px;margin:0 auto;padding:2rem 2.5rem;}
+
+/* Print */
+@media print{
+  .container{max-width:100%;padding:1rem;}
+  .nav{display:none!important;}
+  h1{font-size:28px!important;}
+  h2{font-size:22px!important;}
+  .mermaid svg{max-width:100%!important;}
+  section{page-break-inside:avoid;}
+}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0.75rem 2rem;}
+.nav-inner{max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-weight:800;font-size:1.1rem;color:var(--blue);}
+.nav-links{display:flex;gap:0.25rem;flex-wrap:wrap;}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:0.78rem;font-weight:500;padding:0.35rem 0.7rem;border-radius:6px;transition:0.2s;}
+.nav-links a:hover{background:var(--bg2);color:var(--text);}
+.print-btn{background:var(--blue);color:#fff;border:none;padding:0.4rem 1rem;border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.print-btn:hover{opacity:0.9;}
+
+/* Hero */
+.hero{text-align:center;padding:4rem 0 3rem;border-bottom:1px solid var(--border);}
+.hero h1{font-size:2.8rem;font-weight:800;letter-spacing:-1.5px;margin-bottom:0.75rem;}
+.hero .meta{display:flex;justify-content:center;gap:2rem;font-size:0.82rem;color:var(--text3);margin-bottom:1.5rem;}
+.hero p{font-size:1.1rem;color:var(--text2);max-width:700px;margin:0 auto;}
+
+/* Sections */
+section{padding:3rem 0;border-bottom:1px solid var(--border);}
+.section-label{display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:0.3rem 0.8rem;border-radius:100px;margin-bottom:1rem;}
+.section-label.blue{background:#dbeafe;color:var(--blue);}
+.section-label.purple{background:#ede9fe;color:var(--purple);}
+.section-label.green{background:#d1fae5;color:var(--green);}
+.section-label.orange{background:#ffedd5;color:var(--orange);}
+.section-label.pink{background:#fce7f3;color:var(--pink);}
+.section-label.gray{background:#f3f4f6;color:#6b7280;}
+
+h2{font-size:2rem;font-weight:800;letter-spacing:-1px;margin-bottom:1rem;}
+h3{font-size:1.35rem;font-weight:700;margin:2.5rem 0 0.75rem;letter-spacing:-0.3px;}
+h4{font-size:1.1rem;font-weight:700;margin:2rem 0 0.6rem;color:var(--text);}
+p{margin-bottom:1rem;color:var(--text2);}
+strong{color:var(--text);}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:0.88rem;}
+thead th{background:var(--bg2);padding:0.75rem 1rem;text-align:left;font-weight:600;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);border-bottom:2px solid var(--border);}
+tbody td{padding:0.75rem 1rem;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text2);}
+tbody tr:hover{background:var(--bg2);}
+
+/* Lists */
+ul,ol{margin:0.75rem 0 1.25rem 1.5rem;color:var(--text2);}
+li{margin-bottom:0.4rem;}
+
+/* Mermaid */
+.mermaid-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:2rem;margin:1.5rem 0;overflow-x:auto;}
+.mermaid{display:flex;justify-content:center;}
+
+/* Callouts */
+.callout{border-radius:10px;padding:1.25rem 1.5rem;margin:1.5rem 0;border-left:4px solid;}
+.callout.blue{background:#eff6ff;border-color:var(--blue);}
+.callout.red{background:#fef2f2;border-color:#dc2626;}
+.callout.green{background:#ecfdf5;border-color:var(--green);}
+.callout.yellow{background:#fffbeb;border-color:#d97706;}
+.callout h5{font-size:0.88rem;font-weight:700;margin-bottom:0.5rem;}
+.callout p{margin:0;font-size:0.88rem;}
+
+/* PR Comment Block */
+.pr-comment{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin:1.25rem 0;font-size:0.88rem;}
+.pr-comment .pr-tag{display:inline-block;font-size:0.72rem;font-weight:700;padding:0.2rem 0.5rem;border-radius:4px;margin-bottom:0.5rem;}
+.pr-comment .pr-tag.critical{background:#fecaca;color:#991b1b;}
+.pr-comment .pr-tag.warning{background:#fef3c7;color:#92400e;}
+.pr-comment .pr-tag.info{background:#dbeafe;color:#1e40af;}
+.pr-comment p{margin:0.3rem 0;color:var(--text2);}
+.pr-comment code{background:#e5e7eb;padding:0.1rem 0.4rem;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:0.82rem;}
+
+/* Code blocks */
+pre{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;overflow-x:auto;margin:1rem 0;font-size:0.85rem;font-family:'JetBrains Mono',monospace;color:var(--text);}
+
+/* Impact cards */
+.impact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin:1.5rem 0;}
+.impact-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;}
+.impact-card .ic-label{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;}
+.impact-card .ic-value{font-size:1.8rem;font-weight:800;letter-spacing:-1px;margin-bottom:0.25rem;}
+.impact-card .ic-desc{font-size:0.82rem;color:var(--text3);}
+
+/* TOC */
+.toc{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:2rem;margin:2rem 0;}
+.toc h3{margin:0 0 1rem;font-size:1.1rem;}
+.toc ol{margin:0;padding-left:1.25rem;}
+.toc li{margin:0.4rem 0;}
+.toc a{color:var(--blue);text-decoration:none;font-weight:500;font-size:0.92rem;}
+.toc a:hover{text-decoration:underline;}
+
+/* Footer */
+.footer{text-align:center;padding:3rem 0;color:var(--text3);font-size:0.82rem;}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+<div class="nav-inner">
+<div class="nav-logo">Shodh AI</div>
+<div class="nav-links">
+<a href="#exec">Executive Summary</a>
+<a href="#arch">Architecture</a>
+<a href="#m1">Limit Firewall</a>
+<a href="#m2">Tech Debt</a>
+<a href="#m3">QA</a>
+<a href="#m4">Dev XP</a>
+<a href="#m5">Enterprise</a>
+<a href="#matrix">Matrix</a>
+<a href="#roi">ROI</a>
+</div>
+<button class="print-btn" onclick="window.print()">⬇ Export PDF</button>
+</div>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<div class="hero">
+<h1>Shodh AI — Complete Platform Audit</h1>
+<div class="meta">
+<span>📄 Product Architecture & Capability Audit</span>
+<span>🔒 Internal / Client-Facing</span>
+<span>📅 April 2026 — v1.0</span>
+</div>
+<p>The autonomous Salesforce governance engine. From code review to compliance, Shodh AI guards your org at every stage of the development lifecycle.</p>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+<h3>Table of Contents</h3>
+<ol>
+<li><a href="#exec">Executive Summary</a></li>
+<li><a href="#arch">Platform Architecture — How Shodh AI Works</a></li>
+<li><a href="#m1">Module 1 — The Limit Firewall</a></li>
+<li><a href="#m2">Module 2 — Tech Debt & Architecture Governance</a></li>
+<li><a href="#m3">Module 3 — Autonomous QA</a></li>
+<li><a href="#m4">Module 4 — Developer Experience</a></li>
+<li><a href="#m5">Module 5 — Enterprise Use Cases</a></li>
+<li><a href="#matrix">Complete Capability Matrix</a></li>
+<li><a href="#roi">Business Impact & ROI</a></li>
+</ol>
+</div>
+
+<!-- ================================== -->
+<!-- 1. EXECUTIVE SUMMARY -->
+<!-- ================================== -->
+<section id="exec">
+<span class="section-label gray">Section 01</span>
+<h2>Executive Summary</h2>
+<p>Shodh AI is an <strong>autonomous Salesforce governance platform</strong> that acts as an intelligent layer across the entire Salesforce development lifecycle. It connects to your GitHub repositories, Salesforce orgs, Jira boards, and developer tools — analyzing every code change, metadata modification, and configuration update before it reaches production.</p>
+
+<h3>The Problem</h3>
+<p>Salesforce orgs grow uncontrollably. Every team adds fields, writes triggers, builds flows, and creates automation — without visibility into what already exists or what might break.</p>
+
+<table>
+<thead><tr><th>Problem</th><th>Shodh AI Solution</th><th>Impact</th></tr></thead>
+<tbody>
+<tr><td>SOQL queries inside loops cause production outages</td><td>Limit Firewall blocks them at PR level before merge</td><td><strong>Zero</strong> governor limit incidents</td></tr>
+<tr><td>Developers create duplicate fields</td><td>Duplicate Field Prevention cross-references entire org</td><td><strong>30-40%</strong> reduction in metadata bloat</td></tr>
+<tr><td>UI tests break when Salesforce updates DOM</td><td>Vision AI self-heals broken selectors automatically</td><td><strong>90%</strong> reduction in test maintenance</td></tr>
+<tr><td>No one knows blast radius of changing a field</td><td>IDE integration shows every dependency in real-time</td><td><strong>80%</strong> fewer unintended side effects</td></tr>
+<tr><td>M&A requires manual metadata comparison</td><td>Automated org merge mapping with overlap report</td><td>Due diligence: <strong>months → days</strong></td></tr>
+<tr><td>Compliance audits require manual access tracing</td><td>Automated security access reports across all profiles</td><td>Audit reports in <strong>minutes</strong></td></tr>
+</tbody>
+</table>
+
+<h3>How It Integrates</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart LR
+    subgraph CONNECT["Shodh AI Connects To"]
+        G["GitHub\nRepositories"]
+        S["Salesforce\nOrgs"]
+        J["Jira\nBoards"]
+        SL["Slack\nWorkspace"]
+        IDE["IDE\nCursor / VS Code"]
+    end
+
+    subgraph ENGINE["Shodh AI Engine"]
+        E["Metadata Graph\n+ AI Analysis\n+ Governance Rules"]
+    end
+
+    subgraph ACTION["Automated Actions"]
+        A1["PR Review Comments"]
+        A2["PR Approve / Block"]
+        A3["Auto-Fix Commits"]
+        A4["Slack Responses"]
+        A5["IDE Previews"]
+        A6["Audit Reports"]
+    end
+
+    G --> E
+    S --> E
+    J --> E
+    SL --> E
+    IDE --> E
+    E --> A1
+    E --> A2
+    E --> A3
+    E --> A4
+    E --> A5
+    E --> A6
+</pre>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 2. PLATFORM ARCHITECTURE -->
+<!-- ================================== -->
+<section id="arch">
+<span class="section-label gray">Section 02</span>
+<h2>Platform Architecture — How Shodh AI Works</h2>
+
+<h3>2.1 End-to-End Lifecycle Flow</h3>
+<p>Shodh AI operates across the <strong>entire development lifecycle</strong> — from the moment a developer opens their IDE to production monitoring after deployment.</p>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    A["👨‍💻 DEVELOPER WRITES CODE\nApex, LWC, Flows, Metadata\nin IDE"]
+    B["💻 IDE ANALYSIS\nBlast radius preview\nField dependency map\nLimit estimation"]
+    C["📤 PR CREATED ON GITHUB\nCode pushed, PR opened"]
+    D["🤖 SHODH AI PR REVIEW\nFull automated analysis\nacross all 5 modules"]
+    E{"VIOLATIONS\nFOUND?"}
+    F["✅ PR AUTO-APPROVED\nAll checks pass"]
+    G["🚫 PR BLOCKED\nLine-level violation report\nwith remediation steps"]
+    H["🔧 AUTO-FIX GENERATED\nAI creates fix commit"]
+    I["🚀 DEPLOYED TO PRODUCTION"]
+    J["📡 SYNTHETIC MONITORING\n24/7 production health checks"]
+
+    A --> B --> C --> D --> E
+    E -->|No| F --> I
+    E -->|Yes, auto-fixable| H --> D
+    E -->|Yes, needs human| G
+    G -->|Developer fixes| C
+    I --> J
+    J -->|Issue detected| G
+</pre>
+</div>
+
+<h3>2.2 What Happens During PR Review — Detailed Breakdown</h3>
+<p>When a PR is created, Shodh AI performs a comprehensive analysis. Here is exactly what gets analyzed, in what order, and what outputs are produced.</p>
+
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    subgraph INPUTS["STEP 1 — GATHER CONTEXT"]
+        I1["📝 PR Diff\nChanged Apex, Flows,\nmetadata XML"]
+        I2["🗂️ Full Org Metadata\nEvery object, field,\nflow, class, profile"]
+        I3["🎫 Linked Jira Ticket\nAcceptance criteria"]
+        I4["📋 Business Rules\nOrg-specific policies"]
+    end
+
+    subgraph ANALYSIS["STEP 2 — ANALYZE"]
+        A1["🛡️ LIMIT FIREWALL\nSOQL loops, CPU,\nData skew, API limits"]
+        A2["🏗️ ARCHITECTURE\nDuplicates, orphans,\npatterns, best practices"]
+        A3["🧪 QA ENGINE\nSelf-healing tests,\nvideo, verification"]
+        A4["🔗 INTEGRATION\nAPI contracts,\nERP validation"]
+    end
+
+    subgraph OUTPUTS["STEP 3 — ACT"]
+        O1["✅ APPROVE"]
+        O2["🚫 BLOCK\nLine-level report"]
+        O3["🔧 AUTO-FIX\nAI commits"]
+        O4["📊 AUDIT LOG\nCompliance record"]
+    end
+
+    I1 --> A1
+    I1 --> A2
+    I2 --> A1
+    I2 --> A2
+    I3 --> A3
+    I4 --> A2
+    I2 --> A3
+    I2 --> A4
+    A1 --> O1
+    A1 --> O2
+    A2 --> O2
+    A2 --> O3
+    A3 --> O4
+    A4 --> O2
+</pre>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 3. MODULE 1 — LIMIT FIREWALL -->
+<!-- ================================== -->
+<section id="m1">
+<span class="section-label blue">Module 01</span>
+<h2>The Limit Firewall</h2>
+<p>Prevents Salesforce governor limit violations before they reach production. Governor limits are hard caps enforced per transaction — exceeding them crashes the entire transaction. This is the <strong>#1 cause of production outages</strong> in Salesforce.</p>
+
+<h3>How It Works</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    PR["📤 PR Submitted\nDeveloper pushes Apex/Flow changes"]
+    PARSE["🔍 STEP 1: AST PARSING\nParse Apex into Abstract Syntax Tree\nMap every method, loop, DML, SOQL"]
+    LOOP["🔄 STEP 2: LOOP DETECTION\nFind SOQL/DML inside loops\nIncluding indirect method calls"]
+    CPU["⏱️ STEP 3: CPU PROFILING\nEstimate CPU time for complex paths\nSync: 10,000ms / Async: 60,000ms"]
+    SKEW["📊 STEP 4: DATA SKEW\nAnalyze DML against org data\nFlag row-locking patterns"]
+    API["🌐 STEP 5: API LIMITS\nCount callouts per transaction\nLimit: 100 sync / 200 async"]
+    REPORT["📋 VIOLATION REPORT\nFile + line number\nSeverity + fix suggestion"]
+    DECIDE{"CRITICAL\nVIOLATIONS?"}
+    BLOCK["🚫 PR BLOCKED"]
+    APPROVE["✅ PR APPROVED"]
+
+    PR --> PARSE --> LOOP --> CPU --> SKEW --> API --> REPORT --> DECIDE
+    DECIDE -->|Yes| BLOCK
+    DECIDE -->|No| APPROVE
+</pre>
+</div>
+
+<h3>Capabilities</h3>
+
+<h4>3.3.1 — Prevent SOQL & DML Loops</h4>
+<p><strong>What it detects:</strong> Any SOQL query or DML operation that executes inside a loop. Also detects <em>indirect</em> calls — method A calls method B inside a loop, and method B has SOQL.</p>
+<p><strong>Why it matters:</strong> Salesforce enforces 100 SOQL queries and 150 DML statements per transaction. A loop over 200 records with one query per iteration crashes at iteration 101.</p>
+
+<div class="pr-comment">
+<span class="pr-tag critical">❌ CRITICAL</span>
+<p><strong>SOQL Query Inside Loop</strong> — <code>AccountService.cls:47</code></p>
+<p>A SOQL query <code>[SELECT Id, Name FROM Contact WHERE AccountId = :acc.Id]</code> is executed inside a <code>for</code> loop iterating over <code>accounts</code>. If <code>accounts</code> has more than 100 records, this will throw <code>System.LimitException</code>.</p>
+<p><strong>Fix:</strong> Move the query before the loop and use a Map to access results.</p>
+</div>
+
+<h4>3.3.2 — Catch CPU Timeouts</h4>
+<p><strong>What it detects:</strong> Code paths where estimated CPU execution time approaches Salesforce's limit (10s sync, 60s async).</p>
+<p><strong>How:</strong> Analyzes algorithmic complexity — loop nesting depth, collection operations, string manipulation. Flags paths estimated to consume >70% of CPU limit.</p>
+
+<h4>3.3.3 — Detect Data Skew</h4>
+<p><strong>What it detects:</strong> DML patterns that cause row-locking errors — parent records with 10K+ children, lookup skew on shared objects, ownership concentration.</p>
+<p><strong>How:</strong> Cross-references DML operations against the org's actual data distribution.</p>
+
+<h4>3.3.4 — Enforce API Limits</h4>
+<p><strong>What it detects:</strong> Outbound HTTP callouts exceeding 100/transaction. Also checks for missing async patterns in batch callout scenarios.</p>
+
+<table>
+<thead><tr><th>Check</th><th>SF Limit</th><th>Detection Method</th><th>Severity</th></tr></thead>
+<tbody>
+<tr><td>SOQL in loops</td><td>100 queries/txn</td><td>AST + indirect call tracing</td><td>Critical</td></tr>
+<tr><td>DML in loops</td><td>150 statements/txn</td><td>AST + indirect call tracing</td><td>Critical</td></tr>
+<tr><td>CPU time</td><td>10,000ms / 60,000ms</td><td>Complexity estimation</td><td>Critical</td></tr>
+<tr><td>Data skew</td><td>Row lock contention</td><td>Org data distribution analysis</td><td>Warning</td></tr>
+<tr><td>API callouts</td><td>100 sync / 200 async</td><td>Callout path tracing</td><td>Critical</td></tr>
+</tbody>
+</table>
+
+<div class="callout blue">
+<h5>💡 Why This Matters</h5>
+<p>Governor limit violations are the most common cause of Salesforce production outages. Traditional code reviews catch ~30%. Shodh AI provides <strong>100% automated coverage</strong> across every PR — eliminating 95%+ governor limit incidents.</p>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 4. MODULE 2 — TECH DEBT -->
+<!-- ================================== -->
+<section id="m2">
+<span class="section-label purple">Module 02</span>
+<h2>Tech Debt & Architecture Governance</h2>
+<p>Prevents new technical debt from entering the org and autonomously remediates existing debt. Enforces architecture standards, blocks redundant metadata, discovers dead code, and auto-refactors patterns.</p>
+
+<h3>How It Works</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    CHANGE["📤 CHANGE DETECTED\nNew PR with metadata changes"]
+    DUP["🔍 DUPLICATE SCAN\nCompare new fields vs all\nexisting org fields"]
+    ORPHAN["👻 ORPHAN DISCOVERY\nDependency graph analysis\nFind zero-reference metadata"]
+    ARCH["🏛️ ARCHITECTURE CHECK\nEnforce Flows over Triggers\nHandler patterns, naming"]
+    LOGIC["📜 BUSINESS LOGIC\nVerify org-specific rules"]
+    BEST["✅ BEST PRACTICES\nCRUD/FLS, sharing,\ncoverage, patterns"]
+    BULK["⚡ BULKIFICATION\nDetect single-record code\nAuto-refactor to bulk-safe"]
+    CLEAN["🧹 CLEANUP GENERATOR\nGenerate destructiveChanges.xml"]
+    SCORE["📊 DEBT SCORE"]
+    DECIDE{"ISSUES?"}
+    AUTOFIX["🔧 AUTO-FIX PR"]
+    BLOCK["🚫 BLOCKED"]
+    PASS["✅ APPROVED"]
+
+    CHANGE --> DUP
+    CHANGE --> ORPHAN
+    CHANGE --> ARCH
+    CHANGE --> LOGIC
+    CHANGE --> BEST
+    CHANGE --> BULK
+    DUP --> SCORE
+    ORPHAN --> CLEAN --> SCORE
+    ARCH --> SCORE
+    LOGIC --> SCORE
+    BEST --> SCORE
+    BULK --> AUTOFIX
+    SCORE --> DECIDE
+    DECIDE -->|Auto-fixable| AUTOFIX
+    DECIDE -->|Policy violation| BLOCK
+    DECIDE -->|Clean| PASS
+</pre>
+</div>
+
+<h3>Capabilities</h3>
+
+<h4>4.3.1 — Duplicate Field Prevention</h4>
+<p>When a developer creates a new custom field, Shodh AI searches the <strong>entire org metadata</strong> for existing fields that serve the same purpose. Checks name similarity, data type, picklist values, and usage patterns. If >85% match → PR blocked.</p>
+
+<div class="pr-comment">
+<span class="pr-tag critical">❌ CRITICAL — Potential Duplicate Field</span>
+<p><strong>Field:</strong> <code>Account.Customer_Status__c</code></p>
+<p>This appears to duplicate <code>Account.Account_Status__c</code>:</p>
+<p>• Name similarity: 87% &nbsp;• Both Picklist type &nbsp;• 4/5 values identical</p>
+<p><strong>Existing field:</strong> Created 2023-04-15, used by 3 Flows, 2 Apex classes, 5 reports</p>
+</div>
+
+<h4>4.3.2 — Orphan Node Discovery</h4>
+<p>Builds a complete <strong>dependency graph</strong> of every metadata component. Identifies components with zero inbound references — dead fields, unused classes, abandoned Flows. Assigns confidence scores (80-100%).</p>
+
+<h4>4.3.3 — Architecture Enforcement</h4>
+<table>
+<thead><tr><th>Rule</th><th>What It Blocks</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>No simple triggers</td><td>Inline trigger logic</td><td>Must use handler pattern or Flow</td></tr>
+<tr><td>No hardcoded IDs</td><td><code>Id profileId = '00e...'</code></td><td>Breaks across environments</td></tr>
+<tr><td>No empty test asserts</td><td>Tests without assertions</td><td>False confidence — tests nothing</td></tr>
+<tr><td>Separation of concerns</td><td>Logic in trigger body</td><td>Use service/handler classes</td></tr>
+<tr><td>Error handling</td><td>Bare <code>try/catch</code> blocks</td><td>Swallowed exceptions hide bugs</td></tr>
+</tbody>
+</table>
+
+<h4>4.3.4 — Autonomous Cleanup</h4>
+<p>Auto-generates <code>destructiveChanges.xml</code> deployment packages for confirmed orphan metadata. Ready to deploy — just review and ship.</p>
+
+<h4>4.3.5 — Apex Bulkification</h4>
+<p>Detects single-record patterns in Apex and <strong>autonomously refactors</strong> into bulk-safe logic using Maps, Sets, and Lists. Pushes refactored code as a fix commit, verified by the <a href="#m3">Verification Protocol</a>.</p>
+
+<h4>4.3.6 — Business Logic Enforcement</h4>
+<p>Every PR checked against org-specific business rules: naming conventions, validation standards, approval process policies, state machine transitions — all machine-enforced.</p>
+
+<h4>4.3.7 — Best Practice Maintenance</h4>
+<p>Every push verified for: <code>with sharing</code> usage, CRUD/FLS checks, test coverage thresholds, async patterns, collection efficiency, SOQL pagination.</p>
+
+<div class="callout blue">
+<h5>💡 Why This Matters</h5>
+<p>A typical enterprise org has <strong>30-40% redundant metadata</strong>. Shodh AI prevents new debt, remediates existing debt, and saves 10+ hours per developer per month through automated refactoring.</p>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 5. MODULE 3 — AUTONOMOUS QA -->
+<!-- ================================== -->
+<section id="m3">
+<span class="section-label green">Module 03</span>
+<h2>Autonomous QA</h2>
+<p>Self-healing tests, automated video evidence, intelligent data seeding, and mathematical verification of business logic correctness.</p>
+
+<h3>How It Works</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    TRIGGER["🚀 TEST TRIGGERED\nPR merge, schedule, or on-demand"]
+    SEED["🌱 SMART DATA SEEDING\nGenerate minimal test records\nrespecting all field constraints"]
+    EXEC["🖥️ UI TEST EXECUTION\nHeadless browser runs E2E tests\nagainst Salesforce UI"]
+    HEAL{"SELECTOR\nBROKEN?"}
+    VISION["👁️ VISION AI HEALING\nScreenshot page, find element\nvisually, update selector"]
+    RECORD["🎥 VIDEO RECORDING\nRecord every step for\naudit evidence"]
+    VERIFY["🧮 LOGIC VERIFICATION\nMathematically prove\nrefactored code equivalence"]
+    REPORT["📊 QA REPORT\nPass/fail, videos,\ncoverage, proof status"]
+
+    TRIGGER --> SEED --> EXEC --> HEAL
+    HEAL -->|Yes| VISION --> EXEC
+    HEAL -->|No| RECORD --> VERIFY --> REPORT
+</pre>
+</div>
+
+<h3>Capabilities</h3>
+
+<h4>5.3.1 — Self-Healing UI Tests</h4>
+<p><strong>The problem:</strong> Salesforce releases 3 major updates/year. Each can change CSS class names and DOM structure. Every UI test breaks — even though the app works fine. QA teams spend 2-4 weeks per release fixing selectors.</p>
+<p><strong>The solution:</strong> When a selector fails, Shodh AI takes a <strong>screenshot</strong> and uses Vision AI to locate the element visually (by button text, position, appearance). The selector is auto-updated and the test continues.</p>
+
+<div class="impact-grid">
+<div class="impact-card"><div class="ic-label" style="color:var(--green)">Test Maintenance</div><div class="ic-value" style="color:var(--green)">-90%</div><div class="ic-desc">Reduction in test maintenance effort</div></div>
+<div class="impact-card"><div class="ic-label" style="color:var(--blue)">SF Release Impact</div><div class="ic-value" style="color:var(--blue)">0 days</div><div class="ic-desc">Downtime from selector breakage</div></div>
+</div>
+
+<h4>5.3.2 — Video Logs</h4>
+<p>Every test execution auto-recorded as video. Shows every click, keystroke, page navigation, and data verification. Serves as <strong>irrefutable audit evidence</strong> for SOX, HIPAA, SOC2 compliance.</p>
+
+<h4>5.3.3 — Smart Data Seeding</h4>
+<p>Generates the <strong>minimal viable dataset</strong> per test — respecting required fields, lookup relationships, validation rules, and picklist values. Records auto-cleaned after test. Zero sandbox bloat.</p>
+<p><em>Example:</em> To test Opportunity closure → generates 1 Account + 1 Contact + 1 Opportunity + 1 LineItem. Total: 4 records. Created in 2 seconds. Auto-cleaned.</p>
+
+<h4>5.3.4 — Verification Protocol</h4>
+<p>When Shodh AI refactors code, the protocol <strong>mathematically proves</strong> the refactored version produces identical output for all possible inputs. Zero tolerance — even one divergence rejects the refactoring.</p>
+
+<div class="callout green">
+<h5>💡 Why This Matters</h5>
+<p>Tests fix themselves. Data seeds itself. Code correctness is <strong>mathematically guaranteed</strong>. Video evidence satisfies auditors without manual documentation.</p>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 6. MODULE 4 — DEV EXPERIENCE -->
+<!-- ================================== -->
+<section id="m4">
+<span class="section-label orange">Module 04</span>
+<h2>Developer Experience</h2>
+<p>Embeds intelligence directly into the IDE, Slack, and Jira — no context-switching required.</p>
+
+<h3>How It Works</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    subgraph IDE_FLOW["IDE INTEGRATION"]
+        DEV["Developer edits\na field in Cursor"]
+        BLAST["Shodh AI shows blast radius:\n3 Flows, 2 Apex classes,\n5 Reports, 1 Validation Rule"]
+        WARN["⚠️ Changing this field\nbreaks Flow 'Lead Assignment'"]
+        DEV --> BLAST --> WARN
+    end
+
+    subgraph SLACK_FLOW["SLACK BOT"]
+        Q["'What happens when\nan Opp stage changes\nto Closed Won?'"]
+        ANS["1. Trigger OppTrigger fires\n2. Flow sends notification\n3. Revenue Schedule created\n4. Account field updated\n5. Outbound msg to ERP"]
+        Q --> ANS
+    end
+
+    subgraph JIRA_FLOW["JIRA ALIGNMENT"]
+        JIRA["Jira says: Add Status__c\nand create update Flow"]
+        CHECK["✅ Status__c field found\n✅ Flow found\n❌ Flow doesn't fire on Case close\n❌ Missing test coverage"]
+        JIRA --> CHECK
+    end
+</pre>
+</div>
+
+<h3>Capabilities</h3>
+
+<h4>6.3.1 — IDE Integration: Blast Radius Preview</h4>
+<p>Inside Cursor/VSCode, see the <strong>complete impact</strong> of any change before saving. Modify a field? Instantly see every Flow, Apex class, Report, Validation Rule, Page Layout, and integration that references it.</p>
+
+<div class="pr-comment">
+<span class="pr-tag warning">⚠️ BLAST RADIUS — Account.Customer_Rating__c</span>
+<p>Renaming this field will break:</p>
+<p>• <strong>Flow "Lead Scoring"</strong> — reads field at Decision Node 3</p>
+<p>• <strong>Apex "AccountService"</strong> — queries field at line 47</p>
+<p>• <strong>Report "Top Accounts"</strong> — filters on this field</p>
+<p>• <strong>Page Layout "Account Layout"</strong> — displays this field</p>
+<p><strong>Total impact: 4 components will break</strong></p>
+</div>
+
+<h4>6.3.2 — Slack Bot</h4>
+<p>Ask plain-English questions in Slack. Shodh AI responds with graph-backed answers:</p>
+<table>
+<thead><tr><th>Question</th><th>Response</th></tr></thead>
+<tbody>
+<tr><td>"Which Flows reference Account.Status__c?"</td><td>Lists all 5 Flows with names, versions, and which nodes reference the field</td></tr>
+<tr><td>"What happens when a Lead is converted?"</td><td>Full execution trace: triggers → flows → process builders → field updates</td></tr>
+<tr><td>"Who can see Contact.SSN__c?"</td><td>Lists profiles and permission sets with field-level read access</td></tr>
+<tr><td>"What would break if I delete OpportunityLineItem?"</td><td>Full dependency analysis across all metadata types</td></tr>
+</tbody>
+</table>
+
+<h4>6.3.3 — Jira Alignment</h4>
+<p>Reads Jira acceptance criteria and verifies the PR actually implements what was specified. Catches requirement gaps at code review time — not UAT.</p>
+
+<div class="callout blue">
+<h5>💡 Why This Matters</h5>
+<p>Eliminates context-switching. Developers get org intelligence <strong>where they already work</strong> — IDE, Slack, Jira. New team members become productive in days instead of weeks.</p>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 7. MODULE 5 — ENTERPRISE -->
+<!-- ================================== -->
+<section id="m5">
+<span class="section-label pink">Module 05</span>
+<h2>Enterprise Use Cases</h2>
+<p>Purpose-built capabilities for M&A, compliance, integration governance, production monitoring, and legacy modernization.</p>
+
+<h3>How It Works</h3>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    subgraph MA["M&A ORG MERGE"]
+        MA1["Connect to Org A + Org B"] --> MA2["Extract full metadata"] --> MA3["Compare & map overlap"] --> MA4["Generate Merge Report\nwith migration plan"]
+    end
+
+    subgraph SEC["SECURITY AUDIT"]
+        S1["Select sensitive field"] --> S2["Trace access:\nProfiles, PermSets,\nSharing Rules, OWD"] --> S3["Generate compliance report\nUser→Field access matrix"]
+    end
+
+    subgraph API["API CONTRACT"]
+        AP1["Register external consumers\nERP, DW, Marketing"] --> AP2["PR modifies contracted field"] --> AP3["Auto-block PR\nNotify integration owner"]
+    end
+
+    subgraph MON["SYNTHETIC MONITORING"]
+        MO1["Define critical paths\nLead, Opp, Case flows"] --> MO2["Run against PROD\nevery 15 minutes"] --> MO3["Alert on failure\nSlack + Jira incident"]
+    end
+
+    subgraph MIG["LEGACY MIGRATION"]
+        MI1["Scan for Workflow Rules"] --> MI2["Parse conditions + actions"] --> MI3["Generate equivalent Flow"] --> MI4["Create PR with\nFlow + tests + proof"]
+    end
+</pre>
+</div>
+
+<h3>Capabilities</h3>
+
+<h4>7.3.1 — M&A Org Merge Mapping</h4>
+<p>Connects to both Salesforce orgs, extracts full metadata, and produces a <strong>complete overlap report</strong>: identical components, conflicts, unique items, and estimated merge effort.</p>
+<table>
+<thead><tr><th>Component</th><th>Org A</th><th>Org B</th><th>Status</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>Account.Revenue__c</code></td><td>Currency</td><td>Currency</td><td>Identical</td><td>Keep one</td></tr>
+<tr><td><code>Account.Status__c</code></td><td>Picklist (5)</td><td>Picklist (8)</td><td>Conflict</td><td>Merge values</td></tr>
+<tr><td><code>LeadScoring</code> Flow</td><td>Active</td><td>N/A</td><td>Unique to A</td><td>Migrate</td></tr>
+<tr><td><code>AccountTrigger</code></td><td>Handler pattern</td><td>Inline</td><td>Conflict</td><td>Use Org A</td></tr>
+</tbody>
+</table>
+<p><strong>Impact:</strong> M&A due-diligence reduced from <strong>months to days</strong>.</p>
+
+<h4>7.3.2 — Security Audits</h4>
+<p>Traces every access path from any user to any field: Profiles → Permission Sets → Permission Set Groups → Sharing Rules → OWD. Generates <strong>compliance-ready reports</strong> for SOX, HIPAA, GDPR, SOC2.</p>
+
+<h4>7.3.3 — API Contract Guardian</h4>
+<p>Maintains a registry of fields consumed by external systems. Any PR that modifies or deletes a contracted field is <strong>auto-blocked</strong> with the integration owner notified.</p>
+
+<div class="pr-comment">
+<span class="pr-tag critical">❌ API CONTRACT VIOLATION</span>
+<p><code>Account.Revenue__c</code> is consumed by <strong>SAP ERP Integration</strong>.</p>
+<p>Contact: <code>integration-team@company.com</code></p>
+<p>This field cannot be modified without integration owner approval.</p>
+</div>
+
+<h4>7.3.4 — Synthetic Monitoring</h4>
+<p>Runs lightweight, non-destructive test scenarios against <strong>Production</strong> every 15 minutes. Verifies critical business processes work. Alerts via Slack + auto-creates Jira incident on failure.</p>
+
+<h4>7.3.5 — Legacy Migration (Workflow Rules → Flows)</h4>
+<p>Autonomously translates retiring Workflow Rules into modern Flow equivalents — preserving all conditions, field updates, email alerts, and outbound messages. Behavioral equivalence verified by the Verification Protocol.</p>
+
+<div class="callout blue">
+<h5>💡 Why This Matters</h5>
+<p>M&A due-diligence: months → days. Security audits: weeks → minutes. Integration breakages: eliminated. Legacy migration: automated. No consultants required.</p>
+</div>
+</section>
+
+<!-- ================================== -->
+<!-- 8. CAPABILITY MATRIX -->
+<!-- ================================== -->
+<section id="matrix">
+<span class="section-label gray">Reference</span>
+<h2>Complete Capability Matrix</h2>
+
+<table>
+<thead><tr><th>#</th><th>Module</th><th>Capability</th><th>What It Does</th><th>Primary Benefit</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Limit Firewall</td><td><strong>SOQL/DML Loop Prevention</strong></td><td>Blocks database queries inside loops at PR level</td><td>Eliminates #1 limit breach cause</td></tr>
+<tr><td>2</td><td>Limit Firewall</td><td><strong>CPU Timeout Detection</strong></td><td>Profiles Apex/Flows for CPU time estimation</td><td>Prevents timeout errors</td></tr>
+<tr><td>3</td><td>Limit Firewall</td><td><strong>Data Skew Detection</strong></td><td>Flags row-locking patterns before deployment</td><td>Prevents lock errors at scale</td></tr>
+<tr><td>4</td><td>Limit Firewall</td><td><strong>API Limit Enforcement</strong></td><td>Validates outbound callout counts</td><td>Prevents integration failures</td></tr>
+<tr><td>5</td><td>Tech Debt</td><td><strong>Duplicate Field Prevention</strong></td><td>Blocks redundant custom field creation</td><td>30-40% less metadata bloat</td></tr>
+<tr><td>6</td><td>Tech Debt</td><td><strong>Orphan Node Discovery</strong></td><td>Finds dead metadata safe for deletion</td><td>Clean, performant org</td></tr>
+<tr><td>7</td><td>Tech Debt</td><td><strong>Architecture Enforcement</strong></td><td>Auto-reject non-compliant patterns</td><td>Consistent architecture</td></tr>
+<tr><td>8</td><td>Tech Debt</td><td><strong>Autonomous Cleanup</strong></td><td>Auto-generate deletion XML packages</td><td>Zero manual cleanup</td></tr>
+<tr><td>9</td><td>Tech Debt</td><td><strong>Apex Bulkification</strong></td><td>Auto-refactor to bulk-safe code</td><td>Scalable, limit-safe code</td></tr>
+<tr><td>10</td><td>Tech Debt</td><td><strong>Business Logic Enforcement</strong></td><td>Check PRs against business rules</td><td>Domain policy compliance</td></tr>
+<tr><td>11</td><td>Tech Debt</td><td><strong>Best Practice Maintenance</strong></td><td>Every push checked for best practices</td><td>Consistent code quality</td></tr>
+<tr><td>12</td><td>QA</td><td><strong>Self-Healing UI Tests</strong></td><td>Vision AI fixes broken selectors</td><td>90% less test maintenance</td></tr>
+<tr><td>13</td><td>QA</td><td><strong>Video Logs</strong></td><td>Auto-record every test execution</td><td>Audit-ready evidence</td></tr>
+<tr><td>14</td><td>QA</td><td><strong>Smart Data Seeding</strong></td><td>Generate minimal test records</td><td>50% fewer sandbox refreshes</td></tr>
+<tr><td>15</td><td>QA</td><td><strong>Verification Protocol</strong></td><td>Mathematically prove code equivalence</td><td>Zero regressions</td></tr>
+<tr><td>16</td><td>Dev XP</td><td><strong>IDE Blast Radius</strong></td><td>Show all dependencies in real-time</td><td>80% fewer side effects</td></tr>
+<tr><td>17</td><td>Dev XP</td><td><strong>Slack Bot</strong></td><td>Natural language org queries</td><td>Hours saved weekly</td></tr>
+<tr><td>18</td><td>Dev XP</td><td><strong>Jira Alignment</strong></td><td>Verify PR meets acceptance criteria</td><td>Requirement traceability</td></tr>
+<tr><td>19</td><td>Enterprise</td><td><strong>M&A Org Merge Mapping</strong></td><td>Compare orgs, map overlap</td><td>Months → days</td></tr>
+<tr><td>20</td><td>Enterprise</td><td><strong>Security Audits</strong></td><td>Trace user access across profiles</td><td>SOX/HIPAA/GDPR compliant</td></tr>
+<tr><td>21</td><td>Enterprise</td><td><strong>API Contract Guardian</strong></td><td>Block integration-breaking changes</td><td>Zero breaking deploys</td></tr>
+<tr><td>22</td><td>Enterprise</td><td><strong>Synthetic Monitoring</strong></td><td>24/7 production health tests</td><td>Detect outages in minutes</td></tr>
+<tr><td>23</td><td>Enterprise</td><td><strong>Legacy Migration</strong></td><td>Auto-convert Workflows → Flows</td><td>Automated modernization</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ================================== -->
+<!-- 9. ROI -->
+<!-- ================================== -->
+<section id="roi">
+<span class="section-label gray">Business Case</span>
+<h2>Business Impact & ROI</h2>
+
+<h3>Time Savings</h3>
+<table>
+<thead><tr><th>Activity</th><th>Without Shodh AI</th><th>With Shodh AI</th><th>Savings</th></tr></thead>
+<tbody>
+<tr><td>Code review (limit checks)</td><td>2-4 hours/PR</td><td>Automated (0 min)</td><td>~3 hrs/PR</td></tr>
+<tr><td>Finding field dependencies</td><td>30-60 min/field</td><td>Instant (IDE preview)</td><td>~45 min/field</td></tr>
+<tr><td>Fixing broken UI tests post-release</td><td>2-4 weeks/year</td><td>Self-healed (0 days)</td><td>~3 weeks/yr</td></tr>
+<tr><td>Creating test data</td><td>1-2 hrs/suite</td><td>Auto-generated (sec)</td><td>~1.5 hrs/suite</td></tr>
+<tr><td>Security audit preparation</td><td>2-4 weeks/audit</td><td>Minutes (auto report)</td><td>~3 weeks/audit</td></tr>
+<tr><td>M&A org comparison</td><td>2-6 months</td><td>Days (auto mapping)</td><td>Months</td></tr>
+<tr><td>Workflow → Flow migration</td><td>2-4 hrs/rule</td><td>Automated (minutes)</td><td>~3 hrs/rule</td></tr>
+<tr><td>Org architecture questions</td><td>15-60 min (manual)</td><td>Seconds (Slack bot)</td><td>~30 min/question</td></tr>
+</tbody>
+</table>
+
+<h3>Risk Reduction</h3>
+<table>
+<thead><tr><th>Risk</th><th>Without Shodh AI</th><th>With Shodh AI</th></tr></thead>
+<tbody>
+<tr><td>Governor limit outages</td><td>5-15 per year</td><td><strong>Near zero</strong></td></tr>
+<tr><td>Integration breakages</td><td>2-5 per quarter</td><td><strong>Zero</strong></td></tr>
+<tr><td>Refactoring regressions</td><td>Unknown (silent)</td><td><strong>Zero</strong> (verified)</td></tr>
+<tr><td>Compliance audit failures</td><td>Possible</td><td><strong>Eliminated</strong></td></tr>
+<tr><td>Undetected production outages</td><td>Hours</td><td><strong>&lt;15 minutes</strong></td></tr>
+</tbody>
+</table>
+
+<h3>Key Metrics</h3>
+<div class="impact-grid">
+<div class="impact-card"><div class="ic-label" style="color:var(--green)">Production Incidents</div><div class="ic-value" style="color:var(--green)">-95%</div><div class="ic-desc">Governor limit related incidents</div></div>
+<div class="impact-card"><div class="ic-label" style="color:var(--blue)">PR Review Speed</div><div class="ic-value" style="color:var(--blue)">∞</div><div class="ic-desc">Unlimited automated reviews per day</div></div>
+<div class="impact-card"><div class="ic-label" style="color:var(--purple)">Metadata Bloat</div><div class="ic-value" style="color:var(--purple)">-40%</div><div class="ic-desc">Reduction in redundant metadata</div></div>
+<div class="impact-card"><div class="ic-label" style="color:var(--orange)">Test Maintenance</div><div class="ic-value" style="color:var(--orange)">-90%</div><div class="ic-desc">Self-healing test maintenance</div></div>
+<div class="impact-card"><div class="ic-label" style="color:var(--pink)">M&A Due Diligence</div><div class="ic-value" style="color:var(--pink)">10x</div><div class="ic-desc">Faster org merge analysis</div></div>
+<div class="impact-card"><div class="ic-label" style="color:#6b7280">Onboarding Time</div><div class="ic-value" style="color:#6b7280">-70%</div><div class="ic-desc">New developer ramp-up time</div></div>
+</div>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+<p><strong>Shodh AI</strong> — The Autonomous Salesforce Governance Platform</p>
+<p>Confidential — For Internal & Client Presentation Use &nbsp;|&nbsp; © 2026 Shodh AI</p>
+</div>
+
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#dbeafe',
+    primaryTextColor: '#1e293b',
+    primaryBorderColor: '#93c5fd',
+    lineColor: '#94a3b8',
+    secondaryColor: '#f1f5f9',
+    tertiaryColor: '#f8fafc',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '13px'
+  },
+  flowchart: {
+    htmlLabels: true,
+    curve: 'basis',
+    padding: 15
+  }
+});
+</script>
+
+</body>
+</html>
