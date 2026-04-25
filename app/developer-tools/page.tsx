@@ -99,9 +99,6 @@ export default function DeveloperToolsPage() {
   const copyToken = async () => {
     const token = await getToken();
     if (!token) return;
-<<<<<<< Updated upstream
-    await navigator.clipboard.writeText(token);
-=======
     if (!activeBrain) {
       alert("Please select a brain first, then copy the Manual IDE Auth Payload.");
       return;
@@ -115,7 +112,7 @@ export default function DeveloperToolsPage() {
       brainName: selectedBrainName,
     });
     await navigator.clipboard.writeText(payload);
->>>>>>> Stashed changes
+
     setCopiedToken(true);
     setTimeout(() => setCopiedToken(false), 1500);
   };
