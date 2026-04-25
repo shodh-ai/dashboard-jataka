@@ -18,6 +18,13 @@ interface WorkflowSummary {
   total_steps?: number;
   file_count?: number;
   github_repo?: string;
+  test_tier?: string;
+  seed_priority_score?: number;
+  seed_centrality_score?: number;
+  seed_record_count?: number;
+  seed_git_churn?: number;
+  seed_reason?: string;
+  seed_context_window_days?: number;
 }
 
 interface Repository {
@@ -28,6 +35,17 @@ interface Repository {
 
 const HEALTHY = ["healthy", "verified", "success", "ok"];
 const ACTIVE = ["queued", "in_progress", "running", "pending", "draft"];
+
+const TEST_TIER_LABELS: Record<string, string> = {
+  backend_only: "Backend",
+  ui_only: "UI",
+  backend_then_ui: "Hybrid",
+};
+
+function formatCompactNumber(value?: number) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0";
+  return new Intl.NumberFormat("en", { notation: "compact" }).format(value);
+}
 
 export default function ActiveTestsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -86,8 +104,8 @@ export default function ActiveTestsPage() {
       const parsedWorkflows = Array.isArray(wfJson?.workflows) ? wfJson.workflows : [];
       setWorkflows(parsedWorkflows);
       setTotalTests(Number(wfJson?.total_tests) || parsedWorkflows.length);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load active tests");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load active tests");
     } finally {
       setLoading(false);
     }
@@ -205,7 +223,9 @@ export default function ActiveTestsPage() {
                   <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] uppercase text-[11px] tracking-wider">
                     <tr>
                       <th className="px-5 py-3 font-medium">Workflow</th>
+                      <th className="px-5 py-3 font-medium">Type</th>
                       <th className="px-5 py-3 font-medium">Status</th>
+                      <th className="px-5 py-3 font-medium">Seed Signals</th>
                       <th className="px-5 py-3 font-medium">Steps</th>
                       <th className="px-5 py-3 font-medium">Files</th>
                       <th className="px-5 py-3 font-medium">Drift Detail</th>
@@ -216,6 +236,8 @@ export default function ActiveTestsPage() {
                       const status = String(wf.health || wf.status || "draft").toLowerCase();
                       const isHealthy = HEALTHY.includes(status);
                       const isActive = ACTIVE.includes(status);
+                      const tier = String(wf.test_tier || "ui_only");
+                      const typeLabel = TEST_TIER_LABELS[tier] || tier;
                       return (
                         <tr key={wf.name} className="hover:bg-[var(--bg-base)]/50 transition-colors">
                           <td className="px-5 py-4 font-medium flex flex-col">
@@ -227,12 +249,31 @@ export default function ActiveTestsPage() {
                             )}
                           </td>
                           <td className="px-5 py-4">
+                            <span className="badge badge-indigo">{typeLabel}</span>
+                          </td>
+                          <td className="px-5 py-4">
                             {isHealthy ? (
                               <span className="badge badge-emerald"><CheckCircle2 size={12} /> {status}</span>
                             ) : isActive ? (
                               <span className="badge badge-indigo"><Clock3 size={12} /> {status}</span>
                             ) : (
                               <span className="badge badge-rose"><AlertTriangle size={12} /> {status}</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4">
+                            {typeof wf.seed_priority_score === "number" ? (
+                              <div className="flex flex-col gap-1 text-xs">
+                                <div className="flex flex-wrap gap-1.5">
+                                  <span className="badge badge-amber">P {wf.seed_priority_score.toFixed(1)}</span>
+                                  <span className="badge badge-indigo">{formatCompactNumber(wf.seed_record_count)} records</span>
+                                  <span className="badge badge-indigo">{formatCompactNumber(wf.seed_git_churn)} churn</span>
+                                </div>
+                                <span className="max-w-[260px] truncate text-[var(--text-muted)]" title={wf.seed_reason || ""}>
+                                  {wf.seed_reason || `Last ${wf.seed_context_window_days || 15} days`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[var(--text-muted)]">—</span>
                             )}
                           </td>
                           <td className="px-5 py-4 text-[var(--text-secondary)]">{wf.step_count ?? wf.total_steps ?? "—"}</td>
