@@ -99,7 +99,20 @@ export default function DeveloperToolsPage() {
   const copyToken = async () => {
     const token = await getToken();
     if (!token) return;
-    await navigator.clipboard.writeText(token);
+    if (!activeBrain) {
+      alert("Please select a brain first, then copy the Manual IDE Auth Payload.");
+      return;
+    }
+
+    const selectedBrainName =
+      brains.find((b: any) => b.knowledgeBaseId === activeBrain)?.name || activeBrain;
+    const payload = JSON.stringify({
+      token,
+      curriculumId: activeBrain,
+      brainName: selectedBrainName,
+    });
+    await navigator.clipboard.writeText(payload);
+
     setCopiedToken(true);
     setTimeout(() => setCopiedToken(false), 1500);
   };
@@ -184,7 +197,7 @@ export default function DeveloperToolsPage() {
               </div>
 
               <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
-                <label className="text-xs text-[var(--text-muted)] uppercase font-semibold">Manual Auth Token</label>
+                <label className="text-xs text-[var(--text-muted)] uppercase font-semibold">Manual IDE Auth Payload</label>
                 <div className="mt-2 flex items-center gap-2 rounded bg-[var(--bg-base)] px-3 py-2 border border-[var(--border-default)]">
                   <Key size={14} className="text-[var(--text-muted)]" />
                   <code className="flex-1 truncate text-xs text-[var(--text-secondary)] font-mono">{tokenPreview || "Loading..."}</code>
