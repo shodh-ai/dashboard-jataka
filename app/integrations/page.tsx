@@ -350,7 +350,8 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = 'https://api.jataka.ai/api/integrations/github/trigger';
+  const apiBaseForWebhook = BASE_API?.replace(/\/$/, "") || "https://api.jataka.ai/api";
+  const webhookUrl = `${apiBaseForWebhook}/integrations/github/trigger`;
   const displayInstallId = installationId ? installationId : '"YOUR_INSTALLATION_ID"';
   
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests

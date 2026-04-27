@@ -319,7 +319,8 @@ export default function IntegrationsAndSetupPage() {
     setTimeout(() => setter(false), 3000);
   };
 
-  const webhookUrl = `${BASE_API || 'https://api.jataka.ai'}/integrations/github/trigger`;
+  const apiBaseForWebhook = BASE_API?.replace(/\/$/, "") || "https://api.jataka.ai/api";
+  const webhookUrl = `${apiBaseForWebhook}/integrations/github/trigger`;
   const yamlSnippet = `- name: Trigger Jataka AI UI Tests
   # Put this step AFTER your Salesforce deployment step (Gearset, Copado, or SFDX)
   run: |
