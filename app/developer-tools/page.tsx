@@ -215,24 +215,31 @@ export default function DeveloperToolsPage() {
               {userRole === "ARCHITECT" && (
                 <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
                   <label className="text-xs text-[var(--text-muted)] uppercase font-semibold">Invite Team Member</label>
-                  <div className="mt-2 flex flex-col md:flex-row gap-2">
+                  <div className="mt-3 flex flex-col gap-3">
                     <input
+                      type="email"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
-                      className="input flex-1"
-                      placeholder="developer@company.com"
+                      className="input w-full"
+                      placeholder="Email address"
+                      autoComplete="email"
                     />
-                    <select
-                      value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value)}
-                      className="input md:w-44"
-                    >
-                      <option value="developer">Developer</option>
-                      <option value="senior">Architect</option>
-                    </select>
+                    <div>
+                      <label htmlFor="invite-role" className="text-xs text-[var(--text-muted)] uppercase font-semibold">Role</label>
+                      <select
+                        id="invite-role"
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        className="input w-full mt-2"
+                      >
+                        <option value="developer">Developer</option>
+                        <option value="senior">Architect</option>
+                      </select>
+                    </div>
                     <button
+                      type="button"
                       onClick={handleInvite}
-                      className="btn-secondary md:w-auto"
+                      className="btn-secondary w-full justify-center"
                       disabled={!inviteEmail.trim()}
                     >
                       <Send size={14} /> Invite
