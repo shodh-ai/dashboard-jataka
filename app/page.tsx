@@ -10,7 +10,6 @@ import {
   BookOpen,
   AlertTriangle,
   Clock,
-  Send,
   ChevronDown,
   Crown,
   Code2,
@@ -21,7 +20,6 @@ import {
   Plus,
   Key,
   Sparkles,
-  Users,
   Plug,
   Network,
   Brain,
@@ -90,7 +88,6 @@ const METRICS_URL = BASE_API ? `${BASE_API}/brum-proxy/dashboard-metrics` : unde
 const WORKFLOWS_URL = BASE_API ? `${BASE_API}/brum-proxy/workflows` : undefined;
 const HEALER_LOG_URL = BASE_API ? `${BASE_API}/brum-proxy/healer-log` : undefined;
 const BUS_FACTOR_URL = BASE_API ? `${BASE_API}/brum-proxy/bus-factor` : undefined;
-const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
 const ONBOARD_URL = BASE_API ? `${BASE_API}/auth/onboard` : undefined;
 
 const DEFAULT_METRICS: Metrics = {
@@ -114,9 +111,6 @@ export default function Home() {
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("developer");
-  const [inviteStatus, setInviteStatus] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
@@ -494,54 +488,6 @@ export default function Home() {
     window.location.href = GITHUB_INSTALL_URL;
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
-    setInviteStatus("Sending...");
-
-    try {
-      // Always fetch a fresh token to avoid expiry issues
-      const freshToken = await getToken();
-
-      if (!freshToken) {
-        setInviteStatus("❌ Error: You are not signed in.");
-        return;
-      }
-
-      if (!INVITE_URL) {
-        console.error("Missing env var: NEXT_PUBLIC_API_BASE_URL");
-        setInviteStatus("❌ Invite endpoint isn't configured.");
-        return;
-      }
-
-      const res = await fetch(INVITE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${freshToken}`,
-        },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole}),
-      });
-
-      let data: any = {};
-      try {
-        data = await res.json();
-      } catch {
-        // ignore JSON parse errors; fall back to generic messages
-      }
-
-      if (res.ok) {
-        const msg = data.message || `Invited ${inviteEmail} successfully.`;
-        setInviteStatus(`✅ Invited as ${inviteRole}.`);
-        setInviteEmail("");
-      } else {
-        const errorMsg = data.message || "Failed to send invite";
-        setInviteStatus(`❌ ${errorMsg}`);
-      }
-    } catch (e: any) {
-      console.error(e);
-      setInviteStatus("❌ Network Connection Error");
-    }
-  };
 
   const handleOnboarding = async () => {
     if (!companyName.trim() || !token) return;

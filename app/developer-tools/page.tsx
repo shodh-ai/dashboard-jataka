@@ -2,10 +2,22 @@
 
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
-import { Loader2, MessageSquare, Terminal, Plug, Check, Copy, Key, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  MessageSquare,
+  Terminal,
+  Plug,
+  Check,
+  Copy,
+  Key,
+  ExternalLink,
+  Users,
+  Send,
+} from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
 
 export default function DeveloperToolsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -22,6 +34,9 @@ export default function DeveloperToolsPage() {
   const [tokenPreview, setTokenPreview] = useState("");
   const [copiedToken, setCopiedToken] = useState(false);
   const[copiedSlack, setCopiedSlack] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("developer");
+  const [inviteStatus, setInviteStatus] = useState("");
 
   useEffect(() => {
     async function bootstrap() {
@@ -124,6 +139,47 @@ export default function DeveloperToolsPage() {
     setTimeout(() => setCopiedSlack(false), 1500);
   };
 
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviteStatus("Sending...");
+    try {
+      const token = await getToken();
+      if (!token) {
+        setInviteStatus("❌ Error: You are not signed in.");
+        return;
+      }
+      if (!INVITE_URL) {
+        setInviteStatus("❌ Invite endpoint isn't configured.");
+        return;
+      }
+
+      const res = await fetch(INVITE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+      });
+
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        Promise.resolve();
+      }
+
+      if (res.ok) {
+        setInviteStatus(`✅ Invited as ${inviteRole}.`);
+        setInviteEmail("");
+      } else {
+        setInviteStatus(`❌ ${data.message || "Failed to send invite"}`);
+      }
+    } catch {
+      setInviteStatus("❌ Network Connection Error");
+    }
+  };
+
   if (!isLoaded || !isSignedIn) {
     return <div className="min-h-screen bg-[var(--bg-base)] flex items-center justify-center"><Loader2 className="w-7 h-7 animate-spin text-[var(--accent)]" /></div>;
   }
@@ -208,6 +264,45 @@ export default function DeveloperToolsPage() {
               </div>
             </div>
           </div>
+
+          {userRole === "ARCHITECT" && (
+            <div className="card p-6">
+              <div className="flex items-center gap-2 text-lg font-semibold mb-3">
+                <Users size={18} /> Invite Team Member
+              </div>
+              <p className="text-sm text-[var(--text-secondary)] mb-4">
+                Add a junior/developer to your org before using Slack assignment.
+              </p>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="input flex-1"
+                  placeholder="developer@company.com"
+                />
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value)}
+                  className="input md:w-40"
+                >
+                  <option value="developer">Developer</option>
+                  <option value="senior">Senior</option>
+                </select>
+                <button
+                  onClick={handleInvite}
+                  className="btn-secondary md:w-auto"
+                  disabled={!inviteEmail.trim()}
+                >
+                  <Send size={14} /> Invite
+                </button>
+              </div>
+              {inviteStatus ? (
+                <p className="text-xs text-[var(--text-secondary)] mt-3">
+                  {inviteStatus}
+                </p>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </div>
