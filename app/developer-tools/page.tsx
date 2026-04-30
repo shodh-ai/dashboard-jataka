@@ -11,7 +11,6 @@ import {
   Copy,
   Key,
   ExternalLink,
-  Users,
   Send,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
@@ -212,6 +211,40 @@ export default function DeveloperToolsPage() {
                   </button>
                 </div>
               </div>
+
+              {userRole === "ARCHITECT" && (
+                <div className="mt-4 pt-4 border-t border-[var(--border-default)]">
+                  <label className="text-xs text-[var(--text-muted)] uppercase font-semibold">Invite Team Member</label>
+                  <div className="mt-2 flex flex-col md:flex-row gap-2">
+                    <input
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="input flex-1"
+                      placeholder="developer@company.com"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value)}
+                      className="input md:w-44"
+                    >
+                      <option value="developer">Developer</option>
+                      <option value="senior">Architect</option>
+                    </select>
+                    <button
+                      onClick={handleInvite}
+                      className="btn-secondary md:w-auto"
+                      disabled={!inviteEmail.trim()}
+                    >
+                      <Send size={14} /> Invite
+                    </button>
+                  </div>
+                  {inviteStatus ? (
+                    <p className="text-xs text-[var(--text-secondary)] mt-3">
+                      {inviteStatus}
+                    </p>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             {/* VS Code Card */}
@@ -265,44 +298,6 @@ export default function DeveloperToolsPage() {
             </div>
           </div>
 
-          {userRole === "ARCHITECT" && (
-            <div className="card p-6">
-              <div className="flex items-center gap-2 text-lg font-semibold mb-3">
-                <Users size={18} /> Invite Team Member
-              </div>
-              <p className="text-sm text-[var(--text-secondary)] mb-4">
-                Add a junior/developer to your org before using Slack assignment.
-              </p>
-              <div className="flex flex-col md:flex-row gap-2">
-                <input
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  className="input flex-1"
-                  placeholder="developer@company.com"
-                />
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value)}
-                  className="input md:w-40"
-                >
-                  <option value="developer">Developer</option>
-                  <option value="senior">Senior</option>
-                </select>
-                <button
-                  onClick={handleInvite}
-                  className="btn-secondary md:w-auto"
-                  disabled={!inviteEmail.trim()}
-                >
-                  <Send size={14} /> Invite
-                </button>
-              </div>
-              {inviteStatus ? (
-                <p className="text-xs text-[var(--text-secondary)] mt-3">
-                  {inviteStatus}
-                </p>
-              ) : null}
-            </div>
-          )}
         </div>
       </div>
     </div>
