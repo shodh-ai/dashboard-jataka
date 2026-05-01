@@ -44,6 +44,7 @@ export default function PRRadarDashboard() {
       const token = await getToken();
       const res = await fetch(`${BASE_API}/integrations/github/active-pr-health`, {
         headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
       });
       const data = await res.json();
       setReports(data.reports || []);

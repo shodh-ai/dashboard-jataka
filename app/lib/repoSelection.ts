@@ -50,6 +50,7 @@ export async function fetchLinkedRepositories(
 ): Promise<{ repositories: LinkedRepository[]; message: string }> {
   const linkedRes = await fetch(`${baseApi}/integrations/github/linked-repos`, {
     headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
   });
   if (!linkedRes.ok) {
     return { repositories: [], message: "Unable to fetch linked repositories" };

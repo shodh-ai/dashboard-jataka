@@ -108,8 +108,8 @@ export default function ActiveTestsPage() {
         : `${WORKFLOWS_URL}?branch=main&limit=200`;
 
       const [syncRes, wfRes] = await Promise.all([
-        fetch(`${BASE_API}/auth/sync`, { headers }),
-        fetch(fetchUrl, { headers }),
+        fetch(`${BASE_API}/auth/sync`, { headers, cache: "no-store" }),
+        fetch(fetchUrl, { headers, cache: "no-store" }),
       ]);
 
       if (syncRes.ok) {
