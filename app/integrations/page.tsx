@@ -132,8 +132,16 @@ export default function IntegrationsAndSetupPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("jira") === "connected") alert("✅ Jira connected!");
       if (params.get("salesforce") === "connected") alert("✅ Salesforce connected!");
-      
-      if (params.has("jira") || params.has("salesforce")) {
+      if (params.get("github") === "connected") {
+        alert("✅ GitHub connected!");
+        checkGithubConnection();
+      }
+      if (params.get("jira") === "error") {
+        const message = params.get("message");
+        alert(`❌ Jira connection failed${message ? `: ${decodeURIComponent(message)}` : ""}`);
+      }
+
+      if (params.has("jira") || params.has("salesforce") || params.has("github")) {
         window.history.replaceState({}, '', "/integrations");
       }
     }
