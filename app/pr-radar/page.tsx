@@ -61,7 +61,7 @@ export default function PRRadarDashboard() {
       if (!target?.curriculum_id) return;
       const token = await getToken();
       if (!token) return;
-      await fetch(`${BASE_API}/curriculum/switch`, {
+      const res = await fetch(`${BASE_API}/curriculum/switch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,6 +69,9 @@ export default function PRRadarDashboard() {
         },
         body: JSON.stringify({ curriculumId: target.curriculum_id }),
       });
+      if (!res.ok) {
+        throw new Error("Failed to switch active brain for selected repository");
+      }
     },
     [repos, getToken],
   );
@@ -130,8 +133,17 @@ export default function PRRadarDashboard() {
                 onChange={async (e) => {
                   const nextRepo = e.target.value;
                   setSelectedRepo(nextRepo);
-                  await switchBrainForRepo(nextRepo);
-                  await fetchRadarData();
+                  try {
+                    await switchBrainForRepo(nextRepo);
+                    await fetchRadarData();
+                    setRepoMessage("");
+                  } catch (err) {
+                    const message =
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to change repository context";
+                    setRepoMessage(message);
+                  }
                 }}
                 className="input select w-full text-sm py-1.5 pl-8 pr-8 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
                 disabled={repoLoading}
