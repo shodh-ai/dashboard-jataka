@@ -93,7 +93,7 @@ export default function ActiveTestsPage() {
     loadRepos();
   }, [isSignedIn, getToken]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (repoOverride?: string) => {
     if (!isSignedIn || !WORKFLOWS_URL || !BASE_API) return;
 
     setLoading(true);
@@ -102,9 +102,10 @@ export default function ActiveTestsPage() {
       const token = await getToken();
       if (!token) return;
       const headers = { Authorization: `Bearer ${token}` };
+      const effectiveRepo = repoOverride ?? selectedRepo;
 
-      const fetchUrl = selectedRepo
-        ? `${WORKFLOWS_URL}?branch=main&limit=200&github_repo=${encodeURIComponent(selectedRepo)}`
+      const fetchUrl = effectiveRepo
+        ? `${WORKFLOWS_URL}?branch=main&limit=200&github_repo=${encodeURIComponent(effectiveRepo)}`
         : `${WORKFLOWS_URL}?branch=main&limit=200`;
 
       const [syncRes, wfRes] = await Promise.all([
@@ -199,7 +200,7 @@ export default function ActiveTestsPage() {
                     try {
                       await switchBrainForRepo(nextRepo);
                       setError(null);
-                      await load();
+                      await load(nextRepo);
                     } catch (err) {
                       const message =
                         err instanceof Error
@@ -221,7 +222,7 @@ export default function ActiveTestsPage() {
                 <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
               </div>
 
-              <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
+              <button onClick={() => load()} className="btn-secondary text-sm py-1.5" disabled={loading}>
                 {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
               </button>
             </div>
