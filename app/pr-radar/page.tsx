@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Sidebar from "../components/Sidebar";
 import { 
   AlertTriangle, 
@@ -13,42 +13,98 @@ import {
   Activity 
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns"; // Make sure to: npm install date-fns
-import { useSearchParams } from "next/navigation";
+import {
+  fetchLinkedRepositories,
+  getStoredRepo,
+  setStoredRepo,
+  type LinkedRepository,
+} from "../lib/repoSelection";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function PRRadarDashboard() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const searchParams = useSearchParams();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const selectedRepo = searchParams.get("repo") || "";
+  const [repos, setRepos] = useState<LinkedRepository[]>([]);
+  const [repoLoading, setRepoLoading] = useState(false);
+  const [repoMessage, setRepoMessage] = useState("");
+  const [selectedRepo, setSelectedRepo] = useState("");
   const visibleReports = useMemo(() => {
     if (!selectedRepo) return reports;
     return reports.filter((pr) => pr.repoFullName === selectedRepo);
   }, [reports, selectedRepo]);
 
+  const fetchRadarData = useCallback(async () => {
+    if (!isSignedIn || !BASE_API) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const token = await getToken();
+      const res = await fetch(`${BASE_API}/integrations/github/active-pr-health`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setReports(data.reports || []);
+    } catch (e) {
+      console.error("Failed to fetch PR Radar data", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [isSignedIn, getToken]);
+
+  const switchBrainForRepo = useCallback(
+    async (repoFullName: string) => {
+      if (!BASE_API) return;
+      const target = repos.find((r) => r.full_name === repoFullName);
+      if (!target?.curriculum_id) return;
+      const token = await getToken();
+      if (!token) return;
+      await fetch(`${BASE_API}/curriculum/switch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ curriculumId: target.curriculum_id }),
+      });
+    },
+    [repos, getToken],
+  );
+
   useEffect(() => {
-    async function fetchRadarData() {
-      if (!isSignedIn || !BASE_API) {
-        setLoading(false);
-        return;
-      }
+    setSelectedRepo(getStoredRepo());
+  }, []);
+
+  useEffect(() => {
+    setStoredRepo(selectedRepo);
+  }, [selectedRepo]);
+
+  useEffect(() => {
+    async function loadRepos() {
+      if (!isSignedIn || !BASE_API) return;
+      setRepoLoading(true);
+      setRepoMessage("");
       try {
         const token = await getToken();
-        const res = await fetch(`${BASE_API}/integrations/github/active-pr-health`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        setReports(data.reports || []);
-      } catch (e) {
-        console.error("Failed to fetch PR Radar data", e);
+        if (!token) return;
+        const { repositories, message } = await fetchLinkedRepositories(BASE_API, token);
+        setRepos(repositories);
+        setRepoMessage(message);
+      } catch {
+        setRepoMessage("Failed to load repositories");
       } finally {
-        setLoading(false);
+        setRepoLoading(false);
       }
     }
+
+    loadRepos();
+  }, [isSignedIn, getToken]);
+
+  useEffect(() => {
     fetchRadarData();
-  }, [isSignedIn, getToken, BASE_API]);
+  }, [fetchRadarData]);
 
   if (!isLoaded || !isSignedIn) return null;
 
@@ -63,13 +119,37 @@ export default function PRRadarDashboard() {
 
       <div className="flex-1 overflow-y-auto">
         <header className="sticky top-0 z-30 flex items-center border-b border-[var(--border-default)] bg-[var(--bg-base)] px-6 h-14 shadow-sm">
-          <h1 className="text-sm font-medium flex items-center gap-2">
-            <Activity size={16} className="text-[var(--accent)]" />
-            Active PR Risk Radar
-          </h1>
+          <div className="w-full flex items-center justify-between gap-3">
+            <h1 className="text-sm font-medium flex items-center gap-2">
+              <Activity size={16} className="text-[var(--accent)]" />
+              Active PR Risk Radar
+            </h1>
+            <div className="relative min-w-[260px]">
+              <select
+                value={selectedRepo}
+                onChange={async (e) => {
+                  const nextRepo = e.target.value;
+                  setSelectedRepo(nextRepo);
+                  await switchBrainForRepo(nextRepo);
+                  await fetchRadarData();
+                }}
+                className="input select w-full text-sm py-1.5 pl-8 pr-8 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                disabled={repoLoading}
+              >
+                <option value="">{repoLoading ? "Loading repositories..." : "All repositories"}</option>
+                {repos.map((repo) => (
+                  <option key={repo.id} value={repo.full_name}>
+                    {repo.full_name}
+                  </option>
+                ))}
+              </select>
+              <GitPullRequest className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+            </div>
+          </div>
         </header>
 
         <div className="px-6 py-6 max-w-7xl mx-auto">
+          {repoMessage && <p className="text-xs text-[var(--text-muted)] mb-3">{repoMessage}</p>}
           {/* Summary Banner */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1 bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex items-center justify-between">
@@ -99,7 +179,7 @@ export default function PRRadarDashboard() {
             <div className="flex items-center justify-center py-20 text-[var(--text-muted)]">
               <Loader2 size={24} className="animate-spin mr-2" /> Analyzing Active PRs...
             </div>
-          ) : reports.length === 0 ? (
+          ) : visibleReports.length === 0 ? (
             <div className="text-center py-20 border border-dashed border-[var(--border-default)] rounded-lg text-[var(--text-secondary)]">
               No active PR reports found{selectedRepo ? ` for ${selectedRepo}` : ""}.
             </div>

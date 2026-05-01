@@ -4,7 +4,12 @@ import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, CheckCircle2, Clock3, Loader2, AlertTriangle, GitBranch } from "lucide-react";
 import Sidebar from "../components/Sidebar";
-import { useSearchParams } from "next/navigation";
+import {
+  fetchLinkedRepositories,
+  getStoredRepo,
+  setStoredRepo,
+  type LinkedRepository,
+} from "../lib/repoSelection";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const WORKFLOWS_URL = BASE_API ? `${BASE_API}/brum-proxy/workflows` : undefined;
@@ -26,14 +31,64 @@ const ACTIVE = ["queued", "in_progress", "running", "pending", "draft"];
 
 export default function ActiveTestsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const searchParams = useSearchParams();
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("ARCHITECT");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
-  const selectedRepo = searchParams.get("repo") || "";
+  const [repos, setRepos] = useState<LinkedRepository[]>([]);
+  const [repoLoading, setRepoLoading] = useState(false);
+  const [repoMessage, setRepoMessage] = useState("");
+  const [selectedRepo, setSelectedRepo] = useState("");
   const [totalTests, setTotalTests] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const switchBrainForRepo = useCallback(
+    async (repoFullName: string) => {
+      if (!BASE_API) return;
+      const target = repos.find((r) => r.full_name === repoFullName);
+      if (!target?.curriculum_id) return;
+      const token = await getToken();
+      if (!token) return;
+      await fetch(`${BASE_API}/curriculum/switch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ curriculumId: target.curriculum_id }),
+      });
+    },
+    [repos, getToken],
+  );
+
+  useEffect(() => {
+    setSelectedRepo(getStoredRepo());
+  }, []);
+
+  useEffect(() => {
+    setStoredRepo(selectedRepo);
+  }, [selectedRepo]);
+
+  useEffect(() => {
+    async function loadRepos() {
+      if (!isSignedIn || !BASE_API) return;
+      setRepoLoading(true);
+      setRepoMessage("");
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const { repositories, message } = await fetchLinkedRepositories(BASE_API, token);
+        setRepos(repositories);
+        setRepoMessage(message);
+      } catch {
+        setRepoMessage("Failed to load repositories");
+      } finally {
+        setRepoLoading(false);
+      }
+    }
+
+    loadRepos();
+  }, [isSignedIn, getToken]);
 
   const load = useCallback(async () => {
     if (!isSignedIn || !WORKFLOWS_URL || !BASE_API) return;
@@ -45,10 +100,7 @@ export default function ActiveTestsPage() {
       if (!token) return;
       const headers = { Authorization: `Bearer ${token}` };
 
-      let fetchUrl = `${WORKFLOWS_URL}?branch=main&limit=200`;
-      if (selectedRepo) {
-        fetchUrl += `&github_repo=${encodeURIComponent(selectedRepo)}`;
-      }
+      const fetchUrl = `${WORKFLOWS_URL}?branch=main&limit=200`;
 
       const [syncRes, wfRes] = await Promise.all([
         fetch(`${BASE_API}/auth/sync`, { headers }),
@@ -89,22 +141,24 @@ export default function ActiveTestsPage() {
     }
   }, [isLoaded, isSignedIn, load]);
 
+  const visibleWorkflows = useMemo(() => workflows, [workflows]);
+
   const healthyTests = useMemo(
-    () => workflows.filter((wf) => HEALTHY.includes(String(wf.health || wf.status || "").toLowerCase())),
-    [workflows],
+    () => visibleWorkflows.filter((wf) => HEALTHY.includes(String(wf.health || wf.status || "").toLowerCase())),
+    [visibleWorkflows],
   );
 
   const activeTests = useMemo(
-    () => workflows.filter((wf) => ACTIVE.includes(String(wf.health || wf.status || "").toLowerCase())),
-    [workflows],
+    () => visibleWorkflows.filter((wf) => ACTIVE.includes(String(wf.health || wf.status || "").toLowerCase())),
+    [visibleWorkflows],
   );
 
   const needsAttention = useMemo(
-    () => workflows.filter((wf) => {
+    () => visibleWorkflows.filter((wf) => {
       const status = String(wf.health || wf.status || "").toLowerCase();
       return !HEALTHY.includes(status) && !ACTIVE.includes(status);
     }),
-    [workflows],
+    [visibleWorkflows],
   );
 
   if (!isLoaded || !isSignedIn) {
@@ -130,10 +184,35 @@ export default function ActiveTestsPage() {
               </p>
             </div>
 
-            <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
-              {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="relative min-w-[260px]">
+                <select
+                  value={selectedRepo}
+                  onChange={async (e) => {
+                    const nextRepo = e.target.value;
+                    setSelectedRepo(nextRepo);
+                    await switchBrainForRepo(nextRepo);
+                    await load();
+                  }}
+                  className="input select w-full text-sm py-1.5 pl-8 pr-8 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                  disabled={repoLoading}
+                >
+                  <option value="">{repoLoading ? "Loading repositories..." : "All repositories"}</option>
+                  {repos.map((repo) => (
+                    <option key={repo.id} value={repo.full_name}>
+                      {repo.full_name}
+                    </option>
+                  ))}
+                </select>
+                <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+              </div>
+
+              <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
+                {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
+              </button>
+            </div>
           </div>
+          {repoMessage && <p className="text-xs text-[var(--text-muted)]">{repoMessage}</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="card p-4 border-l-4 border-emerald-500">
@@ -150,7 +229,7 @@ export default function ActiveTestsPage() {
             </div>
             <div className="card p-4 border-l-4 border-cyan-500">
               <div className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">Tests in Brain</div>
-              <div className="text-3xl font-bold mt-1">{totalTests}</div>
+              <div className="text-3xl font-bold mt-1">{selectedRepo ? visibleWorkflows.length : totalTests}</div>
             </div>
           </div>
 
@@ -165,7 +244,7 @@ export default function ActiveTestsPage() {
               <div className="p-10 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
             ) : error ? (
               <div className="p-6 text-sm text-rose-500">{error}</div>
-            ) : workflows.length === 0 ? (
+            ) : visibleWorkflows.length === 0 ? (
               <div className="p-6 text-sm text-[var(--text-muted)]">
                 {selectedRepo
                   ? `No tests found for repository: ${selectedRepo}.`
@@ -184,7 +263,7 @@ export default function ActiveTestsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-default)]">
-                    {workflows.map((wf) => {
+                    {visibleWorkflows.map((wf) => {
                       const status = String(wf.health || wf.status || "draft").toLowerCase();
                       const isHealthy = HEALTHY.includes(status);
                       const isActive = ACTIVE.includes(status);
