@@ -34,6 +34,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [repos, setRepos] = useState<{ id: number; full_name: string }[]>([]);
   const [repoLoading, setRepoLoading] = useState(false);
+  const [repoMessage, setRepoMessage] = useState("");
 
   const baseApi = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -50,16 +51,51 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     async function loadRepos() {
       if (!baseApi || !isAuthLoaded || !isSignedIn) return;
       setRepoLoading(true);
+      setRepoMessage("");
       try {
         const token = await getToken();
-        if (!token) return;
-        const res = await fetch(`${baseApi}/integrations/github/linked-repos`, {
+        if (!token) {
+          setRepoMessage("Missing auth token");
+          return;
+        }
+
+        // Step 1: resolve connected GitHub installation for this org
+        const statusRes = await fetch(`${baseApi}/integrations/github/status`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) return;
-        const json = await res.json();
-        const list = Array.isArray(json?.repositories) ? json.repositories : [];
+        if (!statusRes.ok) {
+          setRepoMessage("Unable to fetch GitHub status");
+          return;
+        }
+        const statusJson = await statusRes.json();
+        const installationId = statusJson?.installationId;
+
+        if (!installationId) {
+          setRepoMessage("Connect GitHub in Integrations");
+          setRepos([]);
+          return;
+        }
+
+        // Step 2: fetch repositories visible to that installation
+        const reposRes = await fetch(
+          `${baseApi}/integrations/github/${installationId}/repositories`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!reposRes.ok) {
+          setRepoMessage("Unable to load repositories");
+          return;
+        }
+
+        const reposJson = await reposRes.json();
+        const list = Array.isArray(reposJson?.repositories)
+          ? reposJson.repositories
+          : [];
         setRepos(list);
+        if (list.length === 0) {
+          setRepoMessage("No repositories available");
+        }
+      } catch {
+        setRepoMessage("Failed to load repositories");
       } finally {
         setRepoLoading(false);
       }
@@ -170,6 +206,9 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
             </select>
             <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
           </div>
+          {repoMessage && (
+            <p className="mt-2 text-[11px] text-[var(--text-muted)]">{repoMessage}</p>
+          )}
         </div>
       )}
 
