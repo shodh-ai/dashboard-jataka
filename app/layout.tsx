@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Suspense } from "react";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -24,7 +25,7 @@ export default function RootLayout({
     <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
         <body className={`${inter.variable} ${inter.className} bg-[var(--bg-base)] text-[var(--text-primary)] antialiased`}>
-          {children}
+          <Suspense fallback={null}>{children}</Suspense>
         </body>
       </html>
     </ClerkProvider>
