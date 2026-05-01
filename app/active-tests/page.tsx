@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, CheckCircle2, Clock3, Loader2, AlertTriangle, GitBranch } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import { useSearchParams } from "next/navigation";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const WORKFLOWS_URL = BASE_API ? `${BASE_API}/brum-proxy/workflows` : undefined;
@@ -20,22 +21,16 @@ interface WorkflowSummary {
   github_repo?: string;
 }
 
-interface Repository {
-  id: number;
-  full_name: string;
-  brain_id: string;
-}
-
 const HEALTHY = ["healthy", "verified", "success", "ok"];
 const ACTIVE = ["queued", "in_progress", "running", "pending", "draft"];
 
 export default function ActiveTestsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const searchParams = useSearchParams();
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("ARCHITECT");
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
-  const [repos, setRepos] = useState<Repository[]>([]);
-  const [selectedRepo, setSelectedRepo] = useState("");
+  const selectedRepo = searchParams.get("repo") || "";
   const [totalTests, setTotalTests] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +50,8 @@ export default function ActiveTestsPage() {
         fetchUrl += `&github_repo=${encodeURIComponent(selectedRepo)}`;
       }
 
-      const [syncRes, reposRes, wfRes] = await Promise.all([
+      const [syncRes, wfRes] = await Promise.all([
         fetch(`${BASE_API}/auth/sync`, { headers }),
-        fetch(`${BASE_API}/integrations/github/linked-repos`, { headers }),
         fetch(fetchUrl, { headers }),
       ]);
 
@@ -73,11 +67,6 @@ export default function ActiveTestsPage() {
         }
       }
 
-      if (reposRes.ok) {
-        const reposData = await reposRes.json();
-        setRepos(reposData.repositories || []);
-      }
-
       if (!wfRes.ok) {
         throw new Error("Could not load workflow status list");
       }
@@ -86,8 +75,9 @@ export default function ActiveTestsPage() {
       const parsedWorkflows = Array.isArray(wfJson?.workflows) ? wfJson.workflows : [];
       setWorkflows(parsedWorkflows);
       setTotalTests(Number(wfJson?.total_tests) || parsedWorkflows.length);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load active tests");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to load active tests";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -140,27 +130,9 @@ export default function ActiveTestsPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <select
-                  value={selectedRepo}
-                  onChange={(e) => setSelectedRepo(e.target.value)}
-                  className="input select text-sm py-1.5 pl-8 pr-8 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg appearance-none focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-                >
-                  <option value="">All Repositories</option>
-                  {repos.map((repo) => (
-                    <option key={repo.id} value={repo.full_name}>
-                      {repo.full_name}
-                    </option>
-                  ))}
-                </select>
-                <GitBranch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
-              </div>
-
-              <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
-                {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
-              </button>
-            </div>
+            <button onClick={load} className="btn-secondary text-sm py-1.5" disabled={loading}>
+              {loading ? <Loader2 size={14} className="animate-spin" /> : "Refresh"}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

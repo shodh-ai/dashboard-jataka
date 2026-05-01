@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { 
   AlertTriangle, 
@@ -13,13 +13,20 @@ import {
   Activity 
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns"; // Make sure to: npm install date-fns
+import { useSearchParams } from "next/navigation";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function PRRadarDashboard() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
+  const searchParams = useSearchParams();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const selectedRepo = searchParams.get("repo") || "";
+  const visibleReports = useMemo(() => {
+    if (!selectedRepo) return reports;
+    return reports.filter((pr) => pr.repoFullName === selectedRepo);
+  }, [reports, selectedRepo]);
 
   useEffect(() => {
     async function fetchRadarData() {
@@ -46,9 +53,9 @@ export default function PRRadarDashboard() {
   if (!isLoaded || !isSignedIn) return null;
 
   // Aggregate Stats for Top Banner
-  const criticalCount = reports.filter(pr => pr.overallStatus === "CRITICAL").length;
-  const warningCount = reports.filter(pr => pr.overallStatus === "WARNING" || pr.overallStatus === "AT RISK").length;
-  const safeCount = reports.filter(pr => pr.overallStatus === "SAFE" || pr.overallStatus === "HEALTHY").length;
+  const criticalCount = visibleReports.filter(pr => pr.overallStatus === "CRITICAL").length;
+  const warningCount = visibleReports.filter(pr => pr.overallStatus === "WARNING" || pr.overallStatus === "AT RISK").length;
+  const safeCount = visibleReports.filter(pr => pr.overallStatus === "SAFE" || pr.overallStatus === "HEALTHY").length;
 
   return (
     <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
@@ -94,7 +101,7 @@ export default function PRRadarDashboard() {
             </div>
           ) : reports.length === 0 ? (
             <div className="text-center py-20 border border-dashed border-[var(--border-default)] rounded-lg text-[var(--text-secondary)]">
-              No active PR reports found for your organization.
+              No active PR reports found{selectedRepo ? ` for ${selectedRepo}` : ""}.
             </div>
           ) : (
             <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg overflow-hidden shadow-sm">
@@ -110,7 +117,7 @@ export default function PRRadarDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-default)]">
-                  {reports.map((pr) => (
+                  {visibleReports.map((pr) => (
                     <PRTableRow key={pr.id} pr={pr} />
                   ))}
                 </tbody>
