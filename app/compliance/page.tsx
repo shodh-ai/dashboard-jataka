@@ -21,6 +21,7 @@ interface ExposureRow {
 export default function CompliancePage() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [repoId, setRepoId] = useState<string | null>(null);
+  const [brains, setBrains] = useState<any[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
   const [selectedObject, setSelectedObject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,7 +52,9 @@ export default function CompliancePage() {
         });
         if (res.ok) {
           const data = await res.json();
-          const active = data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
+          setBrains(data.brains || []);
+          const active =
+            data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
           if (active) setRepoId(active.knowledgeBaseId);
         }
       } catch (e) {
@@ -194,7 +197,35 @@ export default function CompliancePage() {
       <Sidebar orgName="Jataka" userRole="ARCHITECT" />
       <div className="flex-1 overflow-y-auto p-6 lg:p-10">
       <div className="max-w-5xl">
-        
+        {brains.length > 1 && (
+          <div className="mb-6 flex items-center justify-end gap-3 print:hidden">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Audit Scope:
+            </label>
+            <select
+              className="input text-sm py-2 px-3 h-10 w-64 bg-[var(--bg-surface)] border-[var(--border-default)]"
+              value={repoId || ""}
+              onChange={(e) => {
+                setRepoId(e.target.value || null);
+                setObjects([]);
+                setSelectedObject("");
+                setSearchQuery("");
+                setSuggestedFields([]);
+                setAccessList(null);
+                setError(null);
+                setExposureRows(null);
+                setExposureError(null);
+              }}
+            >
+              {brains.map((b: any) => (
+                <option key={b.id} value={b.knowledgeBaseId}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
