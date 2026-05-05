@@ -122,7 +122,7 @@ function GithubCallbackInner() {
       if (!res.ok) throw new Error("Link failed");
 
       setStatus("success");
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(() => router.push("/integrations?github=connected"), 2000);
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -220,8 +220,8 @@ function GithubCallbackInner() {
 
         {/* Error Return Button */}
         {status === "error" && (
-           <button onClick={() => router.push("/")} className="w-full text-center text-sm text-slate-400 hover:text-white mt-4 underline">
-             Return to Dashboard
+           <button onClick={() => router.push("/integrations")} className="w-full text-center text-sm text-slate-400 hover:text-white mt-4 underline">
+             Return to Integrations
            </button>
         )}
       </div>
