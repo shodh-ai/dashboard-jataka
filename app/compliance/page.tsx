@@ -12,9 +12,16 @@ interface AccessRecord {
   can_edit: boolean;
 }
 
+interface ExposureRow {
+  object: string;
+  exposed_fields: string[];
+  sharing_rules_applied: string[];
+}
+
 export default function CompliancePage() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [repoId, setRepoId] = useState<string | null>(null);
+  const [brains, setBrains] = useState<any[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
   const [selectedObject, setSelectedObject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,6 +30,8 @@ export default function CompliancePage() {
   const [loading, setLoading] = useState(false);
   const [accessList, setAccessList] = useState<AccessRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exposureRows, setExposureRows] = useState<ExposureRow[] | null>(null);
+  const [exposureError, setExposureError] = useState<string | null>(null);
   const scopeId = repoId || userId || "";
   const todayDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -43,7 +52,9 @@ export default function CompliancePage() {
         });
         if (res.ok) {
           const data = await res.json();
-          const active = data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
+          setBrains(data.brains || []);
+          const active =
+            data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
           if (active) setRepoId(active.knowledgeBaseId);
         }
       } catch (e) {
@@ -79,6 +90,36 @@ export default function CompliancePage() {
     }
 
     fetchObjects();
+  }, [scopeId, getToken]);
+
+  useEffect(() => {
+    async function fetchExperienceCloud() {
+      if (!scopeId) {
+        setExposureRows(null);
+        return;
+      }
+      try {
+        const token = await getToken();
+        const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (!BASE_API) return;
+
+        const res = await fetch(
+          `${BASE_API}/brum-proxy/compliance/experience-cloud-xray?repo_id=${encodeURIComponent(scopeId)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error("Experience Cloud scan failed");
+        const data = await res.json();
+        if (data.status === "success") {
+          setExposureRows(data.exposed_to_public_internet ?? []);
+          setExposureError(null);
+        }
+      } catch (e: any) {
+        console.error("Experience Cloud X-Ray failed", e);
+        setExposureError(e?.message ?? "Unknown error");
+        setExposureRows(null);
+      }
+    }
+    fetchExperienceCloud();
   }, [scopeId, getToken]);
 
   useEffect(() => {
@@ -156,7 +197,35 @@ export default function CompliancePage() {
       <Sidebar orgName="Jataka" userRole="ARCHITECT" />
       <div className="flex-1 overflow-y-auto p-6 lg:p-10">
       <div className="max-w-5xl">
-        
+        {brains.length > 1 && (
+          <div className="mb-6 flex items-center justify-end gap-3 print:hidden">
+            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              Audit Scope:
+            </label>
+            <select
+              className="input text-sm py-2 px-3 h-10 w-64 bg-[var(--bg-surface)] border-[var(--border-default)]"
+              value={repoId || ""}
+              onChange={(e) => {
+                setRepoId(e.target.value || null);
+                setObjects([]);
+                setSelectedObject("");
+                setSearchQuery("");
+                setSuggestedFields([]);
+                setAccessList(null);
+                setError(null);
+                setExposureRows(null);
+                setExposureError(null);
+              }}
+            >
+              {brains.map((b: any) => (
+                <option key={b.id} value={b.knowledgeBaseId}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
@@ -166,6 +235,55 @@ export default function CompliancePage() {
           <p className="text-[var(--text-secondary)] mt-2">
             Instantly generate "Net Effective Access" reports for auditors (SOC2, SOX). Type a sensitive Field API Name to see exactly which Profiles and Permission Sets grant access to it.
           </p>
+        </div>
+
+        {/* Experience Cloud public exposure (graph) */}
+        <div className="print:hidden card p-5 md:p-6 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+            Experience Cloud — public exposure
+          </h3>
+          <p className="text-xs text-[var(--text-muted)] mb-4">
+            Objects reachable via Guest User profiles (object read) or Guest Sharing Rules in the ingested graph.
+          </p>
+          {exposureError && (
+            <p className="text-sm text-rose-500">{exposureError}</p>
+          )}
+          {!exposureError && exposureRows === null && scopeId && (
+            <p className="text-sm text-[var(--text-muted)]">Loading exposure scan…</p>
+          )}
+          {!exposureError && exposureRows && exposureRows.length === 0 && (
+            <p className="text-sm text-[var(--text-secondary)]">No guest profile or guest sharing rule paths matched for this knowledge scope.</p>
+          )}
+          {!exposureError && exposureRows && exposureRows.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-[var(--text-muted)] uppercase text-[11px] tracking-wider border-b border-[var(--border-default)]">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Object</th>
+                    <th className="py-2 pr-4 font-medium">Guest-visible fields</th>
+                    <th className="py-2 font-medium">Sharing rules</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border-default)]">
+                  {exposureRows.map((row, idx) => (
+                    <tr key={`${row.object}-${idx}`}>
+                      <td className="py-3 pr-4 font-medium whitespace-nowrap">{row.object}</td>
+                      <td className="py-3 pr-4 text-[var(--text-secondary)] text-xs">
+                        {row.exposed_fields?.length
+                          ? row.exposed_fields.join(", ")
+                          : "—"}
+                      </td>
+                      <td className="py-3 text-[var(--text-secondary)] text-xs">
+                        {row.sharing_rules_applied?.length
+                          ? row.sharing_rules_applied.join(", ")
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Search Controls */}
