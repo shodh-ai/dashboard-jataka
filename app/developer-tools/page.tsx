@@ -18,6 +18,28 @@ import Sidebar from "../components/Sidebar";
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
 
+function resolveKnowledgeBaseId(
+  brains: any[],
+  activeBrainId?: string,
+  selectedKnowledgeBaseId?: string,
+) {
+  if (!brains.length) return "";
+
+  if (selectedKnowledgeBaseId) {
+    const byKnowledgeBaseId = brains.find(
+      (b: any) => b.knowledgeBaseId === selectedKnowledgeBaseId,
+    );
+    if (byKnowledgeBaseId) return byKnowledgeBaseId.knowledgeBaseId;
+  }
+
+  if (activeBrainId) {
+    const byCurriculumId = brains.find((b: any) => b.id === activeBrainId);
+    if (byCurriculumId) return byCurriculumId.knowledgeBaseId;
+  }
+
+  return brains[0].knowledgeBaseId;
+}
+
 export default function DeveloperToolsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
@@ -64,7 +86,9 @@ export default function DeveloperToolsPage() {
             const list = Array.isArray(brainsData.brains) ? brainsData.brains :[];
             setBrains(list);
             if (list.length > 0) {
-              setActiveBrain(brainsData.activeBrainId || list[0].knowledgeBaseId);
+              setActiveBrain(
+                resolveKnowledgeBaseId(list, brainsData.activeBrainId),
+              );
             }
           }
         } catch (e) {
@@ -84,8 +108,9 @@ export default function DeveloperToolsPage() {
     const token = await getToken();
     if (!token) return;
     const extensionId = "ShodhAI.Jataka";
+    const knowledgeBaseId = resolveKnowledgeBaseId(brains, undefined, activeBrain);
     const params = new URLSearchParams({ token });
-    if (activeBrain) params.append("curriculumId", activeBrain);
+    if (knowledgeBaseId) params.append("curriculumId", knowledgeBaseId);
     window.location.href = `vscode://${extensionId}/auth?${params.toString()}`;
   };
 
@@ -113,17 +138,18 @@ export default function DeveloperToolsPage() {
   const copyToken = async () => {
     const token = await getToken();
     if (!token) return;
-    if (!activeBrain) {
+    const knowledgeBaseId = resolveKnowledgeBaseId(brains, undefined, activeBrain);
+    if (!knowledgeBaseId) {
       alert("Please select a brain first, then copy the Manual IDE Auth Payload.");
       return;
     }
 
-    const selectedBrainName =
-      brains.find((b: any) => b.knowledgeBaseId === activeBrain)?.name || activeBrain;
+    const selectedBrain =
+      brains.find((b: any) => b.knowledgeBaseId === knowledgeBaseId) || null;
     const payload = JSON.stringify({
       token,
-      curriculumId: activeBrain,
-      brainName: selectedBrainName,
+      curriculumId: knowledgeBaseId,
+      brainName: selectedBrain?.name || knowledgeBaseId,
     });
     await navigator.clipboard.writeText(payload);
 
