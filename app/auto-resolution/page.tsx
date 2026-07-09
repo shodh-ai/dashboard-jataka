@@ -121,6 +121,10 @@ type AutoResolutionCase = {
     answer?: string;
     proposedActionType?: string;
     actionInputSummary?: string;
+    actionInput?: {
+      translationRequestId?: string;
+      salesforceOperation?: "submit_for_review" | "authorize_publication";
+    };
     risk?: string;
     rollbackNotes?: string;
     validationPlan?: string;
@@ -181,6 +185,27 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function isResolvableProposal(actionType?: string) {
+  return Boolean(
+    actionType &&
+      actionType !== "REQUEST_MORE_INFO" &&
+      actionType !== "PREPARE_PATCH" &&
+      actionType !== "DEPLOY_CHANGE",
+  );
+}
+
+function describeSalesforceOperation(
+  operation?: "submit_for_review" | "authorize_publication",
+) {
+  if (operation === "submit_for_review") {
+    return "Submit translation draft for review in Salesforce";
+  }
+  if (operation === "authorize_publication") {
+    return "Authorize publication in Salesforce";
+  }
+  return "Not specified";
+}
+
 function normalizeEvidenceBundle(
   value?: EvidenceBundle | EvidenceRef[],
 ): EvidenceBundle | undefined {
@@ -200,6 +225,10 @@ export default function AutoResolutionPage() {
   const [brains, setBrains] = useState<Brain[]>([]);
   const [activeBrain, setActiveBrain] = useState("");
   const [issueText, setIssueText] = useState(L1_DEMO_ISSUE);
+  const [translationRequestId, setTranslationRequestId] = useState("");
+  const [salesforceOperation, setSalesforceOperation] = useState<
+    "" | "submit_for_review" | "authorize_publication"
+  >("");
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [recentCases, setRecentCases] = useState<AutoResolutionCase[]>([]);
   const [loading, setLoading] = useState(false);
@@ -229,6 +258,26 @@ export default function AutoResolutionPage() {
   );
   const policyEvent = useMemo(() => getAuditEvent(detail, "POLICY_DECIDED"), [detail]);
 
+  const proposedActionType = detail?.case.proposalSnapshot?.proposedActionType;
+  const approvalWillExecuteExternalAction = isResolvableProposal(proposedActionType);
+
+  function buildIntakePayload(issue: string) {
+    const payload: Record<string, unknown> = {
+      source: "PORTAL",
+      curriculumId: activeKnowledgeBaseId,
+      issueText: issue.trim(),
+    };
+
+    if (translationRequestId.trim() && salesforceOperation) {
+      payload.actionInput = {
+        translationRequestId: translationRequestId.trim(),
+        salesforceOperation,
+      };
+    }
+
+    return payload;
+  }
+
   async function runDemoIssue(text: string) {
     setIssueText(text);
     setError("");
@@ -240,11 +289,7 @@ export default function AutoResolutionPage() {
     try {
       const data = await apiFetch("/auto-resolution/cases", {
         method: "POST",
-        body: JSON.stringify({
-          source: "PORTAL",
-          curriculumId: activeKnowledgeBaseId,
-          issueText: text,
-        }),
+        body: JSON.stringify(buildIntakePayload(text)),
       });
       await loadCase(data.case_id);
       await loadRecentCases();
@@ -321,11 +366,7 @@ export default function AutoResolutionPage() {
     try {
       const data = await apiFetch("/auto-resolution/cases", {
         method: "POST",
-        body: JSON.stringify({
-          source: "PORTAL",
-          curriculumId: activeKnowledgeBaseId,
-          issueText: issueText.trim(),
-        }),
+        body: JSON.stringify(buildIntakePayload(issueText)),
       });
       await loadCase(data.case_id);
       await loadRecentCases();
@@ -430,6 +471,41 @@ export default function AutoResolutionPage() {
                 className="input min-h-[9rem] w-full resize-y text-sm leading-6"
                 placeholder="Describe the issue..."
               />
+
+              <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Optional Salesforce target
+                </p>
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Translation request ID
+                </label>
+                <input
+                  value={translationRequestId}
+                  onChange={(e) => setTranslationRequestId(e.target.value)}
+                  className="input mb-4 w-full text-sm"
+                  placeholder="a0X..."
+                />
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Salesforce operation
+                </label>
+                <select
+                  value={salesforceOperation}
+                  onChange={(e) =>
+                    setSalesforceOperation(
+                      e.target.value as "" | "submit_for_review" | "authorize_publication",
+                    )
+                  }
+                  className="input select w-full text-sm"
+                >
+                  <option value="">No Salesforce action</option>
+                  <option value="submit_for_review">Submit draft for review</option>
+                  <option value="authorize_publication">Authorize publication</option>
+                </select>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Provide both fields when you want approval to change a real Salesforce
+                  `Knowledge_Translation_Request__c` record instead of only escalating the case.
+                </p>
+              </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
@@ -698,6 +774,21 @@ export default function AutoResolutionPage() {
                       <Meta label="Approval tier" value={detail.case.approvalTier} />
                       <Meta label="Proposal hash" value={detail.case.proposalHash} mono />
                     </div>
+                    {detail.case.proposalSnapshot?.actionInput?.translationRequestId && (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Meta
+                          label="Salesforce record"
+                          value={detail.case.proposalSnapshot.actionInput.translationRequestId}
+                          mono
+                        />
+                        <Meta
+                          label="Salesforce operation"
+                          value={describeSalesforceOperation(
+                            detail.case.proposalSnapshot.actionInput.salesforceOperation,
+                          )}
+                        />
+                      </div>
+                    )}
                     <Meta
                       label="Validation plan"
                       value={detail.case.proposalSnapshot?.validationPlan}
@@ -711,6 +802,20 @@ export default function AutoResolutionPage() {
                     Requester bypass is a demo approval path. It is proposal-hash-bound and logged
                     explicitly in the audit trail.
                   </p>
+
+                  {pendingApproval && !approvalWillExecuteExternalAction && (
+                    <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                      Approving this case will <strong>not</strong> change Salesforce or your codebase.
+                      It will hand the issue to a human for follow-up.
+                    </div>
+                  )}
+
+                  {pendingApproval && approvalWillExecuteExternalAction && (
+                    <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                      Approving this case will run the proposed external action and only mark the
+                      case resolved if Salesforce validation succeeds.
+                    </div>
+                  )}
 
                   {pendingApproval ? (
                     <div className="space-y-4">
@@ -732,7 +837,9 @@ export default function AutoResolutionPage() {
                         ) : (
                           <ShieldCheck size={16} />
                         )}
-                        Approve as requester bypass
+                        {approvalWillExecuteExternalAction
+                          ? "Approve and run Salesforce action"
+                          : "Approve for human follow-up"}
                       </button>
                     </div>
                   ) : (

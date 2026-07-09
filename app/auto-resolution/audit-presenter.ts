@@ -94,6 +94,18 @@ const EVENT_PRESENTATION: Record<
     summary: "A reviewer approved the recommended solution.",
     icon: UserCheck,
     tone: "success",
+    getSummary: (event) => {
+      if (event.policyDecision?.includes("REQUESTER_BYPASS")) {
+        return "A reviewer used the dashboard bypass to approve this case.";
+      }
+      if (
+        event.policyDecision?.includes("human follow-up") ||
+        event.policyDecision?.includes("human to complete")
+      ) {
+        return "A reviewer approved this case for human follow-up. No automated external change was executed.";
+      }
+      return "A reviewer approved the recommended solution.";
+    },
   },
   REJECTED: {
     title: "Review declined",
@@ -106,6 +118,12 @@ const EVENT_PRESENTATION: Record<
     summary: "The approved action was carried out.",
     icon: Play,
     tone: "success",
+    getSummary: (event) => {
+      if (event.policyDecision?.includes("Human follow-up")) {
+        return "No automated external action was executed because this case required human follow-up.";
+      }
+      return "The approved action was carried out.";
+    },
   },
   EXECUTION_FAILED: {
     title: "Action could not be completed",
@@ -130,6 +148,13 @@ const EVENT_PRESENTATION: Record<
     summary: "This issue needs hands-on help from a person on your team.",
     icon: AlertTriangle,
     tone: "warning",
+    getSummary: (event) => {
+      const policy = humanizePolicyDecision(event.policyDecision);
+      if (policy) {
+        return `This issue needs hands-on help from a person on your team. ${policy}`;
+      }
+      return "This issue needs hands-on help from a person on your team.";
+    },
   },
 };
 
