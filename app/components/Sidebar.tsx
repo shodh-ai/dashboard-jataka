@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useOrganizationList, SignOutButton } from "@clerk/nextjs";
+import { useUser, SignOutButton } from "@clerk/nextjs";
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Terminal,
   Wrench,
-  Shield
+  Shield,
+  Bot
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,17 +24,11 @@ interface SidebarProps {
   userRole: "ARCHITECT" | "DEVELOPER" | "";
 }
 
-const orgListParams = {
-  userMemberships: { infinite: true },
-};
-
 export default function Sidebar({ orgName, userRole }: SidebarProps) {
   const { user } = useUser();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList(orgListParams);
 
-  
   const navItems = [
     { label: "Overview", href: "/", icon: LayoutDashboard },
     { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
@@ -41,6 +36,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Public Status", href: "/status", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
     { label: "Security & Compliance", href: "/compliance", icon: Shield },
+    { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
     { label: "Integrations", href: "/integrations", icon: Plug },
