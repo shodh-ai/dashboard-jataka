@@ -18,6 +18,62 @@ import Sidebar from "../components/Sidebar";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
+const L1_DEMO_ISSUE =
+  "What list view should I use to find unpublished Spanish Knowledge drafts?";
+const L2_DEMO_ISSUE =
+  "Why does the Spanish Knowledge draft throw a validation error during save?";
+
+type EvidenceRef = {
+  type: string;
+  id: string;
+  label?: string;
+  score?: number;
+  preview?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type EvidenceBundle = {
+  refs?: EvidenceRef[];
+  snapshot?: {
+    curriculumId?: string;
+    branch?: string;
+    topScore?: number;
+    minScore?: number;
+    retrievalIsWeak?: boolean;
+    retrievalSummary?: {
+      qa_resolution_matches?: number;
+      vector_hits?: number;
+      full_files?: number;
+      graph_dependencies?: number;
+      jira_context?: number;
+      concepts?: number;
+    };
+    qaResolutionMatches?: Array<{ preview: string }>;
+    vectorHits?: Array<{
+      asset_id?: string | null;
+      score?: number | null;
+      preview?: string;
+    }>;
+    fullFiles?: Array<{ name: string; preview?: string }>;
+    graphDependencies?: Array<{
+      target?: string;
+      name?: string;
+      type?: string;
+      relationship?: string;
+    }>;
+    jiraContext?: Array<{
+      jira_key?: string;
+      found?: boolean;
+      preview?: string;
+    }>;
+    concepts?: Array<{ name?: string; definition?: string }>;
+  };
+  topScore?: number;
+  minScore?: number;
+  shouldEscalate?: boolean;
+  reason?: string;
+};
+
 type Brain = {
   id: string;
   name?: string;
@@ -47,6 +103,7 @@ type AuditEvent = {
   policyDecision?: string;
   approvalTier?: string;
   confidence?: number;
+  evidenceRefs?: EvidenceBundle | EvidenceRef[];
   createdAt: string;
 };
 
@@ -61,6 +118,7 @@ type AutoResolutionCase = {
   confidenceScore?: number;
   requesterId?: string;
   proposalHash?: string;
+  evidenceRefs?: EvidenceBundle | EvidenceRef[];
   proposalSnapshot?: {
     answer?: string;
     proposedActionType?: string;
@@ -68,6 +126,7 @@ type AutoResolutionCase = {
     risk?: string;
     rollbackNotes?: string;
     validationPlan?: string;
+    evidenceRefs?: EvidenceRef[];
   };
   executionSnapshot?: {
     ok?: boolean;
@@ -124,15 +183,25 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function normalizeEvidenceBundle(
+  value?: EvidenceBundle | EvidenceRef[],
+): EvidenceBundle | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) return { refs: value };
+  return value;
+}
+
+function getAuditEvent(detail: CaseDetail | null, eventType: string) {
+  return detail?.auditEvents.find((event) => event.eventType === eventType);
+}
+
 export default function AutoResolutionPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [brains, setBrains] = useState<Brain[]>([]);
   const [activeBrain, setActiveBrain] = useState("");
-  const [issueText, setIssueText] = useState(
-    "What list view should I use to find unpublished Spanish Knowledge drafts?",
-  );
+  const [issueText, setIssueText] = useState(L1_DEMO_ISSUE);
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [recentCases, setRecentCases] = useState<AutoResolutionCase[]>([]);
   const [loading, setLoading] = useState(false);
@@ -148,6 +217,45 @@ export default function AutoResolutionPage() {
     () => resolveKnowledgeBaseId(brains, activeBrain),
     [brains, activeBrain],
   );
+
+  const evidenceBundle = useMemo(
+    () =>
+      normalizeEvidenceBundle(detail?.case.evidenceRefs) ||
+      normalizeEvidenceBundle(getAuditEvent(detail, "EVIDENCE_RETRIEVED")?.evidenceRefs),
+    [detail],
+  );
+
+  const classifiedEvent = useMemo(
+    () => getAuditEvent(detail, "CLASSIFIED"),
+    [detail],
+  );
+  const policyEvent = useMemo(() => getAuditEvent(detail, "POLICY_DECIDED"), [detail]);
+
+  async function runDemoIssue(text: string) {
+    setIssueText(text);
+    setError("");
+    if (!activeKnowledgeBaseId) {
+      setError("Select a brain before running the demo.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await apiFetch("/auto-resolution/cases", {
+        method: "POST",
+        body: JSON.stringify({
+          source: "PORTAL",
+          curriculumId: activeKnowledgeBaseId,
+          issueText: text,
+        }),
+      });
+      await loadCase(data.case_id);
+      await loadRecentCases();
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Failed to run demo issue."));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function apiFetch(path: string, options: RequestInit = {}) {
     if (!BASE_API) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
@@ -327,6 +435,22 @@ export default function AutoResolutionPage() {
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
+                  onClick={() => runDemoIssue(L1_DEMO_ISSUE)}
+                  disabled={loading || !activeKnowledgeBaseId}
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                  Run L1 Auto Resolution Demo
+                </button>
+                <button
+                  onClick={() => runDemoIssue(L2_DEMO_ISSUE)}
+                  disabled={loading || !activeKnowledgeBaseId}
+                  className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                  Run L2 Diagnosis Demo
+                </button>
+                <button
                   onClick={raiseIssue}
                   disabled={loading || !issueText.trim() || !activeKnowledgeBaseId}
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -428,6 +552,133 @@ export default function AutoResolutionPage() {
                     </div>
                   ))}
                 </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-2">
+                  <FileText className="text-blue-300" size={20} />
+                  <h2 className="text-lg font-semibold text-white">How It Happened</h2>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <HowItHappenedCard
+                    title="Classification"
+                    value={`${detail.case.supportLevel || "Pending"} / ${detail.case.intent || "Pending"}`}
+                    detail={classifiedEvent?.policyDecision}
+                  />
+                  <HowItHappenedCard
+                    title="Policy decision"
+                    value={detail.case.approvalTier || "Pending"}
+                    detail={policyEvent?.policyDecision}
+                  />
+                  <HowItHappenedCard
+                    title="Resolution path"
+                    value={
+                      detail.case.status === "RESOLVED" && detail.case.approvalTier === "AUTO_ANSWER"
+                        ? "Auto-resolved without approval"
+                        : detail.case.status === "PENDING_APPROVAL"
+                          ? "Waiting for approval before execution"
+                          : detail.case.status
+                    }
+                    detail={detail.case.proposalSnapshot?.actionInputSummary}
+                  />
+                  <HowItHappenedCard
+                    title="Final outcome"
+                    value={detail.case.status}
+                    detail={
+                      detail.case.executionSnapshot?.validationDetail ||
+                      detail.case.proposalSnapshot?.answer
+                    }
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-2">
+                  <Sparkles className="text-violet-300" size={20} />
+                  <h2 className="text-lg font-semibold text-white">Evidence Retrieval</h2>
+                </div>
+                {!evidenceBundle ? (
+                  <p className="rounded-xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">
+                    No evidence payload stored for this case yet.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <Meta
+                        label="Top score"
+                        value={
+                          typeof evidenceBundle.topScore === "number"
+                            ? evidenceBundle.topScore.toFixed(2)
+                            : evidenceBundle.snapshot?.topScore?.toFixed(2)
+                        }
+                      />
+                      <Meta
+                        label="Min score"
+                        value={
+                          typeof evidenceBundle.minScore === "number"
+                            ? evidenceBundle.minScore.toFixed(2)
+                            : evidenceBundle.snapshot?.minScore?.toFixed(2)
+                        }
+                      />
+                      <Meta
+                        label="Should escalate"
+                        value={String(Boolean(evidenceBundle.shouldEscalate))}
+                      />
+                      <Meta label="Reason" value={evidenceBundle.reason} />
+                    </div>
+
+                    {evidenceBundle.snapshot?.retrievalSummary && (
+                      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        <SummaryCard
+                          label="QA memory"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.qa_resolution_matches ?? 0)}
+                        />
+                        <SummaryCard
+                          label="Vector hits"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.vector_hits ?? 0)}
+                        />
+                        <SummaryCard
+                          label="Full files"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.full_files ?? 0)}
+                        />
+                        <SummaryCard
+                          label="Graph deps"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.graph_dependencies ?? 0)}
+                        />
+                        <SummaryCard
+                          label="Jira context"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.jira_context ?? 0)}
+                        />
+                        <SummaryCard
+                          label="Concepts"
+                          value={String(evidenceBundle.snapshot.retrievalSummary.concepts ?? 0)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {(evidenceBundle.refs || []).map((ref) => (
+                        <div
+                          key={`${ref.type}-${ref.id}`}
+                          className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                        >
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-slate-100">
+                              {ref.label || ref.id}
+                            </span>
+                            <span className={`rounded-full border px-2 py-0.5 text-xs ${badgeClasses(ref.type)}`}>
+                              {ref.type}
+                            </span>
+                          </div>
+                          {typeof ref.score === "number" && (
+                            <p className="mb-2 text-xs text-slate-500">score: {ref.score.toFixed(2)}</p>
+                          )}
+                          <p className="text-xs leading-5 text-slate-400">{ref.preview || "No preview available."}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </section>
 
               <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
@@ -577,6 +828,26 @@ function Meta({ label, value, mono }: { label: string; value?: string; mono?: bo
       >
         {value || "N/A"}
       </p>
+    </div>
+  );
+}
+
+function HowItHappenedCard({
+  title,
+  value,
+  detail,
+}: {
+  title: string;
+  value: string;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">{title}</p>
+      <p className={`inline-flex rounded-full border px-2.5 py-1 text-sm ${badgeClasses(value)}`}>
+        {value}
+      </p>
+      {detail && <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>}
     </div>
   );
 }
