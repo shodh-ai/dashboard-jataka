@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import {
+  presentAuditEvent,
+  toneClasses,
+  type AuditEventLike,
+} from "./audit-presenter";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
@@ -95,16 +100,9 @@ type Approval = {
   requestedAt: string;
 };
 
-type AuditEvent = {
+type AuditEvent = AuditEventLike & {
   id: string;
-  eventType: string;
-  actorType: string;
-  actorId?: string;
-  policyDecision?: string;
-  approvalTier?: string;
-  confidence?: number;
   evidenceRefs?: EvidenceBundle | EvidenceRef[];
-  createdAt: string;
 };
 
 type AutoResolutionCase = {
@@ -367,8 +365,8 @@ export default function AutoResolutionPage() {
     <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       <Sidebar orgName={orgName} userRole={userRole} />
 
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <main className="min-w-0 flex-1 overflow-y-auto p-8">
+        <div className="mx-auto w-full max-w-7xl space-y-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-2">
@@ -391,8 +389,8 @@ export default function AutoResolutionPage() {
             </div>
           )}
 
-          <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+          <section className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-white">Raise Issue</h2>
@@ -409,7 +407,7 @@ export default function AutoResolutionPage() {
               <select
                 value={activeBrain}
                 onChange={(e) => setActiveBrain(e.target.value)}
-                className="mb-4 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
+                className="input select mb-4 w-full text-sm"
               >
                 {brains.length === 0 ? (
                   <option value="">No brains found</option>
@@ -429,7 +427,7 @@ export default function AutoResolutionPage() {
                 value={issueText}
                 onChange={(e) => setIssueText(e.target.value)}
                 rows={6}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-blue-500"
+                className="input min-h-[9rem] w-full resize-y text-sm leading-6"
                 placeholder="Describe the issue..."
               />
 
@@ -468,9 +466,9 @@ export default function AutoResolutionPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+            <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
               <h2 className="mb-4 text-lg font-semibold text-white">Recent Cases</h2>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {recentCases.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-500">
                     No cases yet. Raise an issue to start the pipeline.
@@ -480,14 +478,14 @@ export default function AutoResolutionPage() {
                     <button
                       key={caseRow.id}
                       onClick={() => loadCase(caseRow.id)}
-                      className="w-full rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-left transition hover:border-slate-600"
+                      className="w-full min-w-0 rounded-lg border border-slate-800 bg-slate-900/60 p-4 text-left transition hover:border-slate-600"
                     >
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <span className="truncate text-sm font-medium text-slate-200">
+                      <div className="mb-2 flex min-w-0 items-start justify-between gap-3">
+                        <span className="min-w-0 flex-1 text-sm font-medium leading-6 text-slate-200 line-clamp-2">
                           {caseRow.issueText}
                         </span>
                         <span
-                          className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${badgeClasses(caseRow.status)}`}
+                          className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${badgeClasses(caseRow.status)}`}
                         >
                           {caseRow.status}
                         </span>
@@ -681,8 +679,8 @@ export default function AutoResolutionPage() {
                 )}
               </section>
 
-              <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+              <section className="grid min-w-0 gap-6 lg:grid-cols-2">
+                <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                   <div className="mb-4 flex items-center gap-2">
                     <ShieldCheck className="text-emerald-400" size={20} />
                     <h2 className="text-lg font-semibold text-white">Proposed Resolution</h2>
@@ -707,7 +705,7 @@ export default function AutoResolutionPage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+                <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                   <h2 className="mb-2 text-lg font-semibold text-white">Approval Layer</h2>
                   <p className="mb-4 text-sm text-slate-400">
                     Requester bypass is a demo approval path. It is proposal-hash-bound and logged
@@ -769,32 +767,20 @@ export default function AutoResolutionPage() {
               </section>
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
-                <h2 className="mb-4 text-lg font-semibold text-white">Audit Trail</h2>
-                <div className="space-y-3">
-                  {detail.auditEvents.map((event) => (
-                    <div
+                <div className="mb-2">
+                  <h2 className="text-lg font-semibold text-white">What Happened</h2>
+                  <p className="mt-1 text-sm text-slate-400">
+                    A plain-language timeline of every step taken on this case.
+                  </p>
+                </div>
+                <div className="mt-5 space-y-0">
+                  {detail.auditEvents.map((event, index) => (
+                    <AuditTrailItem
                       key={event.id}
-                      className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
-                    >
-                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-mono text-sm text-slate-100">{event.eventType}</span>
-                        <span className="text-xs text-slate-500">
-                          {new Date(event.createdAt).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="grid gap-2 text-xs text-slate-400 md:grid-cols-4">
-                        <span>actor: {event.actorType}</span>
-                        <span className="truncate">id: {event.actorId || "system"}</span>
-                        <span>tier: {event.approvalTier || "N/A"}</span>
-                        <span>
-                          confidence:{" "}
-                          {typeof event.confidence === "number" ? event.confidence.toFixed(2) : "N/A"}
-                        </span>
-                      </div>
-                      {event.policyDecision && (
-                        <p className="mt-2 text-xs text-slate-500">{event.policyDecision}</p>
-                      )}
-                    </div>
+                      event={event}
+                      step={index + 1}
+                      isLast={index === detail.auditEvents.length - 1}
+                    />
                   ))}
                 </div>
               </section>
@@ -848,6 +834,80 @@ function HowItHappenedCard({
         {value}
       </p>
       {detail && <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>}
+    </div>
+  );
+}
+
+function AuditTrailItem({
+  event,
+  step,
+  isLast,
+}: {
+  event: AuditEvent;
+  step: number;
+  isLast: boolean;
+}) {
+  const presentation = presentAuditEvent(event);
+  const tone = toneClasses(presentation.tone);
+  const Icon = presentation.icon;
+
+  return (
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${tone.ring}`}
+        >
+          <Icon size={18} className={tone.icon} />
+        </div>
+        {!isLast && <div className="mt-2 w-px flex-1 bg-slate-800" />}
+      </div>
+
+      <div className={`min-w-0 flex-1 ${isLast ? "pb-0" : "pb-6"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Step {step}
+            </p>
+            <h3 className="text-base font-semibold text-white">{presentation.title}</h3>
+          </div>
+          <time className="shrink-0 text-xs text-slate-500">
+            {new Date(event.createdAt).toLocaleString()}
+          </time>
+        </div>
+
+        <p className="mt-2 text-sm leading-6 text-slate-300">{presentation.summary}</p>
+
+        {presentation.chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {presentation.chips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-xs text-slate-300"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <details className="mt-3 rounded-lg border border-slate-800/80 bg-slate-950/50 px-3 py-2">
+          <summary className="cursor-pointer text-xs text-slate-500 hover:text-slate-300">
+            Technical details
+          </summary>
+          <div className="mt-2 space-y-1 font-mono text-[11px] leading-5 text-slate-500">
+            <p>event: {event.eventType}</p>
+            <p>actor: {event.actorType}</p>
+            {event.actorId && <p>actor id: {event.actorId}</p>}
+            {event.approvalTier && <p>approval tier: {event.approvalTier}</p>}
+            {typeof event.confidence === "number" && (
+              <p>confidence: {event.confidence.toFixed(2)}</p>
+            )}
+            {event.supportLevel && <p>support level: {event.supportLevel}</p>}
+            {event.intent && <p>intent: {event.intent}</p>}
+            {event.policyDecision && <p>note: {event.policyDecision}</p>}
+          </div>
+        </details>
+      </div>
     </div>
   );
 }
