@@ -23,11 +23,6 @@ import {
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
-const L1_DEMO_ISSUE =
-  "What list view should I use to find unpublished Spanish Knowledge drafts?";
-const L2_DEMO_ISSUE =
-  "Why does the Spanish Knowledge draft throw a validation error during save?";
-
 type EvidenceRef = {
   type: string;
   id: string;
@@ -224,7 +219,9 @@ export default function AutoResolutionPage() {
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [brains, setBrains] = useState<Brain[]>([]);
   const [activeBrain, setActiveBrain] = useState("");
-  const [issueText, setIssueText] = useState(L1_DEMO_ISSUE);
+  const [issueText, setIssueText] = useState("");
+  const [salesforceCaseRef, setSalesforceCaseRef] = useState("");
+  const [loadedCaseLabel, setLoadedCaseLabel] = useState("");
   const [translationRequestId, setTranslationRequestId] = useState("");
   const [salesforceOperation, setSalesforceOperation] = useState<
     "" | "submit_for_review" | "authorize_publication"
@@ -232,6 +229,7 @@ export default function AutoResolutionPage() {
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [recentCases, setRecentCases] = useState<AutoResolutionCase[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingTicket, setLoadingTicket] = useState(false);
   const [bypassing, setBypassing] = useState(false);
   const [error, setError] = useState("");
 
@@ -265,38 +263,50 @@ export default function AutoResolutionPage() {
     const payload: Record<string, unknown> = {
       source: "PORTAL",
       curriculumId: activeKnowledgeBaseId,
-      issueText: issue.trim(),
     };
 
+    if (salesforceCaseRef.trim()) {
+      payload.salesforceCaseId = salesforceCaseRef.trim();
+    }
+    if (issue.trim()) {
+      payload.issueText = issue.trim();
+    }
+
+    const actionInput: Record<string, string> = {};
     if (translationRequestId.trim() && salesforceOperation) {
-      payload.actionInput = {
-        translationRequestId: translationRequestId.trim(),
-        salesforceOperation,
-      };
+      actionInput.translationRequestId = translationRequestId.trim();
+      actionInput.salesforceOperation = salesforceOperation;
+    }
+    if (Object.keys(actionInput).length > 0) {
+      payload.actionInput = actionInput;
     }
 
     return payload;
   }
 
-  async function runDemoIssue(text: string) {
-    setIssueText(text);
-    setError("");
-    if (!activeKnowledgeBaseId) {
-      setError("Select a brain before running the demo.");
+  async function loadFromSalesforceTicket() {
+    const ref = salesforceCaseRef.trim();
+    if (!ref) {
+      setError("Enter a Salesforce Case Id or Case Number.");
       return;
     }
-    setLoading(true);
+    setError("");
+    setLoadingTicket(true);
     try {
-      const data = await apiFetch("/auto-resolution/cases", {
-        method: "POST",
-        body: JSON.stringify(buildIntakePayload(text)),
-      });
-      await loadCase(data.case_id);
-      await loadRecentCases();
+      const data = await apiFetch(
+        `/auto-resolution/salesforce/cases/${encodeURIComponent(ref)}`,
+      );
+      setIssueText(data.issueText || "");
+      setSalesforceCaseRef(data.case?.id || ref);
+      setLoadedCaseLabel(
+        data.case
+          ? `${data.case.caseNumber} — ${data.case.subject} (${data.case.status})`
+          : ref,
+      );
     } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to run demo issue."));
+      setError(getErrorMessage(e, "Failed to load Salesforce Case."));
     } finally {
-      setLoading(false);
+      setLoadingTicket(false);
     }
   }
 
@@ -360,7 +370,14 @@ export default function AutoResolutionPage() {
   }, [isLoaded, isSignedIn]);
 
   async function raiseIssue() {
-    if (!issueText.trim()) return;
+    if (!issueText.trim() && !salesforceCaseRef.trim()) {
+      setError("Load a Salesforce Case or enter issue text.");
+      return;
+    }
+    if (!activeKnowledgeBaseId) {
+      setError("Select a brain before raising an issue.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -416,8 +433,8 @@ export default function AutoResolutionPage() {
               <div>
                 <h1 className="text-2xl font-semibold text-white">Auto Resolution Pipeline</h1>
                 <p className="text-sm text-slate-400">
-                  Raise a customer issue, inspect classification and evidence, approve execution,
-                  and review the audit trail in one place.
+                  Feed any Salesforce Case into the pipeline, inspect classification and
+                  evidence, approve execution, and write the answer back to that Case.
                 </p>
               </div>
             </div>
@@ -434,9 +451,10 @@ export default function AutoResolutionPage() {
             <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Raise Issue</h2>
+                  <h2 className="text-lg font-semibold text-white">Raise from ticket</h2>
                   <p className="text-sm text-slate-400">
-                    This creates a `PORTAL` source case and runs the backend pipeline.
+                    Load a Salesforce Case (Id or Case Number). Issue text comes from the
+                    ticket; resolution posts back to the same Case.
                   </p>
                 </div>
                 <FileText className="text-slate-500" size={22} />
@@ -462,19 +480,54 @@ export default function AutoResolutionPage() {
               </select>
 
               <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                Customer issue
+                Salesforce Case Id or Case Number
+              </label>
+              <div className="mb-2 flex flex-wrap gap-2">
+                <input
+                  value={salesforceCaseRef}
+                  onChange={(e) => {
+                    setSalesforceCaseRef(e.target.value);
+                    setLoadedCaseLabel("");
+                  }}
+                  className="input min-w-0 flex-1 text-sm"
+                  placeholder="500… or 00001047"
+                />
+                <button
+                  type="button"
+                  onClick={loadFromSalesforceTicket}
+                  disabled={loadingTicket || !salesforceCaseRef.trim()}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loadingTicket ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCcw size={16} />
+                  )}
+                  Load ticket
+                </button>
+              </div>
+              {loadedCaseLabel ? (
+                <p className="mb-4 text-xs text-emerald-300/90">{loadedCaseLabel}</p>
+              ) : (
+                <p className="mb-4 text-xs text-slate-500">
+                  Works for any Case — no scenario-specific demos.
+                </p>
+              )}
+
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                Issue text (from ticket; editable)
               </label>
               <textarea
                 value={issueText}
                 onChange={(e) => setIssueText(e.target.value)}
                 rows={6}
                 className="input min-h-[9rem] w-full resize-y text-sm leading-6"
-                placeholder="Describe the issue..."
+                placeholder="Load a Salesforce Case to fill this from Subject + Description…"
               />
 
               <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
                 <p className="mb-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Optional Salesforce target
+                  Optional: Knowledge translation mutation
                 </p>
                 <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
                   Translation request ID
@@ -497,36 +550,25 @@ export default function AutoResolutionPage() {
                   }
                   className="input select w-full text-sm"
                 >
-                  <option value="">No Salesforce action</option>
+                  <option value="">No translation action</option>
                   <option value="submit_for_review">Submit draft for review</option>
                   <option value="authorize_publication">Authorize publication</option>
                 </select>
                 <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Provide both fields when you want approval to change a real Salesforce
-                  `Knowledge_Translation_Request__c` record instead of only escalating the case.
+                  Only needed when approving a change to a
+                  `Knowledge_Translation_Request__c` record. Case writeback uses the Case
+                  Id above.
                 </p>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
-                  onClick={() => runDemoIssue(L1_DEMO_ISSUE)}
-                  disabled={loading || !activeKnowledgeBaseId}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                  Run L1 Auto Resolution Demo
-                </button>
-                <button
-                  onClick={() => runDemoIssue(L2_DEMO_ISSUE)}
-                  disabled={loading || !activeKnowledgeBaseId}
-                  className="inline-flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
-                  Run L2 Diagnosis Demo
-                </button>
-                <button
                   onClick={raiseIssue}
-                  disabled={loading || !issueText.trim() || !activeKnowledgeBaseId}
+                  disabled={
+                    loading ||
+                    !activeKnowledgeBaseId ||
+                    (!issueText.trim() && !salesforceCaseRef.trim())
+                  }
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}

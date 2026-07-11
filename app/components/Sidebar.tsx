@@ -14,7 +14,9 @@ import {
   Terminal,
   Wrench,
   Shield,
-  Bot
+  Bot,
+  MessageSquare,
+  Headset,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,6 +38,8 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Public Status", href: "/status", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
     { label: "Security & Compliance", href: "/compliance", icon: Shield },
+    { label: "Ask Support", href: "/ask", icon: MessageSquare },
+    { label: "Support Ops", href: "/support-ops", icon: Headset },
     { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
