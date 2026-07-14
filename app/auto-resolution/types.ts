@@ -94,8 +94,18 @@ export type AutoResolutionCase = {
     proposedActionType?: string;
     actionInputSummary?: string;
     actionInput?: {
+      connectorId?: string;
+      capability?: string;
+      externalRef?: {
+        system?: string;
+        objectType?: string;
+        externalId?: string;
+        displayId?: string;
+      };
       translationRequestId?: string;
       salesforceOperation?: "submit_for_review" | "authorize_publication";
+      salesforceCaseId?: string;
+      jiraTicketKey?: string;
     };
     risk?: string;
     rollbackNotes?: string;
@@ -108,7 +118,16 @@ export type AutoResolutionCase = {
     validated?: boolean;
     validationDetail?: string;
     error?: string;
+    externalMutated?: boolean;
+    externalProof?: Record<string, unknown>;
   };
+  externalRefs?: Array<{
+    system?: string;
+    objectType?: string;
+    externalId?: string;
+    displayId?: string;
+  }>;
+  auditDegraded?: boolean;
   createdAt: string;
   resolvedAt?: string;
 };

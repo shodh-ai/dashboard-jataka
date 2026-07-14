@@ -221,6 +221,7 @@ export default function AutoResolutionPage() {
   const [activeBrain, setActiveBrain] = useState("");
   const [issueText, setIssueText] = useState("");
   const [salesforceCaseRef, setSalesforceCaseRef] = useState("");
+  const [externalSystem, setExternalSystem] = useState<"salesforce" | "jira">("salesforce");
   const [loadedCaseLabel, setLoadedCaseLabel] = useState("");
   const [translationRequestId, setTranslationRequestId] = useState("");
   const [salesforceOperation, setSalesforceOperation] = useState<
@@ -232,6 +233,37 @@ export default function AutoResolutionPage() {
   const [loadingTicket, setLoadingTicket] = useState(false);
   const [bypassing, setBypassing] = useState(false);
   const [error, setError] = useState("");
+  const [evalSuites, setEvalSuites] = useState<
+    Array<{ id: string; label: string; ticketCount: number }>
+  >([]);
+  const [evalSuiteId, setEvalSuiteId] = useState("all_l1");
+  const [evalTickets, setEvalTickets] = useState<
+    Array<{
+      id: string;
+      cloud: string;
+      subject: string;
+      functionalArea: string;
+      priority: string;
+      repoGrounded: boolean;
+      linkedScenarioIds: string[];
+    }>
+  >([]);
+  const [evalRunningId, setEvalRunningId] = useState("");
+  const [evalResult, setEvalResult] = useState<{
+    ticketId: string;
+    caseId: string;
+    status: string;
+    supportLevel?: string | null;
+    proposedAction?: string | null;
+    requiresHuman: boolean;
+    finalAnswer?: string | null;
+    score: {
+      passed: boolean;
+      answerCoverage: number;
+      mutationGuardOk: boolean;
+      notes: string[];
+    };
+  } | null>(null);
 
   const pendingApproval = useMemo(
     () => detail?.approvals.find((approval) => approval.status === "PENDING"),
@@ -266,7 +298,12 @@ export default function AutoResolutionPage() {
     };
 
     if (salesforceCaseRef.trim()) {
-      payload.salesforceCaseId = salesforceCaseRef.trim();
+      payload.externalSystem = externalSystem;
+      payload.externalRecordId = salesforceCaseRef.trim();
+      // Back-compat for older backends.
+      if (externalSystem === "salesforce") {
+        payload.salesforceCaseId = salesforceCaseRef.trim();
+      }
     }
     if (issue.trim()) {
       payload.issueText = issue.trim();
@@ -287,24 +324,52 @@ export default function AutoResolutionPage() {
   async function loadFromSalesforceTicket() {
     const ref = salesforceCaseRef.trim();
     if (!ref) {
-      setError("Enter a Salesforce Case Id or Case Number.");
+      setError(
+        externalSystem === "salesforce"
+          ? "Enter a Salesforce Case Id or Case Number."
+          : "Enter an external record id.",
+      );
       return;
     }
     setError("");
     setLoadingTicket(true);
     try {
       const data = await apiFetch(
-        `/auto-resolution/salesforce/cases/${encodeURIComponent(ref)}`,
+        `/auto-resolution/external/${encodeURIComponent(externalSystem)}/records/${encodeURIComponent(ref)}${
+          externalSystem === "salesforce" ? "?objectType=Case" : ""
+        }`,
       );
       setIssueText(data.issueText || "");
-      setSalesforceCaseRef(data.case?.id || ref);
+      const record = data.record || data.case;
       setLoadedCaseLabel(
-        data.case
-          ? `${data.case.caseNumber} — ${data.case.subject} (${data.case.status})`
-          : ref,
+        record
+          ? `Loaded ${externalSystem} ${record.objectType || "Case"} ${record.displayId || record.caseNumber || record.externalId || record.id}`
+          : `Loaded ${externalSystem} record`,
       );
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to load Salesforce Case."));
+      if (record?.externalId || record?.id) {
+        setSalesforceCaseRef(record.externalId || record.id);
+      }
+    } catch (e) {
+      // Fall back to legacy Salesforce endpoint.
+      if (externalSystem === "salesforce") {
+        try {
+          const data = await apiFetch(
+            `/auto-resolution/salesforce/cases/${encodeURIComponent(ref)}`,
+          );
+          setIssueText(data.issueText || "");
+          setLoadedCaseLabel(
+            data.case
+              ? `Loaded Case ${data.case.caseNumber} (${data.case.id}) · ${data.case.status}`
+              : "Loaded Case",
+          );
+          if (data.case?.id) setSalesforceCaseRef(data.case.id);
+          return;
+        } catch (legacyError) {
+          setError(getErrorMessage(legacyError, "Failed to load external record."));
+          return;
+        }
+      }
+      setError(getErrorMessage(e, "Failed to load external record."));
     } finally {
       setLoadingTicket(false);
     }
@@ -339,6 +404,57 @@ export default function AutoResolutionPage() {
     setRecentCases(Array.isArray(data.cases) ? data.cases : []);
   }
 
+  async function loadEvalSuites() {
+    const data = await apiFetch("/auto-resolution/ticket-eval/suites");
+    const suites = Array.isArray(data.suites) ? data.suites : [];
+    setEvalSuites(suites);
+    if (suites.length > 0 && !suites.some((s: { id: string }) => s.id === evalSuiteId)) {
+      setEvalSuiteId(suites[0].id);
+    }
+  }
+
+  async function loadEvalTickets(suiteId: string) {
+    const data = await apiFetch(
+      `/auto-resolution/ticket-eval/tickets?suite=${encodeURIComponent(suiteId)}`,
+    );
+    setEvalTickets(Array.isArray(data.tickets) ? data.tickets : []);
+  }
+
+  async function runEvalTicket(ticketId: string) {
+    setError("");
+    setEvalRunningId(ticketId);
+    setEvalResult(null);
+    try {
+      const data = await apiFetch(
+        `/auto-resolution/ticket-eval/tickets/${encodeURIComponent(ticketId)}/run`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            curriculumId: activeKnowledgeBaseId || undefined,
+          }),
+        },
+      );
+      setEvalResult({
+        ticketId: data.ticket?.id || ticketId,
+        caseId: data.caseId,
+        status: data.status,
+        supportLevel: data.supportLevel,
+        proposedAction: data.proposedAction,
+        requiresHuman: Boolean(data.requiresHuman),
+        finalAnswer: data.finalAnswer,
+        score: data.score,
+      });
+      if (data.caseId) {
+        await loadCase(data.caseId);
+        await loadRecentCases();
+      }
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Failed to run ticket eval."));
+    } finally {
+      setEvalRunningId("");
+    }
+  }
+
   useEffect(() => {
     async function bootstrap() {
       if (!isLoaded || !isSignedIn || !BASE_API) return;
@@ -361,6 +477,8 @@ export default function AutoResolutionPage() {
         }
 
         await loadRecentCases();
+        await loadEvalSuites();
+        await loadEvalTickets(evalSuiteId || "all_l1");
       } catch (e: unknown) {
         setError(getErrorMessage(e, "Failed to load auto-resolution page."));
       }
@@ -368,6 +486,14 @@ export default function AutoResolutionPage() {
     bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !BASE_API || !evalSuiteId) return;
+    loadEvalTickets(evalSuiteId).catch((e: unknown) => {
+      setError(getErrorMessage(e, "Failed to load eval tickets."));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evalSuiteId, isLoaded, isSignedIn]);
 
   async function raiseIssue() {
     if (!issueText.trim() && !salesforceCaseRef.trim()) {
@@ -433,8 +559,8 @@ export default function AutoResolutionPage() {
               <div>
                 <h1 className="text-2xl font-semibold text-white">Auto Resolution Pipeline</h1>
                 <p className="text-sm text-slate-400">
-                  Feed any Salesforce Case into the pipeline, inspect classification and
-                  evidence, approve execution, and write the answer back to that Case.
+                  Feed an external ticket into the pipeline, inspect classification and
+                  evidence, approve execution, and optionally write the answer back.
                 </p>
               </div>
             </div>
@@ -453,12 +579,26 @@ export default function AutoResolutionPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-white">Raise from ticket</h2>
                   <p className="text-sm text-slate-400">
-                    Load a Salesforce Case (Id or Case Number). Issue text comes from the
-                    ticket; resolution posts back to the same Case.
+                    Choose a connected system and load a record. Issue text comes from the
+                    ticket; resolution can post back through that connector.
                   </p>
                 </div>
                 <FileText className="text-slate-500" size={22} />
               </div>
+
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                External system
+              </label>
+              <select
+                value={externalSystem}
+                onChange={(e) =>
+                  setExternalSystem(e.target.value as "salesforce" | "jira")
+                }
+                className="input select mb-4 w-full text-sm"
+              >
+                <option value="salesforce">Salesforce</option>
+                <option value="jira">Jira</option>
+              </select>
 
               <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
                 Brain / curriculum
@@ -480,7 +620,9 @@ export default function AutoResolutionPage() {
               </select>
 
               <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                Salesforce Case Id or Case Number
+                {externalSystem === "salesforce"
+                  ? "Salesforce Case Id or Case Number"
+                  : "Jira issue key"}
               </label>
               <div className="mb-2 flex flex-wrap gap-2">
                 <input
@@ -522,7 +664,11 @@ export default function AutoResolutionPage() {
                 onChange={(e) => setIssueText(e.target.value)}
                 rows={6}
                 className="input min-h-[9rem] w-full resize-y text-sm leading-6"
-                placeholder="Load a Salesforce Case to fill this from Subject + Description…"
+                placeholder={
+                  externalSystem === "salesforce"
+                    ? "Load a Salesforce Case to fill this from Subject + Description…"
+                    : "Enter issue text or load an external record…"
+                }
               />
 
               <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
@@ -617,6 +763,130 @@ export default function AutoResolutionPage() {
                 )}
               </div>
             </div>
+          </section>
+
+          <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-white">L1 ticket eval suites</h2>
+                <p className="text-sm text-slate-400">
+                  Golden Sales/Service tickets from{" "}
+                  <code className="text-slate-300">salesforcetesting2/docs/tickets</code>. Runs
+                  through intake without Salesforce Case writeback.
+                </p>
+              </div>
+              <ShieldCheck className="text-slate-500" size={22} />
+            </div>
+
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+              Suite
+            </label>
+            <select
+              value={evalSuiteId}
+              onChange={(e) => {
+                setEvalSuiteId(e.target.value);
+                setEvalResult(null);
+              }}
+              className="input select mb-4 w-full max-w-md text-sm"
+            >
+              {evalSuites.length === 0 ? (
+                <option value="all_l1">All L1</option>
+              ) : (
+                evalSuites.map((suite) => (
+                  <option key={suite.id} value={suite.id}>
+                    {suite.label} ({suite.ticketCount})
+                  </option>
+                ))
+              )}
+            </select>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {evalTickets.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+                  No eval tickets loaded for this suite.
+                </p>
+              ) : (
+                evalTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-blue-300">
+                        {ticket.id}
+                      </span>
+                      <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-400">
+                        {ticket.cloud}
+                        {ticket.repoGrounded ? " · repo" : ""}
+                      </span>
+                    </div>
+                    <p className="mb-2 text-sm font-medium leading-5 text-slate-200 line-clamp-2">
+                      {ticket.subject}
+                    </p>
+                    <p className="mb-3 text-xs text-slate-500">
+                      {ticket.functionalArea} · {ticket.priority}
+                      {ticket.linkedScenarioIds?.length
+                        ? ` · ${ticket.linkedScenarioIds.join(", ")}`
+                        : ""}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => runEvalTicket(ticket.id)}
+                      disabled={Boolean(evalRunningId) || !activeKnowledgeBaseId}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {evalRunningId === ticket.id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <Play size={14} />
+                      )}
+                      Run eval
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {evalResult && (
+              <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold text-white">
+                    Result · {evalResult.ticketId}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-xs ${
+                      evalResult.score?.passed
+                        ? "border-emerald-500/40 text-emerald-300"
+                        : "border-amber-500/40 text-amber-200"
+                    }`}
+                  >
+                    {evalResult.score?.passed ? "PASS" : "REVIEW"}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {evalResult.status} · {evalResult.supportLevel || "—"} ·{" "}
+                    {evalResult.proposedAction || "—"} · coverage{" "}
+                    {Math.round((evalResult.score?.answerCoverage || 0) * 100)}%
+                  </span>
+                </div>
+                {evalResult.finalAnswer ? (
+                  <p className="mb-2 whitespace-pre-wrap text-sm leading-6 text-slate-300 line-clamp-6">
+                    {evalResult.finalAnswer}
+                  </p>
+                ) : null}
+                {evalResult.score?.notes?.length ? (
+                  <ul className="mb-2 list-disc space-y-1 pl-5 text-xs text-slate-500">
+                    {evalResult.score.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="text-xs text-slate-500">
+                  Mutation guard:{" "}
+                  {evalResult.score?.mutationGuardOk ? "ok (no SF Case writeback)" : "failed"} ·{" "}
+                  case {evalResult.caseId}
+                </p>
+              </div>
+            )}
           </section>
 
           {detail && (

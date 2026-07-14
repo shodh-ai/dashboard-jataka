@@ -16,7 +16,9 @@ import {
   Shield,
   Bot,
   MessageSquare,
+  BookOpen,
   Headset,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,9 +40,11 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Public Status", href: "/status", icon: Activity },
     { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
     { label: "Security & Compliance", href: "/compliance", icon: Shield },
+    { label: "Knowledge Q&A", href: "/knowledge-qa", icon: BookOpen },
     { label: "Ask Support", href: "/ask", icon: MessageSquare },
     { label: "Support Ops", href: "/support-ops", icon: Headset },
     { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
+    { label: "Auto Resolution Demo", href: "/auto-resolution-demo", icon: Sparkles },
     { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
     { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
     { label: "Integrations", href: "/integrations", icon: Plug },
