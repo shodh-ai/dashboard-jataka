@@ -51,6 +51,205 @@ export type EvidenceBundle = {
   reason?: string;
 };
 
+export type EvidenceVerificationStatus =
+  | "VERIFIED"
+  | "UNVERIFIED"
+  | "PENDING"
+  | "STALE"
+  | "FAILED";
+
+export type EvidenceVerification = {
+  status: EvidenceVerificationStatus;
+  verified?: boolean;
+  verifiedAt?: string;
+  reason?: string;
+  proposalHash?: string;
+  evidenceHash?: string;
+};
+
+export type RichEvidenceRequirements = {
+  astDiff?: boolean;
+  blastRadius?: boolean;
+  causalProof?: boolean;
+  tee?: boolean;
+  deltaBox?: boolean;
+  hashBinding?: boolean;
+};
+
+export type BlastGraphNode = {
+  id: string;
+  label: string;
+  type: "Field" | "Apex" | "Flow" | "Object" | "Test" | "Other";
+  risk: "Critical" | "High" | "Medium" | "Low" | "Safe";
+  apiName?: string;
+  change?: "ADDED" | "MODIFIED" | "REMOVED" | "UNCHANGED";
+};
+
+export type BlastGraphEdge = {
+  id?: string;
+  source: string;
+  target: string;
+  relationType?: string;
+};
+
+export type BlastRadiusGraph = {
+  rootNodeId?: string;
+  nodes: BlastGraphNode[];
+  edges: BlastGraphEdge[];
+  generatedAt?: string;
+  truncated?: boolean;
+  totalNodes?: number;
+};
+
+export type AstTransformationEvidence = {
+  kind?: "unverified_text_diff" | "ast_transformation";
+  filePath: string;
+  language?: string;
+  before: string;
+  after: string;
+  beforeHash: string;
+  afterHash: string;
+  transformationHash?: string;
+};
+
+export type CausalProofEvidence = {
+  status: "PROVEN" | "PARTIAL" | "NOT_PROVEN" | "DISPROVEN";
+  claim?: string;
+  proof?: string;
+  assumptions: string[];
+  limitations?: string[];
+  generatedAt?: string;
+  causes?: Array<{
+    id: string;
+    label: string;
+    confidence: number;
+    evidenceRefs: string[];
+  }>;
+};
+
+export type SandboxTestResult = {
+  id?: string;
+  name: string;
+  status: "PASSED" | "FAILED" | "SKIPPED";
+  durationMs?: number;
+  detail?: string;
+};
+
+export type SandboxVideoEvidence = {
+  url: string;
+  mimeType?: string;
+  sha256?: string;
+  durationSeconds?: number;
+};
+
+export type SandboxEvidence = {
+  status: "PASSED" | "FAILED" | "RUNNING" | "NOT_RUN";
+  environment?: string;
+  startedAt?: string;
+  completedAt?: string;
+  tests: SandboxTestResult[];
+  video?: SandboxVideoEvidence;
+};
+
+export type TeeAttestationEvidence = {
+  status: "VERIFIED" | "UNVERIFIED" | "EXPIRED" | "FAILED";
+  provider?: string;
+  enclaveId?: string;
+  measurement?: string;
+  quoteHash?: string;
+  auditLogHash?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+};
+
+/** Wire contract returned by one-backend, with future presentation aliases retained. */
+export type RichApprovalEvidence = {
+  astDiff?: {
+    kind: "unverified_text_diff" | "ast_transformation";
+    before?: string;
+    after?: string;
+    notes?: string;
+    compilerVersion?: string;
+    sourceHash?: string;
+    resultHash?: string;
+    operations?: Array<{
+      operation: string;
+      path?: string;
+      node_id?: string;
+      expected_kind?: string;
+      value?: unknown;
+      payload?: unknown;
+    }>;
+  };
+  blastRadiusGraph?: {
+    nodes: unknown[];
+    edges: unknown[];
+    cypher?: string;
+    entityName?: string;
+  };
+  causalProof?:
+    | {
+        diagnosis: string;
+        causes: Array<{
+          id: string;
+          label: string;
+          confidence: number;
+          evidenceRefs: string[];
+        }>;
+        proof: Record<string, unknown>;
+        generatedAt: string;
+      }
+    | CausalProofEvidence;
+  teeAttestation?:
+    | {
+        provider: "gcp_confidential_space";
+        nonce: string;
+        issuedAt: string;
+        expiresAt: string;
+        measurement: string;
+        inputHash: string;
+        outputHash: string;
+        tokenHash: string;
+        verified: boolean;
+      }
+    | TeeAttestationEvidence;
+  teeGeneratedInstruction?: string;
+  sandboxVideoUrl?: string | null;
+  sandboxVideoReason?: string;
+
+  // Forward-compatible aliases used by richer evidence producers.
+  proposalHash?: string;
+  evidenceHash?: string;
+  generatedAt?: string;
+  blastRadius?: BlastRadiusGraph;
+  astTransformation?: AstTransformationEvidence;
+  sandbox?: SandboxEvidence;
+  verification?: EvidenceVerification;
+  requirements?: RichEvidenceRequirements;
+  evidenceRequirements?: RichEvidenceRequirements;
+  enforcement?: RichEvidenceRequirements & {
+    requireTee?: boolean;
+    requireDeltaBox?: boolean;
+  };
+  teeRequired?: boolean;
+  deltaBoxRequired?: boolean;
+};
+
+/** Stable view model consumed by the reusable evidence components and gate. */
+export type NormalizedRichApprovalEvidence = {
+  proposalHash?: string;
+  evidenceHash?: string;
+  generatedAt?: string;
+  blastRadius?: BlastRadiusGraph;
+  astTransformation?: AstTransformationEvidence;
+  causalProof?: CausalProofEvidence;
+  sandbox?: SandboxEvidence;
+  teeAttestation?: TeeAttestationEvidence;
+  verification?: EvidenceVerification;
+  sandboxVideoReason?: string;
+  requirements: RichEvidenceRequirements;
+};
+
 export type Brain = {
   id: string;
   name?: string;
@@ -69,6 +268,7 @@ export type Approval = {
   status: string;
   approvalTier: string;
   proposalHash: string;
+  evidenceHash?: string;
   requestedAt: string;
 };
 
@@ -89,6 +289,7 @@ export type AutoResolutionCase = {
   requesterId?: string;
   proposalHash?: string;
   evidenceRefs?: EvidenceBundle | EvidenceRef[];
+  richEvidence?: RichApprovalEvidence;
   proposalSnapshot?: {
     answer?: string;
     proposedActionType?: string;
@@ -111,6 +312,7 @@ export type AutoResolutionCase = {
     rollbackNotes?: string;
     validationPlan?: string;
     evidenceRefs?: EvidenceRef[];
+    richEvidence?: RichApprovalEvidence;
   };
   executionSnapshot?: {
     ok?: boolean;

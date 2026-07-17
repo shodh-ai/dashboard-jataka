@@ -16,9 +16,34 @@ import { formatDistanceToNow } from "date-fns"; // Make sure to: npm install dat
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+interface PRMetric {
+  status: string;
+  percent: number;
+  used: number;
+  limit: number;
+  metric: string;
+}
+
+interface PRIssue {
+  type: string;
+  description: string;
+}
+
+interface PRReport {
+  id: string;
+  overallStatus: string;
+  title: string;
+  repoFullName: string;
+  prNumber: number;
+  author: string;
+  metricsJson?: PRMetric[];
+  issuesJson?: PRIssue[];
+  updatedAt: string;
+}
+
 export default function PRRadarDashboard() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<PRReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +66,7 @@ export default function PRRadarDashboard() {
       }
     }
     fetchRadarData();
-  }, [isSignedIn, getToken, BASE_API]);
+  }, [isSignedIn, getToken]);
 
   if (!isLoaded || !isSignedIn) return null;
 
@@ -124,13 +149,13 @@ export default function PRRadarDashboard() {
 }
 
 // --- Table Row Component ---
-function PRTableRow({ pr }: { pr: any }) {
+function PRTableRow({ pr }: { pr: PRReport }) {
   const metrics = Array.isArray(pr.metricsJson) ? pr.metricsJson : [];
   const issues = Array.isArray(pr.issuesJson) ? pr.issuesJson : [];
 
   // DYNAMIC METRICS: Only show metrics that are Warning (>75%) or Critical (>90%)
   const problematicMetrics = metrics.filter(
-    (m: any) => m.status === 'CRITICAL' || m.status === 'WARNING' || m.percent >= 75
+    (m) => m.status === 'CRITICAL' || m.status === 'WARNING' || m.percent >= 75
   );
 
   // Status Badge Logic
@@ -169,7 +194,7 @@ function PRTableRow({ pr }: { pr: any }) {
       <td className="px-4 py-4 align-top max-w-[250px]">
         {problematicMetrics.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {problematicMetrics.map((m: any, idx: number) => (
+            {problematicMetrics.map((m, idx) => (
               <span 
                 key={idx} 
                 className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
@@ -192,7 +217,7 @@ function PRTableRow({ pr }: { pr: any }) {
       <td className="px-4 py-4 align-top max-w-[250px]">
         {issues.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {issues.slice(0, 3).map((issue: any, idx: number) => (
+            {issues.slice(0, 3).map((issue, idx) => (
               <span 
                 key={idx} 
                 className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)]"

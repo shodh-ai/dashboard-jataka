@@ -17,6 +17,10 @@ export interface UpdateProjectKeyPayload {
   projectKey: string;
 }
 
+interface OAuthUrlResponse {
+  url: string;
+}
+
 /**
  * Check Jira connection status for the current organization
  */
@@ -57,11 +61,11 @@ export async function connectJira(authToken: string): Promise<void> {
       throw new Error(error.message || 'Failed to get authorization URL');
     }
 
-    const { url } = await response.json();
+    const { url } = await response.json() as OAuthUrlResponse;
 
     // Now redirect the browser to Atlassian authorization page
     window.location.href = url;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to initiate Jira OAuth:', error);
     throw error;
   }

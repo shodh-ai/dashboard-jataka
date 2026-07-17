@@ -18,8 +18,18 @@ import Sidebar from "../components/Sidebar";
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const INVITE_URL = BASE_API ? `${BASE_API}/team/invite` : undefined;
 
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
+  name: string;
+}
+
+interface InviteResponse {
+  message?: string;
+}
+
 function resolveKnowledgeBaseId(
-  brains: any[],
+  brains: Brain[],
   activeBrainId?: string,
   selectedKnowledgeBaseId?: string,
 ) {
@@ -27,13 +37,13 @@ function resolveKnowledgeBaseId(
 
   if (selectedKnowledgeBaseId) {
     const byKnowledgeBaseId = brains.find(
-      (b: any) => b.knowledgeBaseId === selectedKnowledgeBaseId,
+      (b) => b.knowledgeBaseId === selectedKnowledgeBaseId,
     );
     if (byKnowledgeBaseId) return byKnowledgeBaseId.knowledgeBaseId;
   }
 
   if (activeBrainId) {
-    const byCurriculumId = brains.find((b: any) => b.id === activeBrainId);
+    const byCurriculumId = brains.find((b) => b.id === activeBrainId);
     if (byCurriculumId) return byCurriculumId.knowledgeBaseId;
   }
 
@@ -47,7 +57,7 @@ export default function DeveloperToolsPage() {
   const [orgName, setOrgName] = useState("");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
 
-  const [brains, setBrains] = useState<any[]>([]);
+  const [brains, setBrains] = useState<Brain[]>([]);
   const[activeBrain, setActiveBrain] = useState("");
   const [newBrainName, setNewBrainName] = useState("");
   const[creatingBrain, setCreatingBrain] = useState(false);
@@ -128,8 +138,8 @@ export default function DeveloperToolsPage() {
       if (!res.ok) throw new Error("Failed to create brain");
       setNewBrainName("");
       window.location.reload(); // Quick refresh to grab new brains
-    } catch (error: any) {
-      alert(error?.message || "Failed to create brain");
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "Failed to create brain");
     } finally {
       setCreatingBrain(false);
     }
@@ -145,7 +155,7 @@ export default function DeveloperToolsPage() {
     }
 
     const selectedBrain =
-      brains.find((b: any) => b.knowledgeBaseId === knowledgeBaseId) || null;
+      brains.find((b) => b.knowledgeBaseId === knowledgeBaseId) || null;
     const payload = JSON.stringify({
       token,
       curriculumId: knowledgeBaseId,
@@ -187,7 +197,7 @@ export default function DeveloperToolsPage() {
         body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       });
 
-      let data: any = {};
+      let data: InviteResponse = {};
       try {
         data = await res.json();
       } catch {
@@ -290,7 +300,7 @@ export default function DeveloperToolsPage() {
                 value={activeBrain}
                 onChange={(e) => setActiveBrain(e.target.value)}
               >
-                {brains.length > 0 ? brains.map((b: any) => (
+                {brains.length > 0 ? brains.map((b) => (
                   <option key={b.id} value={b.knowledgeBaseId}>{b.name}</option>
                 )) : <option value="">No brains found</option>}
               </select>

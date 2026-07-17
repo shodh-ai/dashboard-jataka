@@ -13,6 +13,12 @@ interface Repository {
   default_branch: string;
 }
 
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
+  name: string;
+}
+
 function GithubCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,7 +26,7 @@ function GithubCallbackInner() {
   
   // State
   const [status, setStatus] = useState<"loading" | "selecting" | "linking" | "success" | "error">("loading");
-  const [brains, setBrains] = useState<any[]>([]);
+  const [brains, setBrains] = useState<Brain[]>([]);
   const [selectedBrain, setSelectedBrain] = useState<string>("");
   
   // NEW: State for Repositories and Branch selection
@@ -57,7 +63,7 @@ function GithubCallbackInner() {
           // Setup Brains
           const brainList = Array.isArray(brainsData.brains) ? brainsData.brains : [];
           setBrains(brainList);
-          const initialBrain = brainList.find((b: any) => b.id === brainsData.activeBrainId) || brainList[0];
+          const initialBrain = brainList.find((b: Brain) => b.id === brainsData.activeBrainId) || brainList[0];
           if (initialBrain) setSelectedBrain(initialBrain.knowledgeBaseId);
 
           // Setup Repos & Default Branches

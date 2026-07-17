@@ -3,33 +3,17 @@
 import { useAuth, useUser, SignInButton } from "@clerk/nextjs";
 import { useState, useEffect, useCallback } from "react";
 import {
-  Copy,
   Check,
   Activity,
   ShieldCheck,
-  BookOpen,
   AlertTriangle,
-  Clock,
-  ChevronDown,
   Crown,
   Code2,
-  Maximize2,
-  Minimize2,
-  ArrowUpRight,
-  ArrowDownRight,
-  Plus,
-  Key,
-  Sparkles,
   Plug,
   Network,
   Brain,
-  Terminal,
-  ExternalLink,
-  Play,
   X,
-  Database,
 } from "lucide-react";
-import GraphVisualizer from "./components/GraphVisualizer";
 import ReplayPlayer from "./components/ReplayPlayer";
 import { useOrganizationList } from "@clerk/nextjs";
 import Sidebar from "./components/Sidebar";
@@ -75,6 +59,12 @@ interface BusFactorWorkflow {
   file_count?: number;
   capture_count?: number;
   risk_level: 'ok' | 'warning' | 'critical';
+}
+
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
+  name: string;
 }
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -123,7 +113,7 @@ export default function Home() {
   const [companyName, setCompanyName] = useState("");
   const [orgName, setOrgName] = useState("");
   const [billingTier, setBillingTier] = useState<string>("FREE");
-  const [brains, setBrains] = useState<any[]>([]);
+  const [brains, setBrains] = useState<Brain[]>([]);
   const [activeBrain, setActiveBrain] = useState<string>("");
   const [newBrainName, setNewBrainName] = useState("");
   const [hasLoadedQa, setHasLoadedQa] = useState(false);
@@ -360,7 +350,7 @@ export default function Home() {
         setBrains(list);
 
         if (list.length > 0) {
-          const current = list.find((b: any) => b.id === data.activeBrainId);
+          const current = list.find((b: Brain) => b.id === data.activeBrainId);
           const selected = current || list[0];
           setActiveBrain(selected.knowledgeBaseId);
         }

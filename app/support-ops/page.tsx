@@ -14,6 +14,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import RichApprovalEvidence, {
+  evaluateApprovalEvidence,
+  HashBadge,
+} from "../components/RichApprovalEvidence";
 import {
   describeApprovalTier,
   describeConfidence,
@@ -31,6 +35,7 @@ import {
   statusBadgeClasses,
   truncateIssue,
 } from "../auto-resolution/types";
+import { normalizeRichApprovalEvidence } from "../auto-resolution/evidence-normalizer";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
@@ -113,11 +118,35 @@ export default function SupportOpsPage() {
   );
 
   const proposedActionType = detail?.case.proposalSnapshot?.proposedActionType;
+  const rawRichEvidence =
+    detail?.case.richEvidence || detail?.case.proposalSnapshot?.richEvidence;
+  const richEvidence = useMemo(
+    () => normalizeRichApprovalEvidence(rawRichEvidence),
+    [rawRichEvidence],
+  );
+  const approvalEvidenceGate = useMemo(
+    () =>
+      evaluateApprovalEvidence({
+        supportLevel: detail?.case.supportLevel,
+        actionType: proposedActionType,
+        approvalProposalHash: pendingApproval?.proposalHash,
+        caseProposalHash: detail?.case.proposalHash,
+        evidence: richEvidence,
+      }),
+    [
+      detail?.case.proposalHash,
+      detail?.case.supportLevel,
+      pendingApproval?.proposalHash,
+      proposedActionType,
+      richEvidence,
+    ],
+  );
   const willExecute = isResolvableProposal(proposedActionType);
   const eta = estimateResolutionTime(detail?.case);
 
   async function decide(decision: "APPROVED" | "REJECTED") {
     if (!detail || !pendingApproval) return;
+    if (decision === "APPROVED" && !approvalEvidenceGate.allowed) return;
     setDeciding(true);
     setError("");
     try {
@@ -416,6 +445,16 @@ export default function SupportOpsPage() {
                           </div>
                         )}
 
+                        <div>
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
+                            Approval evidence
+                          </p>
+                          <RichApprovalEvidence
+                            evidence={richEvidence}
+                            gate={approvalEvidenceGate}
+                          />
+                        </div>
+
                         {/* Approval layer */}
                         <div className="rounded-2xl border border-slate-700/80 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
                           <div className="mb-3 flex items-center gap-2">
@@ -444,6 +483,16 @@ export default function SupportOpsPage() {
                               <p className="mb-2 font-mono text-[10px] break-all text-slate-500">
                                 approval {pendingApproval.id} · tier {pendingApproval.approvalTier}
                               </p>
+                              <div className="mb-3 flex flex-wrap gap-2">
+                                <HashBadge
+                                  label="Bound proposal"
+                                  value={pendingApproval.proposalHash}
+                                />
+                                <HashBadge
+                                  label="Bound evidence"
+                                  value={richEvidence?.evidenceHash || pendingApproval.evidenceHash}
+                                />
+                              </div>
 
                               <textarea
                                 value={decisionNote}
@@ -456,7 +505,17 @@ export default function SupportOpsPage() {
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  disabled={deciding}
+                                  disabled={deciding || !approvalEvidenceGate.allowed}
+                                  aria-describedby={
+                                    !approvalEvidenceGate.allowed
+                                      ? "approval-evidence-block-reason"
+                                      : undefined
+                                  }
+                                  title={
+                                    !approvalEvidenceGate.allowed
+                                      ? approvalEvidenceGate.reasons.join(" ")
+                                      : undefined
+                                  }
                                   onClick={() => decide("APPROVED")}
                                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
                                 >
@@ -477,6 +536,15 @@ export default function SupportOpsPage() {
                                   Reject
                                 </button>
                               </div>
+                              {!approvalEvidenceGate.allowed && (
+                                <p
+                                  id="approval-evidence-block-reason"
+                                  className="mt-2 text-xs text-amber-300"
+                                >
+                                  Approve is disabled until required evidence is verified and
+                                  hash-bound. Reject remains available.
+                                </p>
+                              )}
                             </>
                           )}
                         </div>

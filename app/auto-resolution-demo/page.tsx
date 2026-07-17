@@ -542,7 +542,7 @@ export default function AutoResolutionDemoPage() {
                       <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-400">
                         <p className="mb-1 font-medium text-slate-300">
                           External proof
-                          {proof.system ? ` (${proof.system})` : ""}
+                          {"system" in proof && proof.system ? ` (${proof.system})` : ""}
                         </p>
                         {proof.before && (
                           <p>
