@@ -195,6 +195,29 @@ describe("rich approval evidence gate", () => {
     );
   });
 
+  it("shows terminal evidence as hash-bound without a stale approval warning", () => {
+    const normalized = normalizeRichApprovalEvidence({
+      ...backendEvidence,
+      verification: {
+        status: "PENDING",
+        verified: false,
+      },
+      evidenceRequirements: { hashBinding: true },
+    });
+    const gate = evaluateApprovalEvidence({
+      supportLevel: "L3",
+      actionType: "PREPARE_PATCH",
+      caseProposalHash: "proposal-123",
+      evidence: normalized,
+    });
+
+    render(<RichApprovalEvidence evidence={normalized} gate={gate} finalized />);
+
+    expect(screen.getByText("Evidence hash-bound")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("Evidence pending")).not.toBeInTheDocument();
+  });
+
   it("does not require the rich gate for a non-L3 answer", () => {
     expect(
       evaluateApprovalEvidence({

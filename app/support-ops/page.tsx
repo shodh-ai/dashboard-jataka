@@ -452,6 +452,10 @@ export default function SupportOpsPage() {
                           <RichApprovalEvidence
                             evidence={richEvidence}
                             gate={approvalEvidenceGate}
+                            finalized={
+                              detail.case.status === "RESOLVED" &&
+                              detail.case.executionSnapshot?.validated === true
+                            }
                           />
                         </div>
 

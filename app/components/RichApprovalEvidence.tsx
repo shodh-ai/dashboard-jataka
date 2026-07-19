@@ -131,9 +131,11 @@ export function evaluateApprovalEvidence({
 export default function RichApprovalEvidence({
   evidence,
   gate,
+  finalized = false,
 }: {
   evidence?: NormalizedRichApprovalEvidence;
   gate?: ApprovalEvidenceGate;
+  finalized?: boolean;
 }) {
   if (!evidence) {
     return (
@@ -157,7 +159,9 @@ export default function RichApprovalEvidence({
         {evidence.evidenceHash && (
           <HashBadge label="Evidence hash" value={evidence.evidenceHash} />
         )}
-        {evidence.verification && (
+        {finalized ? (
+          <StatusBadge label="Evidence hash-bound" good />
+        ) : evidence.verification ? (
           <StatusBadge
             label={`Evidence ${evidence.verification.status.toLowerCase()}`}
             good={
@@ -165,10 +169,10 @@ export default function RichApprovalEvidence({
               evidence.verification.verified === true
             }
           />
-        )}
+        ) : null}
       </div>
 
-      {gate?.required && !gate.allowed && (
+      {!finalized && gate?.required && !gate.allowed && (
         <div
           role="alert"
           className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100"
