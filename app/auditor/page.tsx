@@ -393,6 +393,8 @@ function presentAuditEventDetail(event: AutoResolutionAuditEvent): AuditPresenta
   const eventRecord = event as unknown as Record<string, unknown>;
   const proposal = asRecord(event.proposalSnapshot);
   const richEvidence = asRecord(proposal.richEvidence);
+  const actionInput = asRecord(proposal.actionInput);
+  const patchPayload = asRecord(actionInput.payload);
   const astDiff = asRecord(
     richEvidence.astDiff || proposal.astDiff || eventRecord.diff,
   );
@@ -426,10 +428,11 @@ function presentAuditEventDetail(event: AutoResolutionAuditEvent): AuditPresenta
             filePath: firstString(
               astDiff.filePath,
               firstOperation.path,
+              patchPayload.filename,
               asRecord(richEvidence.blastRadiusGraph).entityName,
             ),
-            before: firstString(astDiff.before),
-            after: firstString(astDiff.after),
+            before: firstString(astDiff.before, patchPayload.source),
+            after: firstString(astDiff.after, patchPayload.compiledSource),
             patch: firstString(astDiff.patch),
           }
         : undefined,
@@ -441,6 +444,7 @@ function presentAuditEventDetail(event: AutoResolutionAuditEvent): AuditPresenta
     execution,
     videoUrl: firstString(
       richEvidence.sandboxVideoUrl,
+      asRecord(asRecord(richEvidence.sandbox).video).url,
       video.url,
       asRecord(execution).videoUrl,
     ),

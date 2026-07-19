@@ -20,6 +20,7 @@ import {
   Headset,
   Sparkles,
   FileCheck2,
+  GitCompareArrows,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -44,6 +45,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Knowledge Q&A", href: "/knowledge-qa", icon: BookOpen },
     { label: "Ask Support", href: "/ask", icon: MessageSquare },
     { label: "Support Ops", href: "/support-ops", icon: Headset },
+    { label: "Configuration Drift", href: "/configuration-drift", icon: GitCompareArrows },
     { label: "Auditor", href: "/auditor", icon: FileCheck2 },
     { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
     { label: "Auto Resolution Demo", href: "/auto-resolution-demo", icon: Sparkles },

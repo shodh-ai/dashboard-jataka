@@ -29,6 +29,7 @@ export function normalizeRichApprovalEvidence(
           afterHash: evidence.astDiff.resultHash || "",
           transformationHash: evidence.astDiff.resultHash,
           language: evidence.astDiff.compilerVersion,
+          operations: evidence.astDiff.operations,
         }
       : undefined);
 
@@ -106,6 +107,7 @@ function normalizeCausalProof(
   if (!("diagnosis" in causalProof)) return undefined;
 
   const proofRecord = asRecord(causalProof.proof);
+  const simulation = asRecord(proofRecord.intervention_simulation);
   const result = stringValue(proofRecord.result).toLowerCase();
   const structuralSupported =
     asRecord(proofRecord.structural_reachability).supported === true ||
@@ -132,7 +134,7 @@ function normalizeCausalProof(
 
   return {
     status,
-    claim: causalProof.diagnosis,
+    claim: stringValue(simulation.claim) || causalProof.diagnosis,
     proof: safeJson(causalProof.proof),
     assumptions,
     limitations: stringValue(proofRecord.reason)

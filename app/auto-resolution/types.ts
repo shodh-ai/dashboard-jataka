@@ -110,6 +110,14 @@ export type AstTransformationEvidence = {
   beforeHash: string;
   afterHash: string;
   transformationHash?: string;
+  operations?: Array<{
+    operation: string;
+    path?: string;
+    node_id?: string;
+    expected_kind?: string;
+    value?: unknown;
+    payload?: unknown;
+  }>;
 };
 
 export type CausalProofEvidence = {
@@ -307,7 +315,16 @@ export type AutoResolutionCase = {
       salesforceOperation?: "submit_for_review" | "authorize_publication";
       salesforceCaseId?: string;
       jiraTicketKey?: string;
+      payload?: {
+        filename?: string;
+        source?: string;
+        sourceHash?: string;
+        instructions?: unknown[];
+        compiledSource?: string;
+        resultHash?: string;
+      };
     };
+    llmPrompt?: string;
     risk?: string;
     rollbackNotes?: string;
     validationPlan?: string;

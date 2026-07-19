@@ -359,6 +359,16 @@ function TransformationDiff({
         <CodePanel label="Before" code={transformation.before} tone="removed" />
         <CodePanel label="After" code={transformation.after} tone="added" />
       </div>
+      {transformation.operations && transformation.operations.length > 0 && (
+        <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
+            Deterministic AST instructions
+          </p>
+          <pre className="max-h-56 overflow-auto text-xs leading-5 text-slate-300">
+            {JSON.stringify(transformation.operations, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
