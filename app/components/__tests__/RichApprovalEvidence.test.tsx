@@ -171,6 +171,30 @@ describe("rich approval evidence gate", () => {
     );
   });
 
+  it("renders a secure sandbox recording in the embedded video player", () => {
+    const normalized = normalizeRichApprovalEvidence({
+      ...backendEvidence,
+      sandboxVideoUrl: "https://evidence.example/sandbox-run.mp4",
+    });
+    const gate = evaluateApprovalEvidence({
+      supportLevel: "L3",
+      actionType: "PREPARE_PATCH",
+      approvalProposalHash: "proposal-123",
+      caseProposalHash: "proposal-123",
+      evidence: normalized,
+    });
+
+    const { container } = render(
+      <RichApprovalEvidence evidence={normalized} gate={gate} />,
+    );
+
+    expect(container.querySelector("video")).toBeInTheDocument();
+    expect(container.querySelector("video source")).toHaveAttribute(
+      "src",
+      "https://evidence.example/sandbox-run.mp4",
+    );
+  });
+
   it("does not require the rich gate for a non-L3 answer", () => {
     expect(
       evaluateApprovalEvidence({
