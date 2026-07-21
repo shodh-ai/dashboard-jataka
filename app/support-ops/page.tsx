@@ -371,9 +371,9 @@ export default function SupportOpsPage() {
                   </header>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div className="mx-auto grid max-w-6xl gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                       {/* Left: proposal + approval */}
-                      <section className="space-y-6 border-b border-slate-800/60 px-6 py-6 lg:border-b-0 lg:border-r">
+                      <section className="min-w-0 space-y-6 border-b border-slate-800/60 px-6 py-6 lg:border-b-0 lg:border-r">
                         <div>
                           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate-500">
                             Proposed resolution
@@ -556,7 +556,7 @@ export default function SupportOpsPage() {
                       </section>
 
                       {/* Right: audit trail */}
-                      <section className="px-6 py-6">
+                      <section className="min-w-0 px-6 py-6">
                         <p className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-500">
                           Audit trail
                         </p>
