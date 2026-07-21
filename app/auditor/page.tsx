@@ -396,7 +396,11 @@ function presentAuditEventDetail(event: AutoResolutionAuditEvent): AuditPresenta
   const actionInput = asRecord(proposal.actionInput);
   const patchPayload = asRecord(actionInput.payload);
   const astDiff = asRecord(
-    richEvidence.astDiff || proposal.astDiff || eventRecord.diff,
+    richEvidence.astDiff ||
+      richEvidence.metadataDiff ||
+      proposal.astDiff ||
+      proposal.metadataDiff ||
+      eventRecord.diff,
   );
   const approver = asRecord(eventRecord.approver);
   const executionAlias = asRecord(eventRecord.execution);
@@ -427,6 +431,7 @@ function presentAuditEventDetail(event: AutoResolutionAuditEvent): AuditPresenta
         ? {
             filePath: firstString(
               astDiff.filePath,
+              astDiff.filename,
               firstOperation.path,
               patchPayload.filename,
               asRecord(richEvidence.blastRadiusGraph).entityName,

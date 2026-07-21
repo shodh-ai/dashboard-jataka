@@ -102,7 +102,7 @@ export type BlastRadiusGraph = {
 };
 
 export type AstTransformationEvidence = {
-  kind?: "unverified_text_diff" | "ast_transformation";
+  kind?: "unverified_text_diff" | "ast_transformation" | "metadata_transformation";
   filePath: string;
   language?: string;
   before: string;
@@ -187,6 +187,24 @@ export type RichApprovalEvidence = {
       expected_kind?: string;
       value?: unknown;
       payload?: unknown;
+    }>;
+  };
+  metadataDiff?: {
+    kind: "metadata_transformation";
+    format: "salesforce_profile_xml";
+    filename: string;
+    before: string;
+    after: string;
+    compilerVersion: string;
+    sourceHash: string;
+    resultHash: string;
+    operations: Array<{
+      operation: string;
+      profile: string;
+      object: string;
+      permission: string;
+      before: boolean;
+      after: boolean;
     }>;
   };
   blastRadiusGraph?: {

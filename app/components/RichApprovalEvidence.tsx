@@ -51,11 +51,14 @@ export function evaluateApprovalEvidence({
 
   if (
     evidence.requirements.astDiff !== false &&
-    (evidence.astTransformation?.kind !== "ast_transformation" ||
+    (!evidence.astTransformation?.kind ||
+      !["ast_transformation", "metadata_transformation"].includes(
+        evidence.astTransformation.kind,
+      ) ||
       !evidence.astTransformation.beforeHash ||
       !evidence.astTransformation.afterHash)
   ) {
-    reasons.push("A hash-bound AST transformation is missing.");
+    reasons.push("A hash-bound deterministic transformation is missing.");
   }
   if (
     evidence.requirements.blastRadius !== false &&
@@ -209,7 +212,14 @@ export default function RichApprovalEvidence({
         )}
       </EvidenceSection>
 
-      <EvidenceSection title="AST transformation" icon={FileCode2}>
+      <EvidenceSection
+        title={
+          evidence.astTransformation?.kind === "metadata_transformation"
+            ? "Salesforce metadata transformation"
+            : "AST transformation"
+        }
+        icon={FileCode2}
+      >
         {evidence.astTransformation ? (
           <TransformationDiff transformation={evidence.astTransformation} />
         ) : (
@@ -379,7 +389,9 @@ function TransformationDiff({
       {transformation.operations && transformation.operations.length > 0 && (
         <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-cyan-300">
-            Deterministic AST instructions
+            {transformation.kind === "metadata_transformation"
+              ? "Deterministic metadata operations"
+              : "Deterministic AST instructions"}
           </p>
           <pre className="max-h-56 overflow-auto text-xs leading-5 text-slate-300">
             {JSON.stringify(transformation.operations, null, 2)}

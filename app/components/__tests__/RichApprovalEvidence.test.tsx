@@ -120,7 +120,9 @@ describe("rich approval evidence gate", () => {
     render(<RichApprovalEvidence evidence={normalized} gate={gate} />);
 
     expect(gate.allowed).toBe(false);
-    expect(screen.getByRole("alert")).toHaveTextContent("hash-bound AST transformation");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "hash-bound deterministic transformation",
+    );
     expect(screen.getByRole("alert")).toHaveTextContent("not causally proven");
     expect(screen.getByText(/no causal proof supplied/i)).toBeInTheDocument();
   });

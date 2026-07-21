@@ -14,6 +14,19 @@ export function normalizeRichApprovalEvidence(
 
   const astTransformation =
     evidence.astTransformation ||
+    (evidence.metadataDiff
+      ? {
+          kind: evidence.metadataDiff.kind,
+          filePath: evidence.metadataDiff.filename,
+          before: evidence.metadataDiff.before,
+          after: evidence.metadataDiff.after,
+          beforeHash: evidence.metadataDiff.sourceHash,
+          afterHash: evidence.metadataDiff.resultHash,
+          transformationHash: evidence.metadataDiff.resultHash,
+          language: evidence.metadataDiff.compilerVersion,
+          operations: evidence.metadataDiff.operations,
+        }
+      : undefined) ||
     (evidence.astDiff
       ? {
           kind: evidence.astDiff.kind,
