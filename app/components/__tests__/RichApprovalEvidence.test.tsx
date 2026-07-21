@@ -195,6 +195,7 @@ describe("rich approval evidence gate", () => {
     expect(screen.getByText("Original Slack intent")).toBeInTheDocument();
     expect(screen.getByText("Slack: patch the Account save failure.")).toBeInTheDocument();
     expect(container.querySelector("video")).toBeInTheDocument();
+    expect(container.querySelector("video")).not.toHaveAttribute("crossorigin");
     expect(container.querySelector("video source")).toHaveAttribute(
       "src",
       "https://evidence.example/sandbox-run.mp4",

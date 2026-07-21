@@ -494,7 +494,6 @@ function SecureEvidenceVideo({
         controlsList="nodownload noremoteplayback"
         disablePictureInPicture
         preload="metadata"
-        crossOrigin="anonymous"
       >
         <source src={video.url} type={video.mimeType || "video/mp4"} />
         Your browser does not support secure video playback.
