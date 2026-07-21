@@ -185,9 +185,15 @@ describe("rich approval evidence gate", () => {
     });
 
     const { container } = render(
-      <RichApprovalEvidence evidence={normalized} gate={gate} />,
+      <RichApprovalEvidence
+        evidence={normalized}
+        gate={gate}
+        originalIntent="Slack: patch the Account save failure."
+      />,
     );
 
+    expect(screen.getByText("Original Slack intent")).toBeInTheDocument();
+    expect(screen.getByText("Slack: patch the Account save failure.")).toBeInTheDocument();
     expect(container.querySelector("video")).toBeInTheDocument();
     expect(container.querySelector("video source")).toHaveAttribute(
       "src",

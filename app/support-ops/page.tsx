@@ -452,6 +452,7 @@ export default function SupportOpsPage() {
                           <RichApprovalEvidence
                             evidence={richEvidence}
                             gate={approvalEvidenceGate}
+                            originalIntent={detail.case.issueText}
                             finalized={
                               detail.case.status === "RESOLVED" &&
                               detail.case.executionSnapshot?.validated === true
@@ -528,7 +529,7 @@ export default function SupportOpsPage() {
                                   ) : (
                                     <CheckCircle2 size={16} />
                                   )}
-                                  Approve
+                                  {willExecute ? "Authorize & deploy" : "Approve"}
                                 </button>
                                 <button
                                   type="button"

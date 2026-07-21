@@ -6,6 +6,7 @@ import {
   FileCode2,
   Fingerprint,
   FlaskConical,
+  MessageSquareText,
   Network,
   ShieldCheck,
   Video,
@@ -132,10 +133,12 @@ export default function RichApprovalEvidence({
   evidence,
   gate,
   finalized = false,
+  originalIntent,
 }: {
   evidence?: NormalizedRichApprovalEvidence;
   gate?: ApprovalEvidenceGate;
   finalized?: boolean;
+  originalIntent?: string;
 }) {
   if (!evidence) {
     return (
@@ -185,6 +188,16 @@ export default function RichApprovalEvidence({
           </ul>
         </div>
       )}
+
+      <EvidenceSection title="Original Slack intent" icon={MessageSquareText}>
+        {originalIntent?.trim() ? (
+          <blockquote className="border-l-2 border-cyan-400/70 pl-4 text-sm leading-6 text-slate-200 whitespace-pre-wrap">
+            {originalIntent}
+          </blockquote>
+        ) : (
+          <Unavailable />
+        )}
+      </EvidenceSection>
 
       <EvidenceSection title="Blast radius" icon={Network}>
         {!evidence.blastRadius ? (
