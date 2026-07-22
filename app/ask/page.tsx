@@ -170,20 +170,48 @@ export default function AskSupportPage() {
     setDetail(null);
 
     try {
-      const created = await apiFetch("/auto-resolution/cases", {
+      const queued = (await apiFetch("/auto-resolution/cases/async", {
         method: "POST",
         body: JSON.stringify({
           source: "PORTAL",
           curriculumId: activeKnowledgeBaseId,
           issueText: issue,
         }),
-      });
-      const data = (await apiFetch(
-        `/auto-resolution/cases/${created.case_id}`,
-      )) as CaseDetail;
-      setDetail(data);
-      setTurns(turnsFromDetail(data));
-      await loadRecentCases();
+      })) as { job_id: string };
+
+      const deadline = Date.now() + 10 * 60 * 1000;
+      let lastCaseId = "";
+      while (Date.now() < deadline) {
+        const status = (await apiFetch(
+          `/auto-resolution/cases/async/${encodeURIComponent(queued.job_id)}`,
+        )) as {
+          case_id?: string;
+          status: string;
+          ready: boolean;
+        };
+
+        if (status.case_id) {
+          lastCaseId = status.case_id;
+          const current = (await apiFetch(
+            `/auto-resolution/cases/${status.case_id}`,
+          )) as CaseDetail;
+          setDetail(current);
+          setTurns(turnsFromDetail(current));
+        }
+
+        if (status.ready && lastCaseId) {
+          await loadRecentCases();
+          return;
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+
+      throw new Error(
+        lastCaseId
+          ? "Auto-resolution is still running. Open the ticket from history to continue tracking it."
+          : "Auto-resolution did not start within ten minutes.",
+      );
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Could not raise this request."));
       setTurns((prev) => [
