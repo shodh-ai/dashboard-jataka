@@ -17,8 +17,10 @@ import {
   describeApprovalTier,
   describeSupportLevel,
   presentAuditEvent,
+  selectClientProgressEvents,
   toneClasses,
 } from "../auto-resolution/audit-presenter";
+import { clientCaseAnswer } from "../auto-resolution/client-case-presenter";
 import {
   type AutoResolutionCase,
   type Brain,
@@ -103,9 +105,7 @@ export default function AskSupportPage() {
 
   function turnsFromDetail(caseDetail: CaseDetail): ChatTurn[] {
     const created = caseDetail.case.createdAt;
-    const answer =
-      caseDetail.case.proposalSnapshot?.answer ||
-      "We're still working on this. Check status below — support will follow up if needed.";
+    const answer = clientCaseAnswer(caseDetail);
     const estimate = estimateResolutionTime(caseDetail.case);
 
     return [
@@ -499,7 +499,7 @@ export default function AskSupportPage() {
                           </p>
                         </div>
                         <div className="space-y-3">
-                          {detail.auditEvents.slice(0, 6).map((event) => {
+                          {selectClientProgressEvents(detail.auditEvents).map((event) => {
                             const presentation = presentAuditEvent(event);
                             const tone = toneClasses(presentation.tone);
                             const Icon = presentation.icon;

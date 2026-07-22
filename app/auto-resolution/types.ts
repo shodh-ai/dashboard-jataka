@@ -358,6 +358,11 @@ export type AutoResolutionCase = {
     externalMutated?: boolean;
     externalProof?: Record<string, unknown>;
   };
+  kamikazeDiagnosticSnapshot?: {
+    ok?: boolean;
+    summary?: string;
+    error?: string;
+  };
   externalRefs?: Array<{
     system?: string;
     objectType?: string;

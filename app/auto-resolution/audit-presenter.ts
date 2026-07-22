@@ -25,6 +25,18 @@ export type AuditEventLike = {
   createdAt: string;
 };
 
+const CLIENT_PROGRESS_STAGES = [
+  ["RECEIVED"],
+  ["CLASSIFIED"],
+  ["EVIDENCE_RETRIEVED"],
+  ["DIAGNOSTIC_COMPLETED"],
+  ["PROPOSAL_CREATED"],
+  ["APPROVED", "REJECTED", "APPROVAL_REQUESTED", "POLICY_DECIDED"],
+  ["EXECUTED", "EXECUTION_FAILED"],
+  ["VALIDATED"],
+  ["RESOLVED", "ESCALATED"],
+] as const;
+
 type AuditPresentation = {
   title: string;
   summary: string;
@@ -61,13 +73,22 @@ const EVENT_PRESENTATION: Record<
   },
   EVIDENCE_RETRIEVED: {
     title: "Documentation searched",
-    summary: "We searched your knowledge base and related records for relevant answers.",
+    summary: "We searched available documentation and records, then continued to live diagnostics where needed.",
     icon: Search,
     tone: "info",
   },
+  DIAGNOSTIC_COMPLETED: {
+    title: "Live Salesforce check completed",
+    summary: "We checked the affected Salesforce configuration and identified the failing permission path.",
+    icon: Search,
+    tone: "success",
+    getSummary: (event) =>
+      humanizePolicyDecision(event.policyDecision) ||
+      "We checked the affected Salesforce configuration and identified the failing permission path.",
+  },
   PROPOSAL_CREATED: {
     title: "Recommended solution prepared",
-    summary: "A draft answer or recommended next step was prepared for review.",
+    summary: "A deterministic fix was prepared and sent through safety checks.",
     icon: FileText,
     tone: "info",
   },
@@ -301,7 +322,11 @@ export function presentAuditEvent(event: AuditEventLike): AuditPresentation {
 
   const policyDetail = humanizePolicyDecision(event.policyDecision);
   let summary = base.getSummary?.(event) || base.summary;
-  if (policyDetail && event.eventType !== "POLICY_DECIDED") {
+  if (
+    policyDetail &&
+    event.eventType !== "POLICY_DECIDED" &&
+    event.eventType !== "DIAGNOSTIC_COMPLETED"
+  ) {
     summary = `${summary} ${policyDetail}`;
   }
 
@@ -312,6 +337,21 @@ export function presentAuditEvent(event: AuditEventLike): AuditPresentation {
     tone: base.tone,
     chips: chips.filter(Boolean),
   };
+}
+
+/**
+ * Collapse raw audit history into customer-facing lifecycle milestones.
+ * The backend keeps every immutable event; the client shows the latest event
+ * for each stage so a completed case never appears stuck at proposal time.
+ */
+export function selectClientProgressEvents<T extends AuditEventLike>(events: T[]): T[] {
+  return CLIENT_PROGRESS_STAGES.flatMap((stage) => {
+    for (const eventType of stage) {
+      const match = events.findLast((event) => event.eventType === eventType);
+      if (match) return [match];
+    }
+    return [];
+  });
 }
 
 function shortId(value: string) {
