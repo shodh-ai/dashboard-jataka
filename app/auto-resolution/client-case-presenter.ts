@@ -12,7 +12,7 @@ export function clientCaseAnswer(detail: CaseDetail) {
       const commitSha = stringValue(caseRow.executionSnapshot.externalProof?.commitSha);
       return [
         "Resolved. Live Salesforce diagnostics identified the permission blocking Publish.",
-        "The deterministic metadata fix passed causal validation, all Scratch Org checks, and human approval before it was applied to the source repository.",
+        "The deterministic metadata fix passed the recorded safety validation before it was applied to the source repository.",
         commitSha ? `Verified repository commit: ${commitSha.slice(0, 7)}.` : "The repository readback was verified after execution.",
       ].join(" ");
     }

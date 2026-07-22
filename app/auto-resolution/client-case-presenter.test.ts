@@ -32,8 +32,9 @@ describe("clientCaseAnswer", () => {
     );
 
     expect(answer).toContain("Resolved.");
-    expect(answer).toContain("Scratch Org checks");
+    expect(answer).toContain("recorded safety validation");
     expect(answer).toContain("0d96bb8");
+    expect(answer).not.toContain("Scratch Org checks");
     expect(answer).not.toContain("is proposed");
   });
 
