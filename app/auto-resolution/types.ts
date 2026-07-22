@@ -466,7 +466,6 @@ export function isResolvableProposal(actionType?: string) {
   return Boolean(
     actionType &&
       actionType !== "REQUEST_MORE_INFO" &&
-      actionType !== "PREPARE_PATCH" &&
       actionType !== "DEPLOY_CHANGE",
   );
 }
