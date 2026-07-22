@@ -46,4 +46,13 @@ describe("client audit presentation", () => {
     expect(presentation.summary).toBe("Permission failure found.");
     expect(presentation.tone).toBe("success");
   });
+
+  it("does not expose internal reviewer notes in the customer timeline", () => {
+    const presentation = presentAuditEvent(
+      event("APPROVED", "2026-07-22T00:00:00Z", "Internal demo-only approval note"),
+    );
+
+    expect(presentation.summary).toBe("A reviewer approved the recommended solution.");
+    expect(presentation.summary).not.toContain("demo-only");
+  });
 });

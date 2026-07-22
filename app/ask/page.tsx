@@ -520,7 +520,7 @@ export default function AskSupportPage() {
                             );
                           })}
                         </div>
-                        {detail.case.approvalTier && (
+                        {detail.case.approvalTier && detail.case.status === "PENDING_APPROVAL" && (
                           <p className="mt-4 text-xs leading-5 text-slate-500">
                             {describeApprovalTier(detail.case.approvalTier)}
                           </p>

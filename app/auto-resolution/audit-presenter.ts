@@ -325,7 +325,9 @@ export function presentAuditEvent(event: AuditEventLike): AuditPresentation {
   if (
     policyDetail &&
     event.eventType !== "POLICY_DECIDED" &&
-    event.eventType !== "DIAGNOSTIC_COMPLETED"
+    event.eventType !== "DIAGNOSTIC_COMPLETED" &&
+    event.eventType !== "APPROVED" &&
+    event.eventType !== "REJECTED"
   ) {
     summary = `${summary} ${policyDetail}`;
   }
