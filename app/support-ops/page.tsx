@@ -37,7 +37,8 @@ import {
 } from "../auto-resolution/types";
 import { normalizeRichApprovalEvidence } from "../auto-resolution/evidence-normalizer";
 
-const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+const BASE_API =
+  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
 type QueueFilter = "needs_attention" | "all" | "resolved";
 
@@ -55,7 +56,8 @@ export default function SupportOpsPage() {
   const [error, setError] = useState("");
 
   async function apiFetch(path: string, options: RequestInit = {}) {
-    if (!BASE_API) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+    if (!BASE_API)
+      throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
     const token = await getToken();
     const res = await fetch(`${BASE_API}${path}`, {
       ...options,
@@ -67,7 +69,9 @@ export default function SupportOpsPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.message || data.error || `Request failed (${res.status})`);
+      throw new Error(
+        data.message || data.error || `Request failed (${res.status})`,
+      );
     }
     return data;
   }
@@ -91,7 +95,9 @@ export default function SupportOpsPage() {
     setError("");
     setDecisionNote("");
     try {
-      const data = (await apiFetch(`/auto-resolution/cases/${caseId}`)) as CaseDetail;
+      const data = (await apiFetch(
+        `/auto-resolution/cases/${caseId}`,
+      )) as CaseDetail;
       setDetail(data);
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to load case detail."));
@@ -150,14 +156,17 @@ export default function SupportOpsPage() {
     setDeciding(true);
     setError("");
     try {
-      await apiFetch(`/auto-resolution/approvals/${pendingApproval.id}/decide`, {
-        method: "POST",
-        body: JSON.stringify({
-          proposalHash: pendingApproval.proposalHash,
-          decision,
-          decisionNote: decisionNote.trim() || undefined,
-        }),
-      });
+      await apiFetch(
+        `/auto-resolution/approvals/${pendingApproval.id}/decide`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            proposalHash: pendingApproval.proposalHash,
+            decision,
+            decisionNote: decisionNote.trim() || undefined,
+          }),
+        },
+      );
       await openCase(detail.case.id);
       await loadCases();
     } catch (e: unknown) {
@@ -174,7 +183,9 @@ export default function SupportOpsPage() {
         const sync = await apiFetch("/auth/sync");
         const orgData = sync.org || sync.organization || {};
         const rawRole = sync.user?.role || sync.orgRole || "";
-        setOrgName(orgData.name || sync.orgName || sync.organizationName || "Jataka");
+        setOrgName(
+          orgData.name || sync.orgName || sync.organizationName || "Jataka",
+        );
         setUserRole(
           rawRole === "senior" || rawRole === "org:admin" || rawRole === "admin"
             ? "ARCHITECT"
@@ -217,7 +228,9 @@ export default function SupportOpsPage() {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-white">Support Ops</p>
-                <p className="text-xs text-slate-500">Approvals · audit · execution</p>
+                <p className="text-xs text-slate-500">
+                  Approvals · audit · execution
+                </p>
               </div>
               <button
                 type="button"
@@ -225,7 +238,10 @@ export default function SupportOpsPage() {
                 className="rounded-md p-2 text-slate-400 hover:bg-slate-900 hover:text-slate-200"
                 title="Refresh queue"
               >
-                <RefreshCcw size={15} className={loadingList ? "animate-spin" : ""} />
+                <RefreshCcw
+                  size={15}
+                  className={loadingList ? "animate-spin" : ""}
+                />
               </button>
             </div>
 
@@ -285,13 +301,16 @@ export default function SupportOpsPage() {
                       >
                         {row.status.replaceAll("_", " ")}
                       </span>
-                      <span className="text-[10px] text-slate-500">{rowEta.label}</span>
+                      <span className="text-[10px] text-slate-500">
+                        {rowEta.label}
+                      </span>
                     </div>
                     <p className="line-clamp-2 text-sm leading-5 text-slate-200">
                       {truncateIssue(row.issueText, 90)}
                     </p>
                     <p className="mt-2 text-[11px] text-slate-500">
-                      {row.supportLevel || "—"} · {row.approvalTier || "unassigned"} ·{" "}
+                      {row.supportLevel || "—"} ·{" "}
+                      {row.approvalTier || "unassigned"} ·{" "}
                       {new Date(row.createdAt).toLocaleString()}
                     </p>
                   </button>
@@ -361,8 +380,12 @@ export default function SupportOpsPage() {
                         </p>
                       </div>
                       <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-right">
-                        <p className="text-[10px] uppercase tracking-wider text-slate-500">ETA</p>
-                        <p className="text-sm font-medium text-slate-200">{eta.label}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                          ETA
+                        </p>
+                        <p className="text-sm font-medium text-slate-200">
+                          {eta.label}
+                        </p>
                         <p className="mt-0.5 max-w-[180px] text-[11px] text-slate-500">
                           {eta.detail}
                         </p>
@@ -379,20 +402,28 @@ export default function SupportOpsPage() {
                             Proposed resolution
                           </p>
                           <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 px-4 py-4 text-sm leading-7 text-slate-200 whitespace-pre-wrap">
-                            {detail.case.proposalSnapshot?.answer || "No proposal drafted yet."}
+                            {detail.case.proposalSnapshot?.answer ||
+                              "No proposal drafted yet."}
                           </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
                           <TechMeta
                             label="Action"
-                            value={detail.case.proposalSnapshot?.proposedActionType}
+                            value={
+                              detail.case.proposalSnapshot?.proposedActionType
+                            }
                           />
-                          <TechMeta label="Risk" value={detail.case.proposalSnapshot?.risk} />
+                          <TechMeta
+                            label="Risk"
+                            value={detail.case.proposalSnapshot?.risk}
+                          />
                           <TechMeta
                             label="Approval tier"
                             value={detail.case.approvalTier}
-                            hint={describeApprovalTier(detail.case.approvalTier)}
+                            hint={describeApprovalTier(
+                              detail.case.approvalTier,
+                            )}
                           />
                           <TechMeta
                             label="Confidence"
@@ -401,14 +432,18 @@ export default function SupportOpsPage() {
                                 ? detail.case.confidenceScore.toFixed(2)
                                 : undefined
                             }
-                            hint={describeConfidence(detail.case.confidenceScore)}
+                            hint={describeConfidence(
+                              detail.case.confidenceScore,
+                            )}
                           />
                         </div>
 
                         {detail.case.proposalSnapshot?.actionInputSummary && (
                           <TechMeta
                             label="Action input"
-                            value={detail.case.proposalSnapshot.actionInputSummary}
+                            value={
+                              detail.case.proposalSnapshot.actionInputSummary
+                            }
                           />
                         )}
                         {detail.case.proposalSnapshot?.validationPlan && (
@@ -430,14 +465,28 @@ export default function SupportOpsPage() {
                               Execution / validation
                             </p>
                             <div className="space-y-2 font-mono text-[11px] leading-5 text-slate-400">
-                              <p>ok: {String(Boolean(detail.case.executionSnapshot.ok))}</p>
-                              <p>action: {detail.case.executionSnapshot.actionType || "—"}</p>
+                              <p>
+                                ok:{" "}
+                                {String(
+                                  Boolean(detail.case.executionSnapshot.ok),
+                                )}
+                              </p>
+                              <p>
+                                action:{" "}
+                                {detail.case.executionSnapshot.actionType ||
+                                  "—"}
+                              </p>
                               <p>
                                 validated:{" "}
-                                {String(Boolean(detail.case.executionSnapshot.validated))}
+                                {String(
+                                  Boolean(
+                                    detail.case.executionSnapshot.validated,
+                                  ),
+                                )}
                               </p>
                               <p className="whitespace-pre-wrap text-slate-300">
-                                {detail.case.executionSnapshot.validationDetail ||
+                                {detail.case.executionSnapshot
+                                  .validationDetail ||
                                   detail.case.executionSnapshot.error ||
                                   "No detail"}
                               </p>
@@ -463,8 +512,13 @@ export default function SupportOpsPage() {
                         {/* Approval layer */}
                         <div className="rounded-2xl border border-slate-700/80 bg-gradient-to-b from-slate-900/80 to-slate-950/80 p-5">
                           <div className="mb-3 flex items-center gap-2">
-                            <ShieldCheck size={18} className="text-emerald-400" />
-                            <p className="text-sm font-semibold text-white">Approval layer</p>
+                            <ShieldCheck
+                              size={18}
+                              className="text-emerald-400"
+                            />
+                            <p className="text-sm font-semibold text-white">
+                              Approval layer
+                            </p>
                           </div>
 
                           {!pendingApproval ? (
@@ -475,33 +529,48 @@ export default function SupportOpsPage() {
                             <>
                               {willExecute ? (
                                 <p className="mb-3 text-sm leading-6 text-emerald-100/90">
-                                  Approving runs the proposed external action, then validates
-                                  against Salesforce / execution checks.
+                                  Approving runs the proposed external action,
+                                  then validates against Salesforce / execution
+                                  checks.
                                 </p>
                               ) : (
                                 <p className="mb-3 text-sm leading-6 text-amber-100/90">
-                                  Approving routes this for human follow-up — no automated
-                                  external mutation.
+                                  Approving routes this for human follow-up — no
+                                  automated external mutation.
                                 </p>
                               )}
 
                               <p className="mb-2 font-mono text-[10px] break-all text-slate-500">
-                                approval {pendingApproval.id} · tier {pendingApproval.approvalTier}
+                                approval {pendingApproval.id} · tier{" "}
+                                {pendingApproval.approvalTier}
                               </p>
                               <div className="mb-3 flex flex-wrap gap-2">
                                 <HashBadge
                                   label="Bound proposal"
                                   value={pendingApproval.proposalHash}
                                 />
-                                <HashBadge
-                                  label="Bound evidence"
-                                  value={richEvidence?.evidenceHash || pendingApproval.evidenceHash}
-                                />
+                                {richEvidence?.evidenceHash ||
+                                pendingApproval.evidenceHash ? (
+                                  <HashBadge
+                                    label="Bound evidence"
+                                    value={
+                                      richEvidence?.evidenceHash ||
+                                      pendingApproval.evidenceHash
+                                    }
+                                  />
+                                ) : (
+                                  <span className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-400">
+                                    Evidence hash not required for this human
+                                    handoff
+                                  </span>
+                                )}
                               </div>
 
                               <textarea
                                 value={decisionNote}
-                                onChange={(e) => setDecisionNote(e.target.value)}
+                                onChange={(e) =>
+                                  setDecisionNote(e.target.value)
+                                }
                                 rows={2}
                                 placeholder="Decision note (optional, written to audit)"
                                 className="input mb-3 w-full resize-none text-sm"
@@ -510,7 +579,9 @@ export default function SupportOpsPage() {
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
-                                  disabled={deciding || !approvalEvidenceGate.allowed}
+                                  disabled={
+                                    deciding || !approvalEvidenceGate.allowed
+                                  }
                                   aria-describedby={
                                     !approvalEvidenceGate.allowed
                                       ? "approval-evidence-block-reason"
@@ -525,11 +596,16 @@ export default function SupportOpsPage() {
                                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
                                 >
                                   {deciding ? (
-                                    <Loader2 size={16} className="animate-spin" />
+                                    <Loader2
+                                      size={16}
+                                      className="animate-spin"
+                                    />
                                   ) : (
                                     <CheckCircle2 size={16} />
                                   )}
-                                  {willExecute ? "Authorize & deploy" : "Approve"}
+                                  {willExecute
+                                    ? "Authorize & deploy"
+                                    : "Approve"}
                                 </button>
                                 <button
                                   type="button"
@@ -546,8 +622,9 @@ export default function SupportOpsPage() {
                                   id="approval-evidence-block-reason"
                                   className="mt-2 text-xs text-amber-300"
                                 >
-                                  Approve is disabled until required evidence is verified and
-                                  hash-bound. Reject remains available.
+                                  Approve is disabled until required evidence is
+                                  verified and hash-bound. Reject remains
+                                  available.
                                 </p>
                               )}
                             </>
@@ -569,7 +646,8 @@ export default function SupportOpsPage() {
                             const presentation = presentAuditEvent(event);
                             const tone = toneClasses(presentation.tone);
                             const Icon = presentation.icon;
-                            const isLast = index === detail.auditEvents.length - 1;
+                            const isLast =
+                              index === detail.auditEvents.length - 1;
                             return (
                               <div key={event.id} className="flex gap-3">
                                 <div className="flex flex-col items-center">
@@ -578,15 +656,21 @@ export default function SupportOpsPage() {
                                   >
                                     <Icon size={14} className={tone.icon} />
                                   </div>
-                                  {!isLast && <div className="my-1 w-px flex-1 bg-slate-800" />}
+                                  {!isLast && (
+                                    <div className="my-1 w-px flex-1 bg-slate-800" />
+                                  )}
                                 </div>
-                                <div className={`min-w-0 flex-1 ${isLast ? "pb-0" : "pb-5"}`}>
+                                <div
+                                  className={`min-w-0 flex-1 ${isLast ? "pb-0" : "pb-5"}`}
+                                >
                                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                                     <p className="text-sm font-medium text-slate-100">
                                       {presentation.title}
                                     </p>
                                     <time className="font-mono text-[10px] text-slate-600">
-                                      {new Date(event.createdAt).toLocaleString()}
+                                      {new Date(
+                                        event.createdAt,
+                                      ).toLocaleString()}
                                     </time>
                                   </div>
                                   <p className="mt-1 text-xs leading-5 text-slate-400">
@@ -596,13 +680,17 @@ export default function SupportOpsPage() {
                                     <p>event={event.eventType}</p>
                                     <p>
                                       actor={event.actorType}
-                                      {event.actorId ? `:${event.actorId.slice(0, 12)}` : ""}
+                                      {event.actorId
+                                        ? `:${event.actorId.slice(0, 12)}`
+                                        : ""}
                                     </p>
                                     {event.approvalTier && (
                                       <p>tier={event.approvalTier}</p>
                                     )}
                                     {typeof event.confidence === "number" && (
-                                      <p>confidence={event.confidence.toFixed(3)}</p>
+                                      <p>
+                                        confidence={event.confidence.toFixed(3)}
+                                      </p>
                                     )}
                                     {event.policyDecision && (
                                       <p className="whitespace-pre-wrap text-slate-500">
@@ -633,7 +721,9 @@ export default function SupportOpsPage() {
                                     {step.status}
                                   </span>
                                   <span>
-                                    <span className="text-slate-200">{step.label}</span>
+                                    <span className="text-slate-200">
+                                      {step.label}
+                                    </span>
                                     {step.detail ? ` — ${step.detail}` : ""}
                                   </span>
                                 </li>
@@ -665,11 +755,15 @@ function TechMeta({
 }) {
   return (
     <div>
-      <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
       <p className="break-words rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2 text-sm text-slate-200">
         {value || "—"}
       </p>
-      {hint && <p className="mt-1 text-[11px] leading-4 text-slate-600">{hint}</p>}
+      {hint && (
+        <p className="mt-1 text-[11px] leading-4 text-slate-600">{hint}</p>
+      )}
     </div>
   );
 }

@@ -4,10 +4,14 @@ import type { RichApprovalEvidence as RichApprovalEvidenceType } from "../../aut
 import { normalizeRichApprovalEvidence } from "../../auto-resolution/evidence-normalizer";
 
 vi.mock("../GraphVisualizer", () => ({
-  BlastRadiusVisualizer: () => <div data-testid="blast-radius-graph">Graph</div>,
+  BlastRadiusVisualizer: () => (
+    <div data-testid="blast-radius-graph">Graph</div>
+  ),
 }));
 
-import RichApprovalEvidence, { evaluateApprovalEvidence } from "../RichApprovalEvidence";
+import RichApprovalEvidence, {
+  evaluateApprovalEvidence,
+} from "../RichApprovalEvidence";
 
 const backendEvidence: RichApprovalEvidenceType = {
   astDiff: {
@@ -67,14 +71,18 @@ describe("rich approval evidence gate", () => {
       ...backendEvidence,
       causalProof: {
         diagnosis: "Identified intervention.",
-        causes: backendEvidence.causalProof && "causes" in backendEvidence.causalProof
-          ? backendEvidence.causalProof.causes
-          : [],
+        causes:
+          backendEvidence.causalProof && "causes" in backendEvidence.causalProof
+            ? backendEvidence.causalProof.causes
+            : [],
         proof: {
           status: "supported",
           result: "identifiable",
           structural_reachability: { supported: true },
-          statistical_identification: { identifiable: true, method: "do_calculus" },
+          statistical_identification: {
+            identifiable: true,
+            method: "do_calculus",
+          },
           assumptions: ["No unmeasured confounding"],
         },
         generatedAt: "2026-07-16T10:00:00.000Z",
@@ -89,7 +97,10 @@ describe("rich approval evidence gate", () => {
           status: "non_identifiable",
           result: "non_identifiable",
           structural_reachability: { supported: false },
-          statistical_identification: { identifiable: false, method: "do_calculus" },
+          statistical_identification: {
+            identifiable: false,
+            method: "do_calculus",
+          },
           assumptions: [],
         },
         generatedAt: "2026-07-16T10:00:00.000Z",
@@ -97,7 +108,9 @@ describe("rich approval evidence gate", () => {
     });
 
     expect(proven?.causalProof?.status).toBe("PROVEN");
-    expect(proven?.causalProof?.assumptions).toEqual(["No unmeasured confounding"]);
+    expect(proven?.causalProof?.assumptions).toEqual([
+      "No unmeasured confounding",
+    ]);
     expect(notProven?.causalProof?.status).toBe("NOT_PROVEN");
   });
 
@@ -195,7 +208,9 @@ describe("rich approval evidence gate", () => {
     );
 
     expect(screen.getByText("Original Slack intent")).toBeInTheDocument();
-    expect(screen.getByText("Slack: patch the Account save failure.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Slack: patch the Account save failure."),
+    ).toBeInTheDocument();
     expect(container.querySelector("video")).toBeInTheDocument();
     expect(container.querySelector("video")).not.toHaveAttribute("crossorigin");
     expect(container.querySelector("video source")).toHaveAttribute(
@@ -220,7 +235,9 @@ describe("rich approval evidence gate", () => {
       evidence: normalized,
     });
 
-    render(<RichApprovalEvidence evidence={normalized} gate={gate} finalized />);
+    render(
+      <RichApprovalEvidence evidence={normalized} gate={gate} finalized />,
+    );
 
     expect(screen.getByText("Evidence hash-bound")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -234,5 +251,63 @@ describe("rich approval evidence gate", () => {
         actionType: "ANSWER",
       }),
     ).toEqual({ required: false, allowed: true, reasons: [] });
+  });
+
+  it("renders observed read-only diagnostic evidence without empty L3 panels", () => {
+    const normalized = normalizeRichApprovalEvidence({
+      proposalHash: "proposal-123",
+      evidenceHash: "evidence-123",
+      liveDiagnostic: {
+        mode: "l2_precheck",
+        summary: "Standard User has no object permission row.",
+        findings: { likely_cause: "MISSING_OBJECT_PERMISSIONS" },
+        observedAt: "2026-07-23T13:00:00.000Z",
+        readOnly: true,
+      },
+      requirements: {
+        astDiff: false,
+        blastRadius: false,
+        causalProof: false,
+        tee: false,
+        deltaBox: false,
+        hashBinding: true,
+      },
+    });
+    const gate = evaluateApprovalEvidence({
+      supportLevel: "L2",
+      actionType: "ANSWER_ONLY",
+      evidence: normalized,
+    });
+
+    render(
+      <RichApprovalEvidence
+        evidence={normalized}
+        gate={gate}
+        originalIntent="The Publish button throws a save error."
+      />,
+    );
+
+    expect(screen.getByText("Live read-only diagnostic")).toBeInTheDocument();
+    expect(screen.getByText("Observed in Salesforce")).toBeInTheDocument();
+    expect(
+      screen.getByText("Standard User has no object permission row."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Blast radius")).not.toBeInTheDocument();
+    expect(screen.queryByText("AST transformation")).not.toBeInTheDocument();
+  });
+
+  it("does not report missing L3 evidence for a human handoff", () => {
+    render(
+      <RichApprovalEvidence
+        gate={{ required: false, allowed: true, reasons: [] }}
+      />,
+    );
+
+    expect(
+      screen.getByText(/L3 deployment artifacts are not required/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/No rich evidence was supplied/i),
+    ).not.toBeInTheDocument();
   });
 });

@@ -46,7 +46,11 @@ export function evaluateApprovalEvidence({
 
   const reasons: string[] = [];
   if (!evidence) {
-    return { required, allowed: false, reasons: ["Rich approval evidence is missing."] };
+    return {
+      required,
+      allowed: false,
+      reasons: ["Rich approval evidence is missing."],
+    };
   }
 
   if (
@@ -120,7 +124,9 @@ export function evaluateApprovalEvidence({
     (evidence.verification.verified === false ||
       ["STALE", "FAILED"].includes(evidence.verification.status))
   ) {
-    reasons.push(`Evidence verification is ${evidence.verification.status.toLowerCase()}.`);
+    reasons.push(
+      `Evidence verification is ${evidence.verification.status.toLowerCase()}.`,
+    );
   }
   if (
     evidence.requirements.hashBinding === true &&
@@ -146,11 +152,17 @@ export default function RichApprovalEvidence({
   if (!evidence) {
     return (
       <EvidenceSection title="Approval evidence" icon={AlertTriangle}>
-        <p className="text-sm text-amber-200">No rich evidence was supplied for this proposal.</p>
+        <p className="text-sm text-slate-300">
+          {gate?.required
+            ? "Required rich approval evidence was not supplied for this proposal."
+            : "L3 deployment artifacts are not required for this read-only or human-handoff proposal."}
+        </p>
       </EvidenceSection>
     );
   }
 
+  const isReadOnlyDiagnostic =
+    !gate?.required && Boolean(evidence.liveDiagnostic);
   const graphIsLarge =
     Boolean(evidence.blastRadius) &&
     (evidence.blastRadius!.nodes.length > LARGE_GRAPH_NODE_LIMIT ||
@@ -183,7 +195,9 @@ export default function RichApprovalEvidence({
           role="alert"
           className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100"
         >
-          <p className="text-sm font-semibold">Approval blocked by evidence gate</p>
+          <p className="text-sm font-semibold">
+            Approval blocked by evidence gate
+          </p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">
             {gate.reasons.map((reason) => (
               <li key={reason}>{reason}</li>
@@ -202,121 +216,186 @@ export default function RichApprovalEvidence({
         )}
       </EvidenceSection>
 
-      <EvidenceSection title="Blast radius" icon={Network}>
-        {!evidence.blastRadius ? (
-          <Unavailable />
-        ) : graphIsLarge ? (
-          <LargeGraphFallback graph={evidence.blastRadius} />
-        ) : (
-          <BlastRadiusVisualizer graph={evidence.blastRadius} />
-        )}
-      </EvidenceSection>
-
-      <EvidenceSection
-        title={
-          evidence.astTransformation?.kind === "metadata_transformation"
-            ? "Salesforce metadata transformation"
-            : "AST transformation"
-        }
-        icon={FileCode2}
-      >
-        {evidence.astTransformation ? (
-          <TransformationDiff transformation={evidence.astTransformation} />
-        ) : (
-          <Unavailable />
-        )}
-      </EvidenceSection>
-
-      <EvidenceSection title="Causal status" icon={ShieldCheck}>
-        {evidence.causalProof ? (
-          <div>
-            <StatusBadge
-              label={
-                evidence.causalProof.status === "PROVEN"
-                  ? "Causally proven"
-                  : "Not proven"
-              }
-              good={evidence.causalProof.status === "PROVEN"}
-            />
-            {evidence.causalProof.claim && (
-              <p className="mt-3 text-sm text-slate-200">{evidence.causalProof.claim}</p>
-            )}
-            {evidence.causalProof.proof && (
-              <p className="mt-2 text-xs leading-5 text-slate-400">
-                {evidence.causalProof.proof}
-              </p>
-            )}
-            <ListBlock title="Assumptions" items={evidence.causalProof.assumptions} />
-            <ListBlock title="Limitations" items={evidence.causalProof.limitations || []} />
-            <ListBlock
-              title="Identified causes"
-              items={(evidence.causalProof.causes || []).map(
-                (cause) => `${cause.label} (${Math.round(cause.confidence * 100)}%)`,
-              )}
-            />
-          </div>
-        ) : (
-          <p className="text-sm font-medium text-red-300">Not proven — no causal proof supplied.</p>
-        )}
-      </EvidenceSection>
-
-      <EvidenceSection title="Sandbox validation" icon={FlaskConical}>
-        {!evidence.sandbox ? (
-          <Unavailable />
-        ) : (
+      {isReadOnlyDiagnostic && evidence.liveDiagnostic ? (
+        <EvidenceSection title="Live read-only diagnostic" icon={FlaskConical}>
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge label="Observed in Salesforce" good />
               <StatusBadge
-                label={`Sandbox ${evidence.sandbox.status.toLowerCase()}`}
-                good={evidence.sandbox.status === "PASSED"}
+                label={
+                  evidence.liveDiagnostic.readOnly
+                    ? "Read only"
+                    : "Mutation capable"
+                }
+                good={evidence.liveDiagnostic.readOnly}
               />
-              {evidence.sandbox.environment && (
-                <span className="text-xs text-slate-500">{evidence.sandbox.environment}</span>
-              )}
             </div>
-            <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800">
-              {evidence.sandbox.tests.map((test) => (
-                <li key={test.id || test.name} className="flex gap-3 px-3 py-2 text-xs">
-                  {test.status === "PASSED" ? (
-                    <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
-                  ) : test.status === "FAILED" ? (
-                    <XCircle size={14} className="shrink-0 text-red-400" />
-                  ) : (
-                    <AlertTriangle size={14} className="shrink-0 text-amber-400" />
+            <p className="text-sm leading-6 text-slate-200">
+              {evidence.liveDiagnostic.summary}
+            </p>
+            <p className="font-mono text-[10px] text-slate-500">
+              mode {evidence.liveDiagnostic.mode} · observed{" "}
+              {new Date(evidence.liveDiagnostic.observedAt).toLocaleString()}
+            </p>
+            {evidence.liveDiagnostic.findings !== undefined && (
+              <pre className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs leading-5 text-slate-300">
+                {JSON.stringify(evidence.liveDiagnostic.findings, null, 2)}
+              </pre>
+            )}
+          </div>
+        </EvidenceSection>
+      ) : (
+        <>
+          <EvidenceSection title="Blast radius" icon={Network}>
+            {!evidence.blastRadius ? (
+              <Unavailable />
+            ) : graphIsLarge ? (
+              <LargeGraphFallback graph={evidence.blastRadius} />
+            ) : (
+              <BlastRadiusVisualizer graph={evidence.blastRadius} />
+            )}
+          </EvidenceSection>
+
+          <EvidenceSection
+            title={
+              evidence.astTransformation?.kind === "metadata_transformation"
+                ? "Salesforce metadata transformation"
+                : "AST transformation"
+            }
+            icon={FileCode2}
+          >
+            {evidence.astTransformation ? (
+              <TransformationDiff transformation={evidence.astTransformation} />
+            ) : (
+              <Unavailable />
+            )}
+          </EvidenceSection>
+
+          <EvidenceSection title="Causal status" icon={ShieldCheck}>
+            {evidence.causalProof ? (
+              <div>
+                <StatusBadge
+                  label={
+                    evidence.causalProof.status === "PROVEN"
+                      ? "Causally proven"
+                      : "Not proven"
+                  }
+                  good={evidence.causalProof.status === "PROVEN"}
+                />
+                {evidence.causalProof.claim && (
+                  <p className="mt-3 text-sm text-slate-200">
+                    {evidence.causalProof.claim}
+                  </p>
+                )}
+                {evidence.causalProof.proof && (
+                  <p className="mt-2 text-xs leading-5 text-slate-400">
+                    {evidence.causalProof.proof}
+                  </p>
+                )}
+                <ListBlock
+                  title="Assumptions"
+                  items={evidence.causalProof.assumptions}
+                />
+                <ListBlock
+                  title="Limitations"
+                  items={evidence.causalProof.limitations || []}
+                />
+                <ListBlock
+                  title="Identified causes"
+                  items={(evidence.causalProof.causes || []).map(
+                    (cause) =>
+                      `${cause.label} (${Math.round(cause.confidence * 100)}%)`,
                   )}
-                  <span className="flex-1 text-slate-200">{test.name}</span>
-                  {typeof test.durationMs === "number" && (
-                    <span className="font-mono text-slate-500">{test.durationMs} ms</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {evidence.sandbox.video && <SecureEvidenceVideo video={evidence.sandbox.video} />}
-            {evidence.sandboxVideoReason && (
-              <p className="text-xs text-slate-500">
-                Sandbox video: {evidence.sandboxVideoReason.replaceAll("_", " ")}
+                />
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-red-300">
+                Not proven — no causal proof supplied.
               </p>
             )}
-          </div>
-        )}
-      </EvidenceSection>
+          </EvidenceSection>
 
-      <EvidenceSection title="TEE and audit binding" icon={Fingerprint}>
-        {!evidence.teeAttestation ? (
-          <Unavailable />
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge
-              label={`TEE ${evidence.teeAttestation.status.toLowerCase()}`}
-              good={evidence.teeAttestation.status === "VERIFIED"}
-            />
-            <HashBadge label="Quote hash" value={evidence.teeAttestation.quoteHash} />
-            {evidence.teeAttestation.auditLogHash && (
-              <HashBadge label="Audit hash" value={evidence.teeAttestation.auditLogHash} />
+          <EvidenceSection title="Sandbox validation" icon={FlaskConical}>
+            {!evidence.sandbox ? (
+              <Unavailable />
+            ) : (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge
+                    label={`Sandbox ${evidence.sandbox.status.toLowerCase()}`}
+                    good={evidence.sandbox.status === "PASSED"}
+                  />
+                  {evidence.sandbox.environment && (
+                    <span className="text-xs text-slate-500">
+                      {evidence.sandbox.environment}
+                    </span>
+                  )}
+                </div>
+                <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800">
+                  {evidence.sandbox.tests.map((test) => (
+                    <li
+                      key={test.id || test.name}
+                      className="flex gap-3 px-3 py-2 text-xs"
+                    >
+                      {test.status === "PASSED" ? (
+                        <CheckCircle2
+                          size={14}
+                          className="shrink-0 text-emerald-400"
+                        />
+                      ) : test.status === "FAILED" ? (
+                        <XCircle size={14} className="shrink-0 text-red-400" />
+                      ) : (
+                        <AlertTriangle
+                          size={14}
+                          className="shrink-0 text-amber-400"
+                        />
+                      )}
+                      <span className="flex-1 text-slate-200">{test.name}</span>
+                      {typeof test.durationMs === "number" && (
+                        <span className="font-mono text-slate-500">
+                          {test.durationMs} ms
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {evidence.sandbox.video && (
+                  <SecureEvidenceVideo video={evidence.sandbox.video} />
+                )}
+                {evidence.sandboxVideoReason && (
+                  <p className="text-xs text-slate-500">
+                    Sandbox video:{" "}
+                    {evidence.sandboxVideoReason.replaceAll("_", " ")}
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-        )}
-      </EvidenceSection>
+          </EvidenceSection>
+
+          <EvidenceSection title="TEE and audit binding" icon={Fingerprint}>
+            {!evidence.teeAttestation ? (
+              <Unavailable />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <StatusBadge
+                  label={`TEE ${evidence.teeAttestation.status.toLowerCase()}`}
+                  good={evidence.teeAttestation.status === "VERIFIED"}
+                />
+                <HashBadge
+                  label="Quote hash"
+                  value={evidence.teeAttestation.quoteHash}
+                />
+                {evidence.teeAttestation.auditLogHash && (
+                  <HashBadge
+                    label="Audit hash"
+                    value={evidence.teeAttestation.auditLogHash}
+                  />
+                )}
+              </div>
+            )}
+          </EvidenceSection>
+        </>
+      )}
     </div>
   );
 }
@@ -348,7 +427,10 @@ export function HashBadge({ label, value }: { label: string; value?: string }) {
       title={value || `${label} unavailable`}
     >
       <Fingerprint size={11} aria-hidden />
-      {label}: {value ? `${value.slice(0, 12)}${value.length > 12 ? "…" : ""}` : "missing"}
+      {label}:{" "}
+      {value
+        ? `${value.slice(0, 12)}${value.length > 12 ? "…" : ""}`
+        : "missing"}
     </span>
   );
 }
@@ -376,7 +458,9 @@ function TransformationDiff({
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-xs text-slate-300">{transformation.filePath}</span>
+        <span className="font-mono text-xs text-slate-300">
+          {transformation.filePath}
+        </span>
         <div className="flex flex-wrap gap-2">
           <HashBadge label="Before" value={transformation.beforeHash} />
           <HashBadge label="After" value={transformation.afterHash} />
@@ -464,12 +548,15 @@ function LargeGraphFallback({
   return (
     <div>
       <p className="mb-3 text-xs text-amber-200">
-        Interactive rendering is limited for large graphs. Showing an accessible component list
-        for {graph.totalNodes || graph.nodes.length} nodes.
+        Interactive rendering is limited for large graphs. Showing an accessible
+        component list for {graph.totalNodes || graph.nodes.length} nodes.
       </p>
       <ul className="max-h-64 overflow-auto rounded-lg border border-slate-800 divide-y divide-slate-800">
         {graph.nodes.map((node) => (
-          <li key={node.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+          <li
+            key={node.id}
+            className="flex items-center justify-between gap-3 px-3 py-2 text-xs"
+          >
             <span className="text-slate-200">{node.label}</span>
             <span className="text-slate-500">
               {node.type} · {node.risk}
@@ -478,7 +565,9 @@ function LargeGraphFallback({
         ))}
       </ul>
       {graph.truncated && (
-        <p className="mt-2 text-xs text-slate-500">The server response is truncated.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          The server response is truncated.
+        </p>
       )}
     </div>
   );
@@ -487,11 +576,18 @@ function LargeGraphFallback({
 function SecureEvidenceVideo({
   video,
 }: {
-  video: NonNullable<NonNullable<NormalizedRichApprovalEvidence["sandbox"]>["video"]>;
+  video: NonNullable<
+    NonNullable<NormalizedRichApprovalEvidence["sandbox"]>["video"]
+  >;
 }) {
-  const secureUrl = video.url.startsWith("/") || video.url.startsWith("https://");
+  const secureUrl =
+    video.url.startsWith("/") || video.url.startsWith("https://");
   if (!secureUrl) {
-    return <p className="text-xs text-red-300">Video blocked: a secure URL is required.</p>;
+    return (
+      <p className="text-xs text-red-300">
+        Video blocked: a secure URL is required.
+      </p>
+    );
   }
   return (
     <div className="rounded-xl border border-slate-800 bg-black p-2">
@@ -518,7 +614,9 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
   if (!items.length) return null;
   return (
     <div className="mt-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{title}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        {title}
+      </p>
       <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-slate-400">
         {items.map((item) => (
           <li key={item}>{item}</li>

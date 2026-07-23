@@ -52,11 +52,7 @@ export type EvidenceBundle = {
 };
 
 export type EvidenceVerificationStatus =
-  | "VERIFIED"
-  | "UNVERIFIED"
-  | "PENDING"
-  | "STALE"
-  | "FAILED";
+  "VERIFIED" | "UNVERIFIED" | "PENDING" | "STALE" | "FAILED";
 
 export type EvidenceVerification = {
   status: EvidenceVerificationStatus;
@@ -102,7 +98,8 @@ export type BlastRadiusGraph = {
 };
 
 export type AstTransformationEvidence = {
-  kind?: "unverified_text_diff" | "ast_transformation" | "metadata_transformation";
+  kind?:
+    "unverified_text_diff" | "ast_transformation" | "metadata_transformation";
   filePath: string;
   language?: string;
   before: string;
@@ -172,6 +169,13 @@ export type TeeAttestationEvidence = {
 
 /** Wire contract returned by one-backend, with future presentation aliases retained. */
 export type RichApprovalEvidence = {
+  liveDiagnostic?: {
+    mode: string;
+    summary: string;
+    findings?: unknown;
+    observedAt: string;
+    readOnly: true;
+  };
   astDiff?: {
     kind: "unverified_text_diff" | "ast_transformation";
     before?: string;
@@ -266,6 +270,7 @@ export type NormalizedRichApprovalEvidence = {
   proposalHash?: string;
   evidenceHash?: string;
   generatedAt?: string;
+  liveDiagnostic?: RichApprovalEvidence["liveDiagnostic"];
   blastRadius?: BlastRadiusGraph;
   astTransformation?: AstTransformationEvidence;
   causalProof?: CausalProofEvidence;
@@ -381,10 +386,15 @@ export type CaseDetail = {
   steps: PipelineStep[];
 };
 
-export function resolveKnowledgeBaseId(brains: Brain[], activeBrainId?: string) {
+export function resolveKnowledgeBaseId(
+  brains: Brain[],
+  activeBrainId?: string,
+) {
   if (!brains.length) return "";
   if (activeBrainId) {
-    const byKnowledgeBaseId = brains.find((b) => b.knowledgeBaseId === activeBrainId);
+    const byKnowledgeBaseId = brains.find(
+      (b) => b.knowledgeBaseId === activeBrainId,
+    );
     if (byKnowledgeBaseId) return byKnowledgeBaseId.knowledgeBaseId;
     const byId = brains.find((b) => b.id === activeBrainId);
     if (byId) return byId.knowledgeBaseId;
@@ -398,13 +408,27 @@ export function getErrorMessage(error: unknown, fallback: string) {
 
 export function statusTone(value?: string) {
   if (!value) return "neutral";
-  if (["RESOLVED", "AUTO_ANSWER", "L1", "complete", "APPROVED"].includes(value)) {
+  if (
+    ["RESOLVED", "AUTO_ANSWER", "L1", "complete", "APPROVED"].includes(value)
+  ) {
     return "success";
   }
-  if (["PENDING_APPROVAL", "HUMAN_ONLY", "L2", "pending", "CUSTOMER_CONFIRM"].includes(value)) {
+  if (
+    [
+      "PENDING_APPROVAL",
+      "HUMAN_ONLY",
+      "L2",
+      "pending",
+      "CUSTOMER_CONFIRM",
+    ].includes(value)
+  ) {
     return "warning";
   }
-  if (["FAILED", "REJECTED", "ESCALATED", "L3", "EXECUTION_FAILED"].includes(value)) {
+  if (
+    ["FAILED", "REJECTED", "ESCALATED", "L3", "EXECUTION_FAILED"].includes(
+      value,
+    )
+  ) {
     return "danger";
   }
   return "info";
@@ -412,8 +436,10 @@ export function statusTone(value?: string) {
 
 export function statusBadgeClasses(value?: string) {
   const tone = statusTone(value);
-  if (tone === "success") return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
-  if (tone === "warning") return "bg-amber-500/10 text-amber-300 border-amber-500/30";
+  if (tone === "success")
+    return "bg-emerald-500/10 text-emerald-300 border-emerald-500/30";
+  if (tone === "warning")
+    return "bg-amber-500/10 text-amber-300 border-amber-500/30";
   if (tone === "danger") return "bg-red-500/10 text-red-300 border-red-500/30";
   if (tone === "info") return "bg-blue-500/10 text-blue-300 border-blue-500/30";
   return "bg-slate-800 text-slate-300 border-slate-700";
@@ -439,12 +465,17 @@ export function clientStatusLabel(status?: string) {
 }
 
 /** Rough client-facing ETA from status + support level + approval tier. */
-export function estimateResolutionTime(caseRow?: Pick<
-  AutoResolutionCase,
-  "status" | "supportLevel" | "approvalTier" | "resolvedAt"
->) {
+export function estimateResolutionTime(
+  caseRow?: Pick<
+    AutoResolutionCase,
+    "status" | "supportLevel" | "approvalTier" | "resolvedAt"
+  >,
+) {
   if (!caseRow) {
-    return { label: "Usually under 2 minutes", detail: "Most how-to questions resolve instantly." };
+    return {
+      label: "Usually under 2 minutes",
+      detail: "Most how-to questions resolve instantly.",
+    };
   }
   if (caseRow.status === "RESOLVED" || caseRow.resolvedAt) {
     return { label: "Done", detail: "This request is complete." };
@@ -453,25 +484,43 @@ export function estimateResolutionTime(caseRow?: Pick<
     return { label: "~1–2 min", detail: "Safe auto-answer path." };
   }
   if (caseRow.status === "PENDING_APPROVAL") {
-    if (caseRow.supportLevel === "L1" || caseRow.approvalTier === "CUSTOMER_CONFIRM") {
-      return { label: "~15–30 min", detail: "Waiting on a quick human confirm." };
+    if (
+      caseRow.supportLevel === "L1" ||
+      caseRow.approvalTier === "CUSTOMER_CONFIRM"
+    ) {
+      return {
+        label: "~15–30 min",
+        detail: "Waiting on a quick human confirm.",
+      };
     }
-    if (caseRow.supportLevel === "L2" || caseRow.approvalTier === "INTERNAL_APPROVAL") {
-      return { label: "~1–2 hours", detail: "Support is reviewing the proposed fix." };
+    if (
+      caseRow.supportLevel === "L2" ||
+      caseRow.approvalTier === "INTERNAL_APPROVAL"
+    ) {
+      return {
+        label: "~1–2 hours",
+        detail: "Support is reviewing the proposed fix.",
+      };
     }
     return { label: "~4–8 hours", detail: "Needs admin or dual approval." };
   }
   if (caseRow.status === "ESCALATED" || caseRow.approvalTier === "HUMAN_ONLY") {
-    return { label: "~1 business day", detail: "A person on your team will handle this." };
+    return {
+      label: "~1 business day",
+      detail: "A person on your team will handle this.",
+    };
   }
-  return { label: "~2–5 min", detail: "Pipeline is classifying and gathering evidence." };
+  return {
+    label: "~2–5 min",
+    detail: "Pipeline is classifying and gathering evidence.",
+  };
 }
 
 export function isResolvableProposal(actionType?: string) {
   return Boolean(
     actionType &&
-      actionType !== "REQUEST_MORE_INFO" &&
-      actionType !== "DEPLOY_CHANGE",
+    actionType !== "REQUEST_MORE_INFO" &&
+    actionType !== "DEPLOY_CHANGE",
   );
 }
 
