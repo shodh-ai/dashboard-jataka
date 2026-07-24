@@ -20,6 +20,7 @@ import {
   toneClasses,
   type AuditEventLike,
 } from "./audit-presenter";
+import { getApiErrorMessage } from "../lib/api-error";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
@@ -177,7 +178,7 @@ function StepIcon({ complete }: { complete: boolean }) {
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+  return getApiErrorMessage(error, fallback);
 }
 
 function isResolvableProposal(actionType?: string) {
@@ -388,7 +389,9 @@ export default function AutoResolutionPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.message || data.error || `Request failed (${res.status})`);
+      throw new Error(
+        getApiErrorMessage(data, `Request failed (${res.status})`),
+      );
     }
     return data;
   }
@@ -507,12 +510,45 @@ export default function AutoResolutionPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiFetch("/auto-resolution/cases", {
+      const queued = (await apiFetch("/auto-resolution/cases/async", {
         method: "POST",
         body: JSON.stringify(buildIntakePayload(issueText)),
-      });
-      await loadCase(data.case_id);
-      await loadRecentCases();
+      })) as { job_id: string };
+      const deadline = Date.now() + 10 * 60 * 1000;
+      let lastCaseId = "";
+
+      while (Date.now() < deadline) {
+        const status = (await apiFetch(
+          `/auto-resolution/cases/async/${encodeURIComponent(queued.job_id)}`,
+        )) as {
+          case_id?: string;
+          status: string;
+          ready: boolean;
+        };
+
+        if (status.case_id) {
+          lastCaseId = status.case_id;
+          const current = await loadCase(status.case_id);
+          if (status.ready) {
+            await loadRecentCases();
+            if (current.case.status === "FAILED") {
+              setError(
+                current.case.executionSnapshot?.error ||
+                  "Auto-resolution failed. Open the case for details.",
+              );
+            }
+            return;
+          }
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 2000));
+      }
+
+      throw new Error(
+        lastCaseId
+          ? "Auto-resolution is still running. Open the case from Recent Cases to continue tracking it."
+          : "Auto-resolution did not start within ten minutes.",
+      );
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to raise issue."));
     } finally {
