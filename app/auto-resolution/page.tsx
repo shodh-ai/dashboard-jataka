@@ -22,7 +22,8 @@ import {
 } from "./audit-presenter";
 import { getApiErrorMessage } from "../lib/api-error";
 
-const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+const BASE_API =
+  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
 
 type EvidenceRef = {
   type: string;
@@ -147,7 +148,9 @@ type CaseDetail = {
 function resolveKnowledgeBaseId(brains: Brain[], activeBrainId?: string) {
   if (!brains.length) return "";
   if (activeBrainId) {
-    const byKnowledgeBaseId = brains.find((b) => b.knowledgeBaseId === activeBrainId);
+    const byKnowledgeBaseId = brains.find(
+      (b) => b.knowledgeBaseId === activeBrainId,
+    );
     if (byKnowledgeBaseId) return byKnowledgeBaseId.knowledgeBaseId;
     const byId = brains.find((b) => b.id === activeBrainId);
     if (byId) return byId.knowledgeBaseId;
@@ -184,9 +187,9 @@ function getErrorMessage(error: unknown, fallback: string) {
 function isResolvableProposal(actionType?: string) {
   return Boolean(
     actionType &&
-      actionType !== "REQUEST_MORE_INFO" &&
-      actionType !== "PREPARE_PATCH" &&
-      actionType !== "DEPLOY_CHANGE",
+    actionType !== "REQUEST_MORE_INFO" &&
+    actionType !== "PREPARE_PATCH" &&
+    actionType !== "DEPLOY_CHANGE",
   );
 }
 
@@ -222,7 +225,9 @@ export default function AutoResolutionPage() {
   const [activeBrain, setActiveBrain] = useState("");
   const [issueText, setIssueText] = useState("");
   const [salesforceCaseRef, setSalesforceCaseRef] = useState("");
-  const [externalSystem, setExternalSystem] = useState<"salesforce" | "jira">("salesforce");
+  const [externalSystem, setExternalSystem] = useState<"salesforce" | "jira">(
+    "salesforce",
+  );
   const [loadedCaseLabel, setLoadedCaseLabel] = useState("");
   const [translationRequestId, setTranslationRequestId] = useState("");
   const [salesforceOperation, setSalesforceOperation] = useState<
@@ -279,7 +284,9 @@ export default function AutoResolutionPage() {
   const evidenceBundle = useMemo(
     () =>
       normalizeEvidenceBundle(detail?.case.evidenceRefs) ||
-      normalizeEvidenceBundle(getAuditEvent(detail, "EVIDENCE_RETRIEVED")?.evidenceRefs),
+      normalizeEvidenceBundle(
+        getAuditEvent(detail, "EVIDENCE_RETRIEVED")?.evidenceRefs,
+      ),
     [detail],
   );
 
@@ -287,10 +294,14 @@ export default function AutoResolutionPage() {
     () => getAuditEvent(detail, "CLASSIFIED"),
     [detail],
   );
-  const policyEvent = useMemo(() => getAuditEvent(detail, "POLICY_DECIDED"), [detail]);
+  const policyEvent = useMemo(
+    () => getAuditEvent(detail, "POLICY_DECIDED"),
+    [detail],
+  );
 
   const proposedActionType = detail?.case.proposalSnapshot?.proposedActionType;
-  const approvalWillExecuteExternalAction = isResolvableProposal(proposedActionType);
+  const approvalWillExecuteExternalAction =
+    isResolvableProposal(proposedActionType);
 
   function buildIntakePayload(issue: string) {
     const payload: Record<string, unknown> = {
@@ -366,7 +377,9 @@ export default function AutoResolutionPage() {
           if (data.case?.id) setSalesforceCaseRef(data.case.id);
           return;
         } catch (legacyError) {
-          setError(getErrorMessage(legacyError, "Failed to load external record."));
+          setError(
+            getErrorMessage(legacyError, "Failed to load external record."),
+          );
           return;
         }
       }
@@ -377,10 +390,12 @@ export default function AutoResolutionPage() {
   }
 
   async function apiFetch(path: string, options: RequestInit = {}) {
-    if (!BASE_API) throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
+    if (!BASE_API)
+      throw new Error("NEXT_PUBLIC_API_BASE_URL is not configured.");
     const token = await getToken();
     const res = await fetch(`${BASE_API}${path}`, {
       ...options,
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -411,7 +426,10 @@ export default function AutoResolutionPage() {
     const data = await apiFetch("/auto-resolution/ticket-eval/suites");
     const suites = Array.isArray(data.suites) ? data.suites : [];
     setEvalSuites(suites);
-    if (suites.length > 0 && !suites.some((s: { id: string }) => s.id === evalSuiteId)) {
+    if (
+      suites.length > 0 &&
+      !suites.some((s: { id: string }) => s.id === evalSuiteId)
+    ) {
       setEvalSuiteId(suites[0].id);
     }
   }
@@ -465,7 +483,9 @@ export default function AutoResolutionPage() {
         const sync = await apiFetch("/auth/sync");
         const orgData = sync.org || sync.organization || {};
         const rawRole = sync.user?.role || sync.orgRole || "";
-        setOrgName(orgData.name || sync.orgName || sync.organizationName || "Jataka");
+        setOrgName(
+          orgData.name || sync.orgName || sync.organizationName || "Jataka",
+        );
         setUserRole(
           rawRole === "senior" || rawRole === "org:admin" || rawRole === "admin"
             ? "ARCHITECT"
@@ -476,7 +496,9 @@ export default function AutoResolutionPage() {
         const list = Array.isArray(brainsData.brains) ? brainsData.brains : [];
         setBrains(list);
         if (list.length > 0) {
-          setActiveBrain(resolveKnowledgeBaseId(list, brainsData.activeBrainId));
+          setActiveBrain(
+            resolveKnowledgeBaseId(list, brainsData.activeBrainId),
+          );
         }
 
         await loadRecentCases();
@@ -561,13 +583,16 @@ export default function AutoResolutionPage() {
     setBypassing(true);
     setError("");
     try {
-      const data = await apiFetch(`/auto-resolution/cases/${detail.case.id}/requester-bypass`, {
-        method: "POST",
-        body: JSON.stringify({
-          proposalHash: detail.case.proposalHash,
-          decisionNote: "Requester clicked dashboard master bypass.",
-        }),
-      });
+      const data = await apiFetch(
+        `/auto-resolution/cases/${detail.case.id}/requester-bypass`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            proposalHash: detail.case.proposalHash,
+            decisionNote: "Requester clicked dashboard master bypass.",
+          }),
+        },
+      );
       setDetail(data.detail);
       await loadRecentCases();
     } catch (e: unknown) {
@@ -593,10 +618,13 @@ export default function AutoResolutionPage() {
                 <Sparkles className="text-blue-300" size={22} />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-white">Auto Resolution Pipeline</h1>
+                <h1 className="text-2xl font-semibold text-white">
+                  Auto Resolution Pipeline
+                </h1>
                 <p className="text-sm text-slate-400">
-                  Feed an external ticket into the pipeline, inspect classification and
-                  evidence, approve execution, and optionally write the answer back.
+                  Feed an external ticket into the pipeline, inspect
+                  classification and evidence, approve execution, and optionally
+                  write the answer back.
                 </p>
               </div>
             </div>
@@ -613,10 +641,13 @@ export default function AutoResolutionPage() {
             <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Raise from ticket</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    Raise from ticket
+                  </h2>
                   <p className="text-sm text-slate-400">
-                    Choose a connected system and load a record. Issue text comes from the
-                    ticket; resolution can post back through that connector.
+                    Choose a connected system and load a record. Issue text
+                    comes from the ticket; resolution can post back through that
+                    connector.
                   </p>
                 </div>
                 <FileText className="text-slate-500" size={22} />
@@ -648,7 +679,10 @@ export default function AutoResolutionPage() {
                   <option value="">No brains found</option>
                 ) : (
                   brains.map((brain) => (
-                    <option key={brain.knowledgeBaseId} value={brain.knowledgeBaseId}>
+                    <option
+                      key={brain.knowledgeBaseId}
+                      value={brain.knowledgeBaseId}
+                    >
                       {brain.name || brain.knowledgeBaseId}
                     </option>
                   ))
@@ -685,7 +719,9 @@ export default function AutoResolutionPage() {
                 </button>
               </div>
               {loadedCaseLabel ? (
-                <p className="mb-4 text-xs text-emerald-300/90">{loadedCaseLabel}</p>
+                <p className="mb-4 text-xs text-emerald-300/90">
+                  {loadedCaseLabel}
+                </p>
               ) : (
                 <p className="mb-4 text-xs text-slate-500">
                   Works for any Case — no scenario-specific demos.
@@ -727,19 +763,24 @@ export default function AutoResolutionPage() {
                   value={salesforceOperation}
                   onChange={(e) =>
                     setSalesforceOperation(
-                      e.target.value as "" | "submit_for_review" | "authorize_publication",
+                      e.target.value as
+                        "" | "submit_for_review" | "authorize_publication",
                     )
                   }
                   className="input select w-full text-sm"
                 >
                   <option value="">No translation action</option>
-                  <option value="submit_for_review">Submit draft for review</option>
-                  <option value="authorize_publication">Authorize publication</option>
+                  <option value="submit_for_review">
+                    Submit draft for review
+                  </option>
+                  <option value="authorize_publication">
+                    Authorize publication
+                  </option>
                 </select>
                 <p className="mt-3 text-xs leading-5 text-slate-500">
                   Only needed when approving a change to a
-                  `Knowledge_Translation_Request__c` record. Case writeback uses the Case
-                  Id above.
+                  `Knowledge_Translation_Request__c` record. Case writeback uses
+                  the Case Id above.
                 </p>
               </div>
 
@@ -753,7 +794,11 @@ export default function AutoResolutionPage() {
                   }
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {loading ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                  {loading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Play size={16} />
+                  )}
                   Raise Issue
                 </button>
                 <button
@@ -767,7 +812,9 @@ export default function AutoResolutionPage() {
             </div>
 
             <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
-              <h2 className="mb-4 text-lg font-semibold text-white">Recent Cases</h2>
+              <h2 className="mb-4 text-lg font-semibold text-white">
+                Recent Cases
+              </h2>
               <div className="space-y-3">
                 {recentCases.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-500">
@@ -804,11 +851,15 @@ export default function AutoResolutionPage() {
           <section className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-white">L1 ticket eval suites</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  L1 ticket eval suites
+                </h2>
                 <p className="text-sm text-slate-400">
                   Golden Sales/Service tickets from{" "}
-                  <code className="text-slate-300">salesforcetesting2/docs/tickets</code>. Runs
-                  through intake without Salesforce Case writeback.
+                  <code className="text-slate-300">
+                    salesforcetesting2/docs/tickets
+                  </code>
+                  . Runs through intake without Salesforce Case writeback.
                 </p>
               </div>
               <ShieldCheck className="text-slate-500" size={22} />
@@ -868,7 +919,9 @@ export default function AutoResolutionPage() {
                     <button
                       type="button"
                       onClick={() => runEvalTicket(ticket.id)}
-                      disabled={Boolean(evalRunningId) || !activeKnowledgeBaseId}
+                      disabled={
+                        Boolean(evalRunningId) || !activeKnowledgeBaseId
+                      }
                       className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {evalRunningId === ticket.id ? (
@@ -918,8 +971,10 @@ export default function AutoResolutionPage() {
                 ) : null}
                 <p className="text-xs text-slate-500">
                   Mutation guard:{" "}
-                  {evalResult.score?.mutationGuardOk ? "ok (no SF Case writeback)" : "failed"} ·{" "}
-                  case {evalResult.caseId}
+                  {evalResult.score?.mutationGuardOk
+                    ? "ok (no SF Case writeback)"
+                    : "failed"}{" "}
+                  · case {evalResult.caseId}
                 </p>
               </div>
             )}
@@ -929,8 +984,14 @@ export default function AutoResolutionPage() {
             <>
               <section className="grid gap-4 md:grid-cols-4">
                 <SummaryCard label="Status" value={detail.case.status} />
-                <SummaryCard label="Category" value={detail.case.supportLevel || "Pending"} />
-                <SummaryCard label="Intent" value={detail.case.intent || "Pending"} />
+                <SummaryCard
+                  label="Category"
+                  value={detail.case.supportLevel || "Pending"}
+                />
+                <SummaryCard
+                  label="Intent"
+                  value={detail.case.intent || "Pending"}
+                />
                 <SummaryCard
                   label="Confidence"
                   value={
@@ -944,10 +1005,12 @@ export default function AutoResolutionPage() {
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-white">Pipeline</h2>
+                    <h2 className="text-lg font-semibold text-white">
+                      Pipeline
+                    </h2>
                     <p className="text-sm text-slate-400">
-                      Case `{detail.case.id}` moving through intake, policy, evidence, approval,
-                      execution, validation, and audit.
+                      Case `{detail.case.id}` moving through intake, policy,
+                      evidence, approval, execution, validation, and audit.
                     </p>
                   </div>
                   <GitPullRequestArrow className="text-slate-500" size={22} />
@@ -969,7 +1032,9 @@ export default function AutoResolutionPage() {
                       </div>
                       <p className="font-medium text-slate-100">{step.label}</p>
                       {step.detail && (
-                        <p className="mt-1 line-clamp-3 text-xs text-slate-400">{step.detail}</p>
+                        <p className="mt-1 line-clamp-3 text-xs text-slate-400">
+                          {step.detail}
+                        </p>
                       )}
                     </div>
                   ))}
@@ -979,7 +1044,9 @@ export default function AutoResolutionPage() {
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                 <div className="mb-4 flex items-center gap-2">
                   <FileText className="text-blue-300" size={20} />
-                  <h2 className="text-lg font-semibold text-white">How It Happened</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    How It Happened
+                  </h2>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <HowItHappenedCard
@@ -995,7 +1062,8 @@ export default function AutoResolutionPage() {
                   <HowItHappenedCard
                     title="Resolution path"
                     value={
-                      detail.case.status === "RESOLVED" && detail.case.approvalTier === "AUTO_ANSWER"
+                      detail.case.status === "RESOLVED" &&
+                      detail.case.approvalTier === "AUTO_ANSWER"
                         ? "Auto-resolved without approval"
                         : detail.case.status === "PENDING_APPROVAL"
                           ? "Waiting for approval before execution"
@@ -1017,7 +1085,9 @@ export default function AutoResolutionPage() {
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                 <div className="mb-4 flex items-center gap-2">
                   <Sparkles className="text-violet-300" size={20} />
-                  <h2 className="text-lg font-semibold text-white">Evidence Retrieval</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    Evidence Retrieval
+                  </h2>
                 </div>
                 {!evidenceBundle ? (
                   <p className="rounded-xl border border-dashed border-slate-800 p-4 text-sm text-slate-500">
@@ -1053,27 +1123,45 @@ export default function AutoResolutionPage() {
                       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         <SummaryCard
                           label="QA memory"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.qa_resolution_matches ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary
+                              .qa_resolution_matches ?? 0,
+                          )}
                         />
                         <SummaryCard
                           label="Vector hits"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.vector_hits ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary
+                              .vector_hits ?? 0,
+                          )}
                         />
                         <SummaryCard
                           label="Full files"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.full_files ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary
+                              .full_files ?? 0,
+                          )}
                         />
                         <SummaryCard
                           label="Graph deps"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.graph_dependencies ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary
+                              .graph_dependencies ?? 0,
+                          )}
                         />
                         <SummaryCard
                           label="Jira context"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.jira_context ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary
+                              .jira_context ?? 0,
+                          )}
                         />
                         <SummaryCard
                           label="Concepts"
-                          value={String(evidenceBundle.snapshot.retrievalSummary.concepts ?? 0)}
+                          value={String(
+                            evidenceBundle.snapshot.retrievalSummary.concepts ??
+                              0,
+                          )}
                         />
                       </div>
                     )}
@@ -1088,14 +1176,20 @@ export default function AutoResolutionPage() {
                             <span className="text-sm font-medium text-slate-100">
                               {ref.label || ref.id}
                             </span>
-                            <span className={`rounded-full border px-2 py-0.5 text-xs ${badgeClasses(ref.type)}`}>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-xs ${badgeClasses(ref.type)}`}
+                            >
                               {ref.type}
                             </span>
                           </div>
                           {typeof ref.score === "number" && (
-                            <p className="mb-2 text-xs text-slate-500">score: {ref.score.toFixed(2)}</p>
+                            <p className="mb-2 text-xs text-slate-500">
+                              score: {ref.score.toFixed(2)}
+                            </p>
                           )}
-                          <p className="text-xs leading-5 text-slate-400">{ref.preview || "No preview available."}</p>
+                          <p className="text-xs leading-5 text-slate-400">
+                            {ref.preview || "No preview available."}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1107,32 +1201,55 @@ export default function AutoResolutionPage() {
                 <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                   <div className="mb-4 flex items-center gap-2">
                     <ShieldCheck className="text-emerald-400" size={20} />
-                    <h2 className="text-lg font-semibold text-white">Proposed Resolution</h2>
+                    <h2 className="text-lg font-semibold text-white">
+                      Proposed Resolution
+                    </h2>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">Answer</p>
+                      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+                        Answer
+                      </p>
                       <p className="rounded-xl border border-slate-800 bg-slate-900/70 p-4 text-sm leading-6 text-slate-200">
-                        {detail.case.proposalSnapshot?.answer || "No proposal yet."}
+                        {detail.case.proposalSnapshot?.answer ||
+                          "No proposal yet."}
                       </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <Meta label="Action" value={detail.case.proposalSnapshot?.proposedActionType} />
-                      <Meta label="Risk" value={detail.case.proposalSnapshot?.risk} />
-                      <Meta label="Approval tier" value={detail.case.approvalTier} />
-                      <Meta label="Proposal hash" value={detail.case.proposalHash} mono />
+                      <Meta
+                        label="Action"
+                        value={detail.case.proposalSnapshot?.proposedActionType}
+                      />
+                      <Meta
+                        label="Risk"
+                        value={detail.case.proposalSnapshot?.risk}
+                      />
+                      <Meta
+                        label="Approval tier"
+                        value={detail.case.approvalTier}
+                      />
+                      <Meta
+                        label="Proposal hash"
+                        value={detail.case.proposalHash}
+                        mono
+                      />
                     </div>
-                    {detail.case.proposalSnapshot?.actionInput?.translationRequestId && (
+                    {detail.case.proposalSnapshot?.actionInput
+                      ?.translationRequestId && (
                       <div className="grid gap-3 sm:grid-cols-2">
                         <Meta
                           label="Salesforce record"
-                          value={detail.case.proposalSnapshot.actionInput.translationRequestId}
+                          value={
+                            detail.case.proposalSnapshot.actionInput
+                              .translationRequestId
+                          }
                           mono
                         />
                         <Meta
                           label="Salesforce operation"
                           value={describeSalesforceOperation(
-                            detail.case.proposalSnapshot.actionInput.salesforceOperation,
+                            detail.case.proposalSnapshot.actionInput
+                              .salesforceOperation,
                           )}
                         />
                       </div>
@@ -1145,23 +1262,28 @@ export default function AutoResolutionPage() {
                 </div>
 
                 <div className="min-w-0 rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
-                  <h2 className="mb-2 text-lg font-semibold text-white">Approval Layer</h2>
+                  <h2 className="mb-2 text-lg font-semibold text-white">
+                    Approval Layer
+                  </h2>
                   <p className="mb-4 text-sm text-slate-400">
-                    Requester bypass is a demo approval path. It is proposal-hash-bound and logged
-                    explicitly in the audit trail.
+                    Requester bypass is a demo approval path. It is
+                    proposal-hash-bound and logged explicitly in the audit
+                    trail.
                   </p>
 
                   {pendingApproval && !approvalWillExecuteExternalAction && (
                     <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-                      Approving this case will <strong>not</strong> change Salesforce or your codebase.
-                      It will hand the issue to a human for follow-up.
+                      Approving this case will <strong>not</strong> change
+                      Salesforce or your codebase. It will hand the issue to a
+                      human for follow-up.
                     </div>
                   )}
 
                   {pendingApproval && approvalWillExecuteExternalAction && (
                     <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                      Approving this case will run the proposed external action and only mark the
-                      case resolved if Salesforce validation succeeds.
+                      Approving this case will run the proposed external action
+                      and only mark the case resolved if Salesforce validation
+                      succeeds.
                     </div>
                   )}
 
@@ -1193,7 +1315,9 @@ export default function AutoResolutionPage() {
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
                       No pending approval. Current case status is{" "}
-                      <span className={`rounded-full border px-2 py-0.5 text-xs ${badgeClasses(detail.case.status)}`}>
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-xs ${badgeClasses(detail.case.status)}`}
+                      >
                         {detail.case.status}
                       </span>
                     </div>
@@ -1201,12 +1325,19 @@ export default function AutoResolutionPage() {
 
                   {detail.case.executionSnapshot && (
                     <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-                      <p className="mb-2 text-sm font-medium text-white">Execution / validation</p>
+                      <p className="mb-2 text-sm font-medium text-white">
+                        Execution / validation
+                      </p>
                       <div className="space-y-2 text-sm text-slate-300">
-                        <Meta label="Action" value={detail.case.executionSnapshot.actionType} />
+                        <Meta
+                          label="Action"
+                          value={detail.case.executionSnapshot.actionType}
+                        />
                         <Meta
                           label="Validated"
-                          value={String(Boolean(detail.case.executionSnapshot.validated))}
+                          value={String(
+                            Boolean(detail.case.executionSnapshot.validated),
+                          )}
                         />
                         <Meta
                           label="Detail"
@@ -1223,7 +1354,9 @@ export default function AutoResolutionPage() {
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-xl">
                 <div className="mb-2">
-                  <h2 className="text-lg font-semibold text-white">What Happened</h2>
+                  <h2 className="text-lg font-semibold text-white">
+                    What Happened
+                  </h2>
                   <p className="mt-1 text-sm text-slate-400">
                     A plain-language timeline of every step taken on this case.
                   </p>
@@ -1251,17 +1384,29 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-sm ${badgeClasses(value)}`}>
+      <p
+        className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-sm ${badgeClasses(value)}`}
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function Meta({ label, value, mono }: { label: string; value?: string; mono?: boolean }) {
+function Meta({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value?: string;
+  mono?: boolean;
+}) {
   return (
     <div>
-      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
       <p
         className={`break-words rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 ${
           mono ? "font-mono text-xs" : ""
@@ -1284,11 +1429,17 @@ function HowItHappenedCard({
 }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">{title}</p>
-      <p className={`inline-flex rounded-full border px-2.5 py-1 text-sm ${badgeClasses(value)}`}>
+      <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+        {title}
+      </p>
+      <p
+        className={`inline-flex rounded-full border px-2.5 py-1 text-sm ${badgeClasses(value)}`}
+      >
         {value}
       </p>
-      {detail && <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>}
+      {detail && (
+        <p className="mt-3 text-sm leading-6 text-slate-400">{detail}</p>
+      )}
     </div>
   );
 }
@@ -1323,14 +1474,18 @@ function AuditTrailItem({
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               Step {step}
             </p>
-            <h3 className="text-base font-semibold text-white">{presentation.title}</h3>
+            <h3 className="text-base font-semibold text-white">
+              {presentation.title}
+            </h3>
           </div>
           <time className="shrink-0 text-xs text-slate-500">
             {new Date(event.createdAt).toLocaleString()}
           </time>
         </div>
 
-        <p className="mt-2 text-sm leading-6 text-slate-300">{presentation.summary}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">
+          {presentation.summary}
+        </p>
 
         {presentation.chips.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
