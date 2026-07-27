@@ -13,7 +13,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Sidebar from "../components/Sidebar";
+import ManagerialSummary from "../components/ManagerialSummary";
 import RichApprovalEvidence, {
   evaluateApprovalEvidence,
   HashBadge,
@@ -36,6 +38,7 @@ import {
   truncateIssue,
 } from "../auto-resolution/types";
 import { normalizeRichApprovalEvidence } from "../auto-resolution/evidence-normalizer";
+import { buildManagerialSummary } from "../auto-resolution/managerial-summary";
 
 const BASE_API =
   process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
@@ -44,6 +47,7 @@ type QueueFilter = "needs_attention" | "all" | "resolved";
 
 export default function SupportOpsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const searchParams = useSearchParams();
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [cases, setCases] = useState<AutoResolutionCase[]>([]);
@@ -54,6 +58,7 @@ export default function SupportOpsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const [error, setError] = useState("");
+  const requestedCaseId = searchParams.get("case_id")?.trim() || "";
 
   async function apiFetch(path: string, options: RequestInit = {}) {
     if (!BASE_API)
@@ -96,7 +101,7 @@ export default function SupportOpsPage() {
     setDecisionNote("");
     try {
       const data = (await apiFetch(
-        `/auto-resolution/cases/${caseId}`,
+        `/auto-resolution/cases/${encodeURIComponent(caseId)}`,
       )) as CaseDetail;
       setDetail(data);
     } catch (e: unknown) {
@@ -149,6 +154,10 @@ export default function SupportOpsPage() {
   );
   const willExecute = isResolvableProposal(proposedActionType);
   const eta = estimateResolutionTime(detail?.case);
+  const managerialSummary = useMemo(
+    () => (detail ? buildManagerialSummary(detail.case) : null),
+    [detail],
+  );
 
   async function decide(decision: "APPROVED" | "REJECTED") {
     if (!detail || !pendingApproval) return;
@@ -202,11 +211,25 @@ export default function SupportOpsPage() {
   }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
-    if (!detail && filteredCases[0]) {
+    if (!requestedCaseId && !detail && filteredCases[0]) {
       openCase(filteredCases[0].id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredCases.length]);
+  }, [filteredCases.length, requestedCaseId]);
+
+  useEffect(() => {
+    if (
+      !isLoaded ||
+      !isSignedIn ||
+      !requestedCaseId ||
+      detail?.case.id === requestedCaseId
+    ) {
+      return;
+    }
+    void openCase(requestedCaseId);
+    // openCase intentionally follows the query parameter rather than queue state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn, requestedCaseId]);
 
   if (!isLoaded || !isSignedIn) {
     return <div className="min-h-screen bg-[var(--bg-base)]" />;
@@ -394,6 +417,11 @@ export default function SupportOpsPage() {
                   </header>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
+                    {managerialSummary && (
+                      <div className="mx-auto w-full max-w-6xl px-6 pt-6">
+                        <ManagerialSummary summary={managerialSummary} />
+                      </div>
+                    )}
                     <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                       {/* Left: proposal + approval */}
                       <section className="min-w-0 space-y-6 border-b border-slate-800/60 px-6 py-6 lg:border-b-0 lg:border-r">

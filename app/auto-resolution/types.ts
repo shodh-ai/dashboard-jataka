@@ -303,6 +303,14 @@ export type Approval = {
   requestedAt: string;
 };
 
+export type ManagerialSummary = {
+  rootCause?: string;
+  fix?: string;
+  risk?: string;
+  riskLevel?: string;
+  generatedAt?: string;
+};
+
 export type AuditEvent = AuditEventLike & {
   id: string;
   evidenceRefs?: EvidenceBundle | EvidenceRef[];
@@ -351,6 +359,7 @@ export type AutoResolutionCase = {
     risk?: string;
     rollbackNotes?: string;
     validationPlan?: string;
+    managerialSummary?: ManagerialSummary;
     evidenceRefs?: EvidenceRef[];
     richEvidence?: RichApprovalEvidence;
   };

@@ -73,7 +73,7 @@ describe("rich approval evidence gate", () => {
         diagnosis: "Identified intervention.",
         causes:
           backendEvidence.causalProof && "causes" in backendEvidence.causalProof
-            ? backendEvidence.causalProof.causes
+            ? (backendEvidence.causalProof.causes ?? [])
             : [],
         proof: {
           status: "supported",

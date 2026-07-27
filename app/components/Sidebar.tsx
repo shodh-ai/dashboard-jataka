@@ -21,13 +21,18 @@ import {
   Sparkles,
   FileCheck2,
   GitCompareArrows,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  canViewRoiAnalytics,
+  type DashboardRole,
+} from "../lib/dashboard-role";
 
 interface SidebarProps {
   orgName: string;
-  userRole: "ARCHITECT" | "DEVELOPER" | "";
+  userRole: DashboardRole;
 }
 
 export default function Sidebar({ orgName, userRole }: SidebarProps) {
@@ -45,6 +50,15 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
     { label: "Knowledge Q&A", href: "/knowledge-qa", icon: BookOpen },
     { label: "Ask Support", href: "/ask", icon: MessageSquare },
     { label: "Support Ops", href: "/support-ops", icon: Headset },
+    ...(canViewRoiAnalytics(userRole)
+      ? [
+          {
+            label: "ROI Analytics",
+            href: "/roi-analytics",
+            icon: ChartNoAxesCombined,
+          },
+        ]
+      : []),
     { label: "Configuration Drift", href: "/configuration-drift", icon: GitCompareArrows },
     { label: "Auditor", href: "/auditor", icon: FileCheck2 },
     { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
@@ -105,7 +119,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {navItems.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0]);
           return (
