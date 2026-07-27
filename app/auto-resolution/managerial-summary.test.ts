@@ -65,11 +65,40 @@ describe("buildManagerialSummary", () => {
     });
   });
 
+  it("uses a grounded answer as the finding for legacy L1 and L2 proposals", () => {
+    const summary = buildManagerialSummary(
+      caseRow({
+        supportLevel: "L1",
+        proposalSnapshot: {
+          answer:
+            "Draft translations must be submitted from the Draft Translations list view.",
+          proposedActionType: "ANSWER_ONLY",
+          actionInputSummary:
+            "Reply with the grounded answer. No system writes.",
+          risk: "none",
+        },
+      }),
+    );
+
+    expect(summary.rootCause).toBe(
+      "Draft translations must be submitted from the Draft Translations list view.",
+    );
+    expect(summary.fix).toBe(
+      "Reply with the grounded answer. No system writes.",
+    );
+    expect(summary.isFallback).toEqual({
+      rootCause: false,
+      fix: false,
+      risk: false,
+    });
+  });
+
   it("does not present insufficient-context text or invent missing evidence", () => {
     const summary = buildManagerialSummary(
       caseRow({
         proposalSnapshot: {
-          answer: "I don't have enough grounded context to answer.",
+          answer:
+            "I don't have enough context in the Knowledge Graph to answer.",
         },
       }),
     );

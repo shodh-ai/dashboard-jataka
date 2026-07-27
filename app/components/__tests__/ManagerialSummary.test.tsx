@@ -24,7 +24,7 @@ describe("ManagerialSummary", () => {
     expect(screen.getByText("A dependency failed.")).toBeInTheDocument();
   });
 
-  it("labels fallback content as awaiting grounded detail", () => {
+  it("labels fallback content without claiming it is grounded", () => {
     render(
       <ManagerialSummary
         summary={{
@@ -37,7 +37,26 @@ describe("ManagerialSummary", () => {
     );
 
     expect(
-      screen.getAllByText("Awaiting grounded proposal detail"),
+      screen.getAllByText("No supported evidence for this field"),
     ).toHaveLength(3);
+    expect(screen.getByText("Evidence unavailable")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Grounded proposal data"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("labels mixed evidence as partially grounded", () => {
+    render(
+      <ManagerialSummary
+        summary={{
+          rootCause: "A permission is missing.",
+          fix: "No remediation yet.",
+          risk: "Low.",
+          isFallback: { rootCause: false, fix: true, risk: false },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Partially grounded")).toBeInTheDocument();
   });
 });

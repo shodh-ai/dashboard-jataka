@@ -15,7 +15,7 @@ export type ManagerialSummaryView = {
 };
 
 const INSUFFICIENT_CONTEXT =
-  /(?:not enough|(?:do not|don't) have enough|insufficient) grounded context/i;
+  /(?:not enough|(?:do not|don't) have enough|insufficient)\s+(?:grounded\s+)?(?:context|information)|cannot answer|couldn't find|not covered/i;
 
 function usableText(...values: unknown[]) {
   return values.find(
@@ -53,6 +53,7 @@ export function buildManagerialSummary(
     caseRow.kamikazeDiagnosticSnapshot?.ok
       ? caseRow.kamikazeDiagnosticSnapshot.summary
       : undefined,
+    proposal?.answer,
   );
 
   const fix = usableText(

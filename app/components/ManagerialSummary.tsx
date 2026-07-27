@@ -35,6 +35,18 @@ export default function ManagerialSummary({
 }: {
   summary: ManagerialSummaryView;
 }) {
+  const fallbackCount = Object.values(summary.isFallback).filter(Boolean).length;
+  const groundingStatus =
+    fallbackCount === 0
+      ? "Grounded proposal data"
+      : fallbackCount === 3
+        ? "Evidence unavailable"
+        : "Partially grounded";
+  const groundingStatusClass =
+    fallbackCount === 0
+      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+      : "border-amber-400/25 bg-amber-400/10 text-amber-200";
+
   return (
     <section
       aria-labelledby="managerial-summary-title"
@@ -52,8 +64,10 @@ export default function ManagerialSummary({
             Managerial summary
           </h2>
         </div>
-        <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-medium text-emerald-200">
-          Grounded proposal data
+        <span
+          className={`rounded-full border px-3 py-1 text-[11px] font-medium ${groundingStatusClass}`}
+        >
+          {groundingStatus}
         </span>
       </div>
 
@@ -78,7 +92,7 @@ export default function ManagerialSummary({
             {summary.isFallback[key] && (
               <p className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500">
                 <AlertTriangle size={12} />
-                Awaiting grounded proposal detail
+                No supported evidence for this field
               </p>
             )}
           </article>
