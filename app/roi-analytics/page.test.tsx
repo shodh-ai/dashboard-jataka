@@ -90,7 +90,7 @@ describe("ROI Analytics page", () => {
     );
   });
 
-  it("shows access denied and does not request ROI data for developers", async () => {
+  it("allows persona-preview testers to load ROI without a frontend role gate", async () => {
     const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo) => {
       const url = String(input);
       if (url.endsWith("/auth/sync")) {
@@ -99,24 +99,25 @@ describe("ROI Analytics page", () => {
           user: { role: "org:member" },
         });
       }
-      throw new Error(`Unexpected protected request: ${url}`);
+      return Response.json({
+        totalTicketsDeflected: 28,
+        averageTimeToResolveSeconds: 90,
+        firstPassAccuracy: 92,
+        generatedAt: "2026-07-27T10:00:00.000Z",
+      });
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const { default: RoiAnalyticsPage } = await import("./page");
     render(<RoiAnalyticsPage />);
 
-    expect(await screen.findByText("Access denied")).toBeInTheDocument();
-    expect(
-      screen.getByText(/available only to workspace architects and auditors/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByLabelText("ROI metrics")).not.toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("28")).toBeInTheDocument();
+    expect(screen.getByLabelText("ROI metrics")).toBeInTheDocument();
     expect(
       fetchMock.mock.calls.some(([input]) =>
         String(input).includes("/auto-resolution/analytics/roi"),
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(screen.getByRole("navigation", { name: "Sidebar" })).toHaveAttribute(
       "data-organization",
       "Member Workspace",

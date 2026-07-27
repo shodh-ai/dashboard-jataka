@@ -22,52 +22,51 @@ import {
   FileCheck2,
   GitCompareArrows,
   ChartNoAxesCombined,
+  BriefcaseBusiness,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { DashboardRole } from "../lib/dashboard-role";
 import {
-  canViewRoiAnalytics,
-  type DashboardRole,
-} from "../lib/dashboard-role";
+  PERSONA_NAVIGATION,
+  type PersonaNavigationItem,
+} from "../lib/dashboard-persona";
+import { usePersona } from "./PersonaProvider";
 
 interface SidebarProps {
   orgName: string;
-  userRole: DashboardRole;
+  userRole?: DashboardRole;
 }
 
-export default function Sidebar({ orgName, userRole }: SidebarProps) {
+const navigationIcons: Record<PersonaNavigationItem["icon"], LucideIcon> = {
+  overview: LayoutDashboard,
+  graph: Network,
+  tests: Activity,
+  status: Activity,
+  risk: ShieldCheck,
+  compliance: Shield,
+  knowledge: BookOpen,
+  ask: MessageSquare,
+  support: Headset,
+  manager: BriefcaseBusiness,
+  roi: ChartNoAxesCombined,
+  drift: GitCompareArrows,
+  audit: FileCheck2,
+  automation: Bot,
+  demo: Sparkles,
+  developer: Terminal,
+  debt: Wrench,
+  integrations: Plug,
+  logs: Activity,
+};
+
+export default function Sidebar({ orgName }: SidebarProps) {
   const { user } = useUser();
   const pathname = usePathname();
+  const { activePersona, activeDefinition } = usePersona();
   const [collapsed, setCollapsed] = useState(false);
-
-  const navItems = [
-    { label: "Overview", href: "/", icon: LayoutDashboard },
-    { label: "Dependency Graph", href: "/dependency-graph", icon: Network },
-    { label: "Active Tests", href: "/active-tests", icon: Activity },
-    { label: "Public Status", href: "/status", icon: Activity },
-    { label: "PR Risk Radar", href: "/pr-radar", icon: ShieldCheck },
-    { label: "Security & Compliance", href: "/compliance", icon: Shield },
-    { label: "Knowledge Q&A", href: "/knowledge-qa", icon: BookOpen },
-    { label: "Ask Support", href: "/ask", icon: MessageSquare },
-    { label: "Support Ops", href: "/support-ops", icon: Headset },
-    ...(canViewRoiAnalytics(userRole)
-      ? [
-          {
-            label: "ROI Analytics",
-            href: "/roi-analytics",
-            icon: ChartNoAxesCombined,
-          },
-        ]
-      : []),
-    { label: "Configuration Drift", href: "/configuration-drift", icon: GitCompareArrows },
-    { label: "Auditor", href: "/auditor", icon: FileCheck2 },
-    { label: "Auto Resolution", href: "/auto-resolution", icon: Bot },
-    { label: "Auto Resolution Demo", href: "/auto-resolution-demo", icon: Sparkles },
-    { label: "Developer Tools", href: "/developer-tools", icon: Terminal },
-    { label: "Tech Debt Cleanup", href: "/tech-debt", icon: Wrench },
-    { label: "Integrations", href: "/integrations", icon: Plug },
-    { label: "Audit Logs", href: "/audit-logs", icon: Activity },
-  ];
+  const navItems = PERSONA_NAVIGATION[activePersona];
 
   const initials = user?.firstName && user?.lastName
     ? `${user.firstName[0]}${user.lastName[0]}`
@@ -94,7 +93,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
               {orgName || "Jataka"}
             </p>
             <p className="text-xs text-[var(--text-muted)] truncate capitalize">
-              {userRole ? userRole.toLowerCase() : "workspace"}
+              {activeDefinition.label} workspace
             </p>
           </div>
         )}
@@ -122,6 +121,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
         {navItems.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0]);
+          const Icon = navigationIcons[item.icon];
           return (
             <Link
               key={item.href}
@@ -133,7 +133,7 @@ export default function Sidebar({ orgName, userRole }: SidebarProps) {
               } ${collapsed ? "justify-center px-0 mx-auto w-10 h-10" : ""}`}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon
+              <Icon
                 size={18}
                 className={`flex-shrink-0 transition-colors ${
                   isActive ? "text-[var(--accent-light)]" : "text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]"

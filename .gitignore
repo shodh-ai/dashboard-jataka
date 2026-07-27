@@ -19,6 +19,13 @@
 
 # production
 /build
+/dist
+
+# temporary persona dashboard preview
+/.openai/hosting.json
+/app/preview/
+/public/hosted-preview/
+/scripts/build-site-preview.mjs
 
 # misc
 .DS_Store

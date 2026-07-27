@@ -4,14 +4,10 @@ import { useAuth, useUser, SignInButton } from "@clerk/nextjs";
 import { useState, useEffect, useCallback } from "react";
 import {
   Check,
-  Activity,
   ShieldCheck,
   AlertTriangle,
-  Crown,
-  Code2,
-  Plug,
-  Network,
-  Brain,
+  ArrowRight,
+  UserRoundCog,
   X,
 } from "lucide-react";
 import ReplayPlayer from "./components/ReplayPlayer";
@@ -19,6 +15,8 @@ import { useOrganizationList } from "@clerk/nextjs";
 import Sidebar from "./components/Sidebar";
 import Link from "next/link";
 import { getSalesforceStatus } from "../lib/salesforce-api";
+import { usePersona } from "./components/PersonaProvider";
+import { PERSONA_NAVIGATION } from "./lib/dashboard-persona";
 
 interface Metrics {
   senior_deflection_rate: number;
@@ -98,6 +96,7 @@ export default function Home() {
   const { setActive, userMemberships, isLoaded: isOrgListLoaded } = useOrganizationList(orgListParams); 
   const { isLoaded, isSignedIn, getToken, orgId } = useAuth();
   const { user } = useUser();
+  const { activePersona, activeDefinition } = usePersona();
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -127,6 +126,13 @@ export default function Home() {
   const [selectedReplay, setSelectedReplay] = useState<string | null>(null);
   const [hasExpiredSalesforceConnection, setHasExpiredSalesforceConnection] =
     useState(false);
+  const personaLinks = PERSONA_NAVIGATION[activePersona].filter(
+    (item) => item.href !== "/",
+  );
+  const showWorkflowDetails = ["ARCHITECT", "DEVELOPER", "ADMIN"].includes(
+    activePersona,
+  );
+  const showSystemSnapshot = !["REQUESTER", "SUPPORT"].includes(activePersona);
 
   useEffect(() => {
     if (!isLoaded || !isOrgListLoaded || !isSignedIn) return;
@@ -619,7 +625,7 @@ export default function Home() {
 
           <div className="flex-1 overflow-y-auto">
             {/* ─── Top Bar ─── */}
-            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-base)] px-6 lg:px-10 h-14">
+            <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border-default)] bg-[var(--bg-base)] px-6 pr-52 lg:px-10 lg:pr-56 h-14">
               <div>
                 <h1 className="text-sm font-medium text-[var(--text-primary)]">Overview</h1>
                 <p className="text-xs text-[var(--text-muted)]">
@@ -634,20 +640,50 @@ export default function Home() {
                   {billingTier === 'FREE' ? 'Free Tier' : billingTier}
                 </span>
 
-                {userRole === 'ARCHITECT' && (
-                  <span className="badge badge-amber">
-                    <Crown size={10} /> Architect
-                  </span>
-                )}
-                {userRole === 'DEVELOPER' && (
-                  <span className="badge badge-indigo">
-                    <Code2 size={10} /> Developer
-                  </span>
-                )}
+                <span className="badge badge-indigo">
+                  <UserRoundCog size={10} /> {activeDefinition.label}
+                </span>
               </div>
             </header>
 
             <div className="px-6 lg:px-10 py-6 max-w-6xl mx-auto">
+              <section className="card mb-6 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-light)]">
+                  Persona workspace
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-[var(--text-primary)]">
+                  {activeDefinition.label}
+                </h2>
+                <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">
+                  {activeDefinition.description}
+                </p>
+                <nav
+                  aria-label={`${activeDefinition.label} shortcuts`}
+                  className="mt-4 flex flex-wrap gap-2"
+                >
+                  {personaLinks.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="btn-secondary text-xs py-1.5"
+                    >
+                      {item.label}
+                      <ArrowRight size={13} />
+                    </Link>
+                  ))}
+                  {showWorkflowDetails && (
+                    <button
+                      type="button"
+                      onClick={refreshQaData}
+                      className="btn-secondary text-xs py-1.5"
+                      disabled={qaLoading}
+                    >
+                      {qaLoading ? "Refreshing…" : "Refresh live data"}
+                    </button>
+                  )}
+                </nav>
+              </section>
+
               {hasExpiredSalesforceConnection && (
                 <section className="mb-6 rounded-xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm text-red-200">
                   <span className="font-semibold">
@@ -662,7 +698,7 @@ export default function Home() {
               )}
 
               {/* ─── Real Snapshot ─── */}
-              <section className="mb-8">
+              {showSystemSnapshot && <section className="mb-8">
                 <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">System Snapshot</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="card p-5 border-l-4 border-[var(--accent)]">
@@ -698,31 +734,10 @@ export default function Home() {
                     <div className="text-3xl font-bold text-[var(--text-primary)] mt-1">{healerLog.length}</div>
                   </div>
                 </div>
-              </section>
-
-              <section className="mb-8">
-                <div className="card p-4 flex flex-wrap items-center gap-3">
-                  <Link href="/dependency-graph" className="btn-secondary text-xs py-1.5">
-                    <Network size={14} /> Dependency Graph
-                  </Link>
-                  <Link href="/integrations" className="btn-secondary text-xs py-1.5">
-                    <Plug size={14} /> Integrations
-                  </Link>
-                  <Link href="/active-tests" className="btn-secondary text-xs py-1.5">
-                    <Activity size={14} /> Active Tests
-                  </Link>
-                  <button
-                    onClick={refreshQaData}
-                    className="btn-secondary text-xs py-1.5"
-                    disabled={qaLoading}
-                  >
-                    {qaLoading ? "Refreshing..." : "Refresh Live Data"}
-                  </button>
-                </div>
-              </section>
+              </section>}
 
               {/* ─── Live Workflows Table ─── */}
-              <section className="mb-8">
+              {showWorkflowDetails && <section className="mb-8">
                 <div className="card overflow-hidden">
                   <div className="px-5 py-4 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-surface)]">
                     <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -781,10 +796,10 @@ export default function Home() {
                     </table>
                   </div>
                 </div>
-              </section>
+              </section>}
 
               {/* ─── Recent Healer Patches ─── */}
-              <section className="mb-8">
+              {showWorkflowDetails && <section className="mb-8">
                 <div className="card p-4">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Recent Healer Activity</h3>
                   {healerLog.length === 0 ? (
@@ -800,7 +815,7 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-              </section>
+              </section>}
             </div>
           </div>
 

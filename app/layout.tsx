@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
+import { PersonaProvider } from "./components/PersonaProvider";
+import PersonaSwitcher from "./components/PersonaSwitcher";
 const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export const metadata: Metadata = {
@@ -19,7 +21,10 @@ export default function RootLayout({
     <ClerkProvider publishableKey={publishableKey}>
       <html lang="en">
         <body className="bg-[var(--bg-base)] text-[var(--text-primary)] antialiased">
-          {children}
+          <PersonaProvider>
+            <PersonaSwitcher />
+            {children}
+          </PersonaProvider>
         </body>
       </html>
     </ClerkProvider>

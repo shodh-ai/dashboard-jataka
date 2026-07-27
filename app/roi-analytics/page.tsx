@@ -13,7 +13,6 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import {
-  canViewRoiAnalytics,
   normalizeDashboardRole,
   type DashboardRole,
 } from "../lib/dashboard-role";
@@ -102,7 +101,9 @@ export default function RoiAnalyticsPage() {
     useState<IdentityStatus>("loading");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const hasRoiAccess = canViewRoiAnalytics(userRole);
+  // Persona preview is intentionally a frontend-only testing control.
+  // The existing API remains responsible for any real data authorization.
+  const hasRoiAccess = true;
 
   const loadIdentity = useCallback(async () => {
     if (!BASE_API) {
@@ -139,7 +140,6 @@ export default function RoiAnalyticsPage() {
       setOrgName(organizationName(payload));
       setUserRole(role);
       setIdentityStatus("ready");
-      if (!canViewRoiAnalytics(role)) setLoading(false);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -152,7 +152,7 @@ export default function RoiAnalyticsPage() {
   }, [getToken]);
 
   const loadAnalytics = useCallback(async () => {
-    if (!BASE_API || !canViewRoiAnalytics(userRole)) return;
+    if (!BASE_API) return;
 
     setLoading(true);
     setError("");
@@ -180,7 +180,7 @@ export default function RoiAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [getToken, userRole]);
+  }, [getToken]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn) void loadIdentity();

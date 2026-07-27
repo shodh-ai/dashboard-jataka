@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
+  BriefcaseBusiness,
   CheckCircle2,
   FileSearch,
   Filter,
@@ -13,7 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import ManagerialSummary from "../components/ManagerialSummary";
 import RichApprovalEvidence, {
@@ -47,7 +48,9 @@ type QueueFilter = "needs_attention" | "all" | "resolved";
 
 export default function SupportOpsPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isManagerView = pathname.startsWith("/manager/");
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("");
   const [cases, setCases] = useState<AutoResolutionCase[]>([]);
@@ -242,16 +245,23 @@ export default function SupportOpsPage() {
       <div className="relative flex min-w-0 flex-1 overflow-hidden">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(16,185,129,0.08),_transparent_50%),radial-gradient(ellipse_at_bottom,_rgba(99,102,241,0.07),_transparent_45%)]"
+          className="hidden"
         />
 
         {/* Queue */}
-        <aside className="relative z-10 flex h-screen w-[340px] shrink-0 flex-col border-r border-slate-800/80 bg-slate-950/50 backdrop-blur-sm">
+        <aside className="relative z-10 flex h-screen w-[340px] shrink-0 flex-col border-r border-slate-800/80 bg-slate-950/50">
           <div className="border-b border-slate-800/80 px-4 py-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-white">Support Ops</p>
-                <p className="text-xs text-slate-500">
+                <p className="text-sm font-semibold text-white">
+                  {isManagerView ? "Decision Queue" : "Support Queue"}
+                </p>
+                {isManagerView && (
+                  <p className="text-xs text-slate-500">
+                    Risk · impact · approval
+                  </p>
+                )}
+                <p className={isManagerView ? "hidden" : "text-xs text-slate-500"}>
                   Approvals · audit · execution
                 </p>
               </div>
@@ -271,7 +281,7 @@ export default function SupportOpsPage() {
             <div className="mt-3 flex items-center gap-1 rounded-xl border border-slate-800 bg-slate-900/60 p-1">
               {(
                 [
-                  ["needs_attention", "Needs you"],
+                  ["needs_attention", isManagerView ? "Decisions" : "Needs you"],
                   ["all", "All"],
                   ["resolved", "Resolved"],
                 ] as const
@@ -372,7 +382,7 @@ export default function SupportOpsPage() {
                   transition={{ duration: 0.25 }}
                   className="flex min-h-0 flex-1 flex-col overflow-hidden"
                 >
-                  <header className="shrink-0 border-b border-slate-800/70 px-6 py-5">
+                  <header className="shrink-0 border-b border-slate-800/70 px-6 py-5 pr-52">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 max-w-3xl">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -395,7 +405,7 @@ export default function SupportOpsPage() {
                         <h1 className="text-lg font-medium leading-7 text-white">
                           {detail.case.issueText}
                         </h1>
-                        <p className="mt-2 font-mono text-[11px] text-slate-600">
+                        <p className={isManagerView ? "hidden" : "mt-2 font-mono text-[11px] text-slate-600"}>
                           case {detail.case.id}
                           {detail.case.proposalHash
                             ? ` · hash ${detail.case.proposalHash.slice(0, 16)}…`
@@ -417,11 +427,146 @@ export default function SupportOpsPage() {
                   </header>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    {managerialSummary && (
+                    {isManagerView && managerialSummary && (
                       <div className="mx-auto w-full max-w-6xl px-6 pt-6">
                         <ManagerialSummary summary={managerialSummary} />
                       </div>
                     )}
+
+                    {isManagerView && (
+                      <div className="mx-auto w-full max-w-6xl px-6 py-6">
+                        <section
+                          aria-labelledby="manager-decision-heading"
+                          className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5"
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-2 text-indigo-300">
+                              <BriefcaseBusiness size={18} />
+                            </span>
+                            <div>
+                              <h2
+                                id="manager-decision-heading"
+                                className="text-base font-semibold text-white"
+                              >
+                                Decision context
+                              </h2>
+                              <p className="mt-1 text-sm leading-6 text-slate-400">
+                                Review the proposed outcome and its risk before
+                                making a decision.
+                              </p>
+                            </div>
+                          </div>
+
+                          <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <DecisionFact
+                              label="Recommended action"
+                              value={
+                                detail.case.proposalSnapshot
+                                  ?.proposedActionType
+                              }
+                            />
+                            <DecisionFact
+                              label="Risk"
+                              value={detail.case.proposalSnapshot?.risk}
+                            />
+                            <DecisionFact
+                              label="Approval level"
+                              value={detail.case.approvalTier}
+                            />
+                            <DecisionFact
+                              label="Confidence"
+                              value={
+                                typeof detail.case.confidenceScore === "number"
+                                  ? `${Math.round(
+                                      detail.case.confidenceScore * 100,
+                                    )}%`
+                                  : undefined
+                              }
+                            />
+                          </dl>
+
+                          <div className="mt-5">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                              Proposed outcome
+                            </h3>
+                            <p className="mt-2 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-sm leading-6 text-slate-200">
+                              {detail.case.proposalSnapshot?.answer ||
+                                "No proposal has been prepared yet."}
+                            </p>
+                          </div>
+
+                          <div className="mt-5 border-t border-slate-800 pt-5">
+                            {!pendingApproval ? (
+                              <p className="text-sm text-slate-400">
+                                No managerial decision is pending for this case.
+                              </p>
+                            ) : (
+                              <>
+                                <p className="text-sm leading-6 text-slate-300">
+                                  {willExecute
+                                    ? "Approving authorizes the proposed action and its validation."
+                                    : "Approving sends this case for human follow-up. No automated external change will run."}
+                                </p>
+                                <label
+                                  htmlFor="manager-decision-note"
+                                  className="mt-4 block text-xs font-medium text-slate-400"
+                                >
+                                  Decision note
+                                </label>
+                                <textarea
+                                  id="manager-decision-note"
+                                  value={decisionNote}
+                                  onChange={(event) =>
+                                    setDecisionNote(event.target.value)
+                                  }
+                                  rows={3}
+                                  placeholder="Optional context for the audit record"
+                                  className="input mt-2 w-full resize-none text-sm"
+                                />
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      deciding ||
+                                      !approvalEvidenceGate.allowed
+                                    }
+                                    onClick={() => decide("APPROVED")}
+                                    className="inline-flex min-w-[150px] flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {deciding ? (
+                                      <Loader2
+                                        size={16}
+                                        className="animate-spin"
+                                      />
+                                    ) : (
+                                      <CheckCircle2 size={16} />
+                                    )}
+                                    Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={deciding}
+                                    onClick={() => decide("REJECTED")}
+                                    className="inline-flex min-w-[150px] flex-1 items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-200 transition hover:bg-red-500/20 disabled:opacity-50"
+                                  >
+                                    <XCircle size={16} />
+                                    Reject
+                                  </button>
+                                </div>
+                                {!approvalEvidenceGate.allowed && (
+                                  <p className="mt-3 text-xs leading-5 text-amber-300">
+                                    This decision is waiting for the required
+                                    evidence to be verified.
+                                  </p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </section>
+                      </div>
+                    )}
+
+                    {!isManagerView && (
                     <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                       {/* Left: proposal + approval */}
                       <section className="min-w-0 space-y-6 border-b border-slate-800/60 px-6 py-6 lg:border-b-0 lg:border-r">
@@ -761,6 +906,7 @@ export default function SupportOpsPage() {
                         )}
                       </section>
                     </div>
+                    )}
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -792,6 +938,25 @@ function TechMeta({
       {hint && (
         <p className="mt-1 text-[11px] leading-4 text-slate-600">{hint}</p>
       )}
+    </div>
+  );
+}
+
+function DecisionFact({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+      <dt className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+        {label}
+      </dt>
+      <dd className="mt-1 break-words text-sm font-medium text-slate-200">
+        {value || "Not available"}
+      </dd>
     </div>
   );
 }
