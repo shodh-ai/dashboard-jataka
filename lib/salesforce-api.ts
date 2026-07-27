@@ -19,6 +19,10 @@ export interface SalesforceConnectionResponse {
   auth_expired_at?: string | null;
 }
 
+interface OAuthUrlResponse {
+  url: string;
+}
+
 /**
  * Check Salesforce connection status for the current organization
  */
@@ -62,11 +66,11 @@ export async function connectSalesforce(authToken: string, role: string = 'admin
       throw new Error(error.message || 'Failed to get authorization URL');
     }
 
-    const { url } = await response.json();
+    const { url } = await response.json() as OAuthUrlResponse;
 
     // Now redirect the browser to Salesforce authorization page
     window.location.href = url;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to initiate Salesforce OAuth:', error);
     throw error;
   }

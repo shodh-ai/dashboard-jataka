@@ -30,6 +30,7 @@ import {
 // Custom components
 import GlassNode, { GlassNodeData } from './graph/GlassNode';
 import AnimatedEdge, { EdgeMarkerDefs, AnimatedEdgeData } from './graph/AnimatedEdge';
+import type { BlastRadiusGraph } from '../auto-resolution/types';
 
 // --- Custom Node & Edge Types ---
 const nodeTypes = {
@@ -90,6 +91,63 @@ interface ApiEdge {
   source: string;
   target: string;
   relationType?: string;
+}
+
+export function BlastRadiusVisualizer({ graph }: { graph: BlastRadiusGraph }) {
+  const layouted = useMemo(() => {
+    const rawNodes: Node<GlassNodeData>[] = graph.nodes.map((node) => ({
+      id: node.id,
+      type: 'glassNode',
+      data: {
+        label: node.label,
+        type: ['Field', 'Apex', 'Flow'].includes(node.type)
+          ? (node.type as GlassNodeData['type'])
+          : 'Flow',
+        risk: ['Critical', 'High'].includes(node.risk) ? 'Critical' : 'Safe',
+        apiName: node.apiName || node.id,
+        timelineStatus:
+          node.change === 'REMOVED' ? 'deleted' : node.change === 'ADDED' ? 'new' : 'unchanged',
+      },
+      position: { x: 0, y: 0 },
+    }));
+    const rawEdges: Edge<AnimatedEdgeData>[] = graph.edges.map((edge, index) => ({
+      id: edge.id || `blast-edge-${index}`,
+      source: edge.source,
+      target: edge.target,
+      type: 'animatedEdge',
+      data: { label: edge.relationType },
+    }));
+    return getLayoutedElements(rawNodes, rawEdges);
+  }, [graph]);
+
+  return (
+    <div
+      className="relative h-[360px] overflow-hidden rounded-xl border border-slate-800 bg-slate-950"
+      role="img"
+      aria-label={`Blast radius graph with ${graph.nodes.length} components and ${graph.edges.length} dependencies`}
+    >
+      <EdgeMarkerDefs />
+      <ReactFlow
+        nodes={layouted.nodes}
+        edges={layouted.edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable
+        proOptions={{ hideAttribution: true }}
+        minZoom={0.25}
+        maxZoom={1.5}
+      >
+        <Background variant={BackgroundVariant.Dots} color="#1e293b" gap={24} size={1} />
+        <Controls showInteractive={false} />
+      </ReactFlow>
+      <span className="sr-only">
+        {graph.nodes.map((node) => `${node.label}, ${node.type}, ${node.risk} risk`).join('; ')}
+      </span>
+    </div>
+  );
 }
 
 // --- Main Component ---

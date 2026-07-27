@@ -18,10 +18,20 @@ interface ExposureRow {
   sharing_rules_applied: string[];
 }
 
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
+  name: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function CompliancePage() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const [repoId, setRepoId] = useState<string | null>(null);
-  const [brains, setBrains] = useState<any[]>([]);
+  const [brains, setBrains] = useState<Brain[]>([]);
   const [objects, setObjects] = useState<string[]>([]);
   const [selectedObject, setSelectedObject] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +64,7 @@ export default function CompliancePage() {
           const data = await res.json();
           setBrains(data.brains || []);
           const active =
-            data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
+            data.brains?.find((b: Brain) => b.id === data.activeBrainId) || data.brains?.[0];
           if (active) setRepoId(active.knowledgeBaseId);
         }
       } catch (e) {
@@ -113,9 +123,9 @@ export default function CompliancePage() {
           setExposureRows(data.exposed_to_public_internet ?? []);
           setExposureError(null);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Experience Cloud X-Ray failed", e);
-        setExposureError(e?.message ?? "Unknown error");
+        setExposureError(getErrorMessage(e, "Unknown error"));
         setExposureRows(null);
       }
     }
@@ -177,8 +187,8 @@ export default function CompliancePage() {
       const data = await res.json();
       setFieldName(resolvedField);
       setAccessList(data.access_list);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Field not found or scan failed."));
       setAccessList(null);
     } finally {
       setLoading(false);
@@ -217,7 +227,7 @@ export default function CompliancePage() {
                 setExposureError(null);
               }}
             >
-              {brains.map((b: any) => (
+              {brains.map((b) => (
                 <option key={b.id} value={b.knowledgeBaseId}>
                   {b.name}
                 </option>
@@ -233,7 +243,7 @@ export default function CompliancePage() {
             Compliance X-Ray
           </h2>
           <p className="text-[var(--text-secondary)] mt-2">
-            Instantly generate "Net Effective Access" reports for auditors (SOC2, SOX). Type a sensitive Field API Name to see exactly which Profiles and Permission Sets grant access to it.
+            Instantly generate &quot;Net Effective Access&quot; reports for auditors (SOC2, SOX). Type a sensitive Field API Name to see exactly which Profiles and Permission Sets grant access to it.
           </p>
         </div>
 

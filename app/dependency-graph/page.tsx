@@ -8,11 +8,17 @@ import GraphVisualizer from "../components/GraphVisualizer";
 
 const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
+  name: string;
+}
+
 export default function DependencyGraphPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const [orgName, setOrgName] = useState("Jataka");
   const [userRole, setUserRole] = useState<"ARCHITECT" | "DEVELOPER" | "">("ARCHITECT");
-  const [brains, setBrains] = useState<any[]>([]);
+  const [brains, setBrains] = useState<Brain[]>([]);
   const [activeBrain, setActiveBrain] = useState("");
 
   useEffect(() => {
@@ -44,7 +50,7 @@ export default function DependencyGraphPage() {
           const list = Array.isArray(brainsData.brains) ? brainsData.brains : [];
           setBrains(list);
           if (list.length > 0) {
-            const current = list.find((b: any) => b.id === brainsData.activeBrainId);
+            const current = list.find((b: Brain) => b.id === brainsData.activeBrainId);
             const selected = current || list[0];
             setActiveBrain(selected.knowledgeBaseId);
           }
@@ -86,7 +92,7 @@ export default function DependencyGraphPage() {
               onChange={async (e) => {
                 const kb = e.target.value;
                 setActiveBrain(kb);
-                const brain = brains.find((b: any) => b.knowledgeBaseId === kb);
+                const brain = brains.find((b) => b.knowledgeBaseId === kb);
                 const token = await getToken();
                 if (brain && token && BASE_API) {
                   await fetch(`${BASE_API}/curriculum/switch`, {
@@ -100,7 +106,7 @@ export default function DependencyGraphPage() {
                 }
               }}
             >
-              {brains.length > 0 ? brains.map((b: any) => (
+              {brains.length > 0 ? brains.map((b) => (
                 <option key={b.id} value={b.knowledgeBaseId}>{b.name}</option>
               )) : <option value="">No brains</option>}
             </select>

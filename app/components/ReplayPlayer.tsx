@@ -2,11 +2,16 @@
 
 import { useEffect, useRef } from "react";
 import rrwebPlayer from "rrweb-player";
+import type { eventWithTime } from "@rrweb/types";
 import "rrweb-player/dist/style.css";
 
 interface ReplayPlayerProps {
   eventsUrl: string;
 }
+
+type ReplayPlayerInstance = rrwebPlayer & {
+  $destroy?: () => void;
+};
 
 const getPlayerSize = (container: HTMLDivElement) => {
   const rect = container.getBoundingClientRect();
@@ -20,20 +25,25 @@ const getPlayerSize = (container: HTMLDivElement) => {
 
 export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<ReplayPlayerInstance | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || !eventsUrl) return;
 
-    containerRef.current.innerHTML = "";
+    const container = containerRef.current;
+    container.innerHTML = "";
 
     const fetchAndPlay = async () => {
       try {
          const res = await fetch(eventsUrl, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch recording data");
 
-         const data = await res.json();
-         const events = Array.isArray(data) ? data : data?.events;
+         const data: unknown = await res.json();
+         const events = Array.isArray(data)
+           ? data
+           : typeof data === "object" && data !== null && "events" in data
+             ? (data as { events?: unknown }).events
+             : undefined;
          
          if (!Array.isArray(events) || events.length === 0) {
            throw new Error(
@@ -41,11 +51,11 @@ export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
            );
          }
 
-        const size = getPlayerSize(containerRef.current!);
+        const size = getPlayerSize(container);
           playerRef.current = new rrwebPlayer({
-          target: containerRef.current!,
+          target: container,
           props: {
-            events,
+            events: events as eventWithTime[],
             autoPlay: true,
             showController: true,
             width: size.width,
@@ -62,8 +72,7 @@ export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
          } catch {}
       } catch (err) {
         console.error(err);
-         if (!containerRef.current) return;
-         containerRef.current.innerHTML = `
+         container.innerHTML = `
           <div style="color:red; padding:16px; text-align:center;">
              Failed to load replay data
           </div>
@@ -78,7 +87,7 @@ export default function ReplayPlayer({ eventsUrl }: ReplayPlayerProps) {
          playerRef.current?.$destroy?.();
        } catch {}
        playerRef.current = null;
-       containerRef.current!.innerHTML = "";
+       container.innerHTML = "";
     };
   }, [eventsUrl]);
 

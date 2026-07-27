@@ -27,6 +27,7 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
   --shadow-glow: 0 0 20px -5px var(--accent-glow);
+  --font-inter: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 }
 
 @theme inline {

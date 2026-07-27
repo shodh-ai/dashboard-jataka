@@ -2,12 +2,17 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { Wrench, Search, Trash2, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
+import { Wrench, Search, Trash2, AlertTriangle, CheckCircle } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 interface OrphanField {
   api_name: string;
   label: string;
+}
+
+interface Brain {
+  id: string;
+  knowledgeBaseId: string;
 }
 
 export default function TechDebtPage() {
@@ -33,7 +38,7 @@ export default function TechDebtPage() {
         if (res.ok) {
           const data = await res.json();
           // Find active brain
-          const active = data.brains?.find((b: any) => b.id === data.activeBrainId) || data.brains?.[0];
+          const active = data.brains?.find((b: Brain) => b.id === data.activeBrainId) || data.brains?.[0];
           if (active) setRepoId(active.knowledgeBaseId);
         }
       } catch (e) {
@@ -67,8 +72,8 @@ export default function TechDebtPage() {
       const data = await res.json();
       setOrphans(data.orphans || []);
       setHasScanned(true);
-    } catch (err: any) {
-      setError(err.message || "An error occurred during scanning.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred during scanning.");
     } finally {
       setLoading(false);
     }
@@ -93,8 +98,8 @@ export default function TechDebtPage() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-2">Autonomous Org Optimization</h2>
           <p className="text-[var(--text-secondary)] max-w-3xl">
-            Jataka's Neo4j Knowledge Graph continuously maps your Salesforce metadata. 
-            Because we understand every dependency, we can definitively identify <strong>"Orphaned Fields"</strong>—fields that take up space but are never referenced by Apex, Flows, or Layouts.
+            Jataka&apos;s Neo4j Knowledge Graph continuously maps your Salesforce metadata.
+            Because we understand every dependency, we can definitively identify <strong>&quot;Orphaned Fields&quot;</strong>—fields that take up space but are never referenced by Apex, Flows, or Layouts.
           </p>
         </div>
 

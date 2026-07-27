@@ -49,6 +49,10 @@ type ApiKeyRecord = {
   keyPreview: string;
 };
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export default function IntegrationsAndSetupPage() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   
@@ -219,7 +223,7 @@ export default function IntegrationsAndSetupPage() {
       setGeneratedKey(data?.key || null);
       setCopiedKey(false);
       await fetchKeys();
-    } catch (error) {
+    } catch {
       alert("Failed to create API key");
     } finally {
       setCreatingKey(false);
@@ -238,7 +242,7 @@ export default function IntegrationsAndSetupPage() {
       });
       if (!res.ok) throw new Error("Failed to revoke key");
       await fetchKeys();
-    } catch (error) {
+    } catch {
       alert("Failed to revoke API key");
     }
   };
@@ -250,7 +254,7 @@ export default function IntegrationsAndSetupPage() {
       const token = await getToken();
       const data = token ? await getSalesforceStatus(token) :[];
       setSalesforceConnections(data || []);
-    } catch (e) {
+    } catch {
       setSalesforceConnections([]);
     } finally {
       setCheckingSalesforce(false);
@@ -283,8 +287,8 @@ export default function IntegrationsAndSetupPage() {
       setIsSyncingSchema(true);
       await syncSalesforceSchema(token);
       alert('Schema sync started! Standard and custom metadata are updating in the background.');
-    } catch (error: any) {
-      alert(`Failed to sync schema: ${error.message || 'Unknown error'}`);
+    } catch (error: unknown) {
+      alert(`Failed to sync schema: ${getErrorMessage(error)}`);
     } finally {
       setIsSyncingSchema(false);
     }
@@ -301,8 +305,8 @@ export default function IntegrationsAndSetupPage() {
       });
       if (!res.ok) throw new Error("Failed to start dependency sync");
       alert('Impact Graph sync started! Navigating connections in the background. 🕸️');
-    } catch (error: any) {
-      alert(`Failed to sync impact graph: ${error.message || 'Unknown error'}`);
+    } catch (error: unknown) {
+      alert(`Failed to sync impact graph: ${getErrorMessage(error)}`);
     } finally {
       setIsSyncingDependencies(false);
     }
@@ -320,7 +324,7 @@ export default function IntegrationsAndSetupPage() {
         setJiraInfo(data);
         setNewProjectKey(data.project_key || "");
       }
-    } catch (e) {
+    } catch {
       setJiraConnected(false);
     } finally {
       setCheckingJira(false);
@@ -339,7 +343,7 @@ export default function IntegrationsAndSetupPage() {
     try {
       await disconnectJira(token);
       await checkJiraConnection();
-    } catch (error) {
+    } catch {
       alert("Failed to disconnect Jira");
     }
   };
@@ -353,7 +357,7 @@ export default function IntegrationsAndSetupPage() {
       await updateJiraProjectKey({ projectKey: newProjectKey.toUpperCase() }, token);
       setEditingProjectKey(false);
       await checkJiraConnection();
-    } catch (error) {
+    } catch {
       alert("Failed to update Jira Project Key");
     } finally {
       setUpdatingJira(false);
@@ -840,7 +844,7 @@ export default function IntegrationsAndSetupPage() {
                     <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg flex gap-2">
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
                       <p className="text-sm text-yellow-200">
-                        Your GitHub integration isn't fully set up yet. Go back to <strong>Step 1</strong> to connect GitHub, and this snippet will automatically update with your actual <code className="bg-black/40 px-1 rounded">installation_id</code>.
+                        Your GitHub integration isn&apos;t fully set up yet. Go back to <strong>Step 1</strong> to connect GitHub, and this snippet will automatically update with your actual <code className="bg-black/40 px-1 rounded">installation_id</code>.
                       </p>
                     </div>
                   )}
@@ -948,7 +952,7 @@ export default function IntegrationsAndSetupPage() {
                       <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CheckCircle className="w-8 h-8 text-emerald-400" />
                       </div>
-                      <h3 className="text-xl font-bold text-white mb-2">You're All Set!</h3>
+                      <h3 className="text-xl font-bold text-white mb-2">You&apos;re All Set!</h3>
                       <p className="text-gray-400 text-sm">Your pipeline is fully configured. Open a PR in your repository to see Jataka AI in action.</p>
                     </div>
                   )}
