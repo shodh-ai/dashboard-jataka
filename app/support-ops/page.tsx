@@ -42,6 +42,8 @@ import { buildManagerialSummary } from "../auto-resolution/managerial-summary";
 
 const BASE_API =
   process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL;
+const INSUFFICIENT_PROPOSAL =
+  /(?:not enough|(?:do not|don't) have enough|insufficient)\s+(?:grounded\s+)?(?:context|information)|cannot answer|couldn't find|not covered/i;
 
 type QueueFilter = "needs_attention" | "all" | "resolved";
 
@@ -158,6 +160,14 @@ export default function SupportOpsPage() {
     () => (detail ? buildManagerialSummary(detail.case) : null),
     [detail],
   );
+  const proposedResolution = useMemo(() => {
+    const answer = detail?.case.proposalSnapshot?.answer?.trim();
+    if (answer && !INSUFFICIENT_PROPOSAL.test(answer)) return answer;
+    if (managerialSummary && !managerialSummary.isFallback.fix) {
+      return managerialSummary.fix;
+    }
+    return answer || "No proposal drafted yet.";
+  }, [detail?.case.proposalSnapshot?.answer, managerialSummary]);
 
   async function decide(decision: "APPROVED" | "REJECTED") {
     if (!detail || !pendingApproval) return;
@@ -430,8 +440,7 @@ export default function SupportOpsPage() {
                             Proposed resolution
                           </p>
                           <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 px-4 py-4 text-sm leading-7 text-slate-200 whitespace-pre-wrap">
-                            {detail.case.proposalSnapshot?.answer ||
-                              "No proposal drafted yet."}
+                            {proposedResolution}
                           </div>
                         </div>
 
