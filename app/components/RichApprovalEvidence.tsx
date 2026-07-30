@@ -179,6 +179,8 @@ export default function RichApprovalEvidence({
         )}
         {finalized ? (
           <StatusBadge label="Evidence hash-bound" good />
+        ) : gate?.required && gate.allowed ? (
+          <StatusBadge label="Evidence verified" good />
         ) : evidence.verification ? (
           <StatusBadge
             label={`Evidence ${evidence.verification.status.toLowerCase()}`}

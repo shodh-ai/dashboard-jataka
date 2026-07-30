@@ -244,6 +244,28 @@ describe("rich approval evidence gate", () => {
     expect(screen.queryByText("Evidence pending")).not.toBeInTheDocument();
   });
 
+  it("shows pending human approval as verified when the L3 evidence gate passes", () => {
+    const normalized = normalizeRichApprovalEvidence({
+      ...backendEvidence,
+      verification: {
+        status: "PENDING",
+      },
+    });
+    const gate = evaluateApprovalEvidence({
+      supportLevel: "L3",
+      actionType: "PREPARE_PATCH",
+      caseProposalHash: "proposal-123",
+      evidence: normalized,
+    });
+
+    expect(gate.allowed).toBe(true);
+
+    render(<RichApprovalEvidence evidence={normalized} gate={gate} />);
+
+    expect(screen.getByText("Evidence verified")).toBeInTheDocument();
+    expect(screen.queryByText("Evidence pending")).not.toBeInTheDocument();
+  });
+
   it("does not require the rich gate for a non-L3 answer", () => {
     expect(
       evaluateApprovalEvidence({
