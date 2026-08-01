@@ -97,6 +97,8 @@ interface ApiNode {
   id: string;
   label: string;
   type: string;
+  metadataType?: string;
+  apiName?: string;
   risk: string;
   createdAt?: string;
 }
@@ -108,9 +110,9 @@ interface ApiEdge {
 }
 
 const graphNodeType = (value: string): GlassNodeData['type'] => {
-  return ['Object', 'Field', 'Apex', 'Flow'].includes(value)
+  return ['Object', 'Field', 'Apex', 'Flow', 'Security', 'UI', 'Analytics', 'Metadata'].includes(value)
     ? (value as GlassNodeData['type'])
-    : 'Flow';
+    : 'Metadata';
 };
 
 export function BlastRadiusVisualizer({ graph }: { graph: BlastRadiusGraph }) {
@@ -121,6 +123,7 @@ export function BlastRadiusVisualizer({ graph }: { graph: BlastRadiusGraph }) {
       data: {
         label: node.label,
         type: graphNodeType(node.type),
+        metadataType: node.type,
         risk: ['Critical', 'High'].includes(node.risk) ? 'Critical' : 'Safe',
         apiName: node.apiName || node.id,
         timelineStatus:
@@ -373,8 +376,9 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         data: { 
           label: n.label,
           type: graphNodeType(n.type),
+          metadataType: n.metadataType,
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
-          apiName: n.id,
+          apiName: n.apiName || n.id,
           createdAt: n.createdAt, // Map real timestamp from Neo4j
           timelineStatus: 'unchanged' as const,
           isHighlighted: false,
@@ -455,8 +459,9 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         data: { 
           label: n.label,
           type: graphNodeType(n.type),
+          metadataType: n.metadataType,
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
-          apiName: n.id,
+          apiName: n.apiName || n.id,
           createdAt: n.createdAt,
           timelineStatus: 'unchanged' as const,
           isHighlighted: false,
@@ -509,6 +514,9 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
     if (type === 'Field') return '#3b82f6';
     if (type === 'Apex') return '#10b981';
     if (type === 'Flow') return '#a855f7';
+    if (type === 'Security') return '#fb7185';
+    if (type === 'UI') return '#22d3ee';
+    if (type === 'Analytics') return '#a3e635';
     return '#64748b';
   };
 
@@ -579,7 +587,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
                          }`}
               placeholder={isAiMode 
                 ? "e.g., Show me all critical Apex classes..." 
-                : "Enter a field name"}
+                : "Enter any object, field, Flow, class, or metadata name"}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -710,12 +718,12 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
               <p className="mt-4 text-slate-600 text-sm font-mono">
                 {isAiMode 
                   ? "Ask a question about your Salesforce metadata" 
-                  : "Enter a field name to trace dependencies"}
+                  : "Enter any Salesforce entity to trace its full neighborhood"}
               </p>
               <p className="mt-1 text-slate-700 text-xs">
                 {isAiMode 
                   ? "e.g., \"Show me all flows that update Account\"" 
-                  : "Field → Apex Classes → Flows & Triggers"}
+                  : "Objects → fields, Apex, Flows, UI, security, analytics, and metadata"}
               </p>
             </motion.div>
           )}
@@ -833,8 +841,8 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
       </div>
       
       {/* Legend */}
-      <div className="px-4 py-2.5 bg-slate-900/50 border-t border-white/5 flex items-center justify-between">
-        <div className="flex gap-5 text-[11px] text-slate-500">
+      <div className="px-4 py-2.5 bg-slate-900/50 border-t border-white/5 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[10px] text-slate-500">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
             <span className="font-mono">OBJECT</span>
@@ -850,6 +858,22 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50" />
             <span className="font-mono">FLOW</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-400" />
+            <span className="font-mono">SECURITY</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+            <span className="font-mono">UI</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-lime-400" />
+            <span className="font-mono">ANALYTICS</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-slate-400" />
+            <span className="font-mono">OTHER</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />

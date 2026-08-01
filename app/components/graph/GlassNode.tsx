@@ -3,11 +3,33 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
-import { Boxes, Database, Shield, Zap, Trash2, Sparkles } from 'lucide-react';
+import {
+  BarChart3,
+  Boxes,
+  Database,
+  FileCode2,
+  LayoutDashboard,
+  LockKeyhole,
+  Shield,
+  Sparkles,
+  Trash2,
+  Zap,
+} from 'lucide-react';
+
+export type GraphNodeCategory =
+  | 'Object'
+  | 'Field'
+  | 'Apex'
+  | 'Flow'
+  | 'Security'
+  | 'UI'
+  | 'Analytics'
+  | 'Metadata';
 
 export interface GlassNodeData {
   label: string;
-  type: 'Object' | 'Field' | 'Apex' | 'Flow';
+  type: GraphNodeCategory;
+  metadataType?: string;
   risk: 'Critical' | 'Safe';
   apiName?: string;
   createdAt?: string;
@@ -40,6 +62,30 @@ const typeConfig = {
     color: 'text-purple-400',
     bgGlow: 'shadow-purple-500/20',
     borderColor: 'border-purple-500/30',
+  },
+  Security: {
+    icon: LockKeyhole,
+    color: 'text-rose-400',
+    bgGlow: 'shadow-rose-500/20',
+    borderColor: 'border-rose-500/30',
+  },
+  UI: {
+    icon: LayoutDashboard,
+    color: 'text-cyan-400',
+    bgGlow: 'shadow-cyan-500/20',
+    borderColor: 'border-cyan-500/30',
+  },
+  Analytics: {
+    icon: BarChart3,
+    color: 'text-lime-400',
+    bgGlow: 'shadow-lime-500/20',
+    borderColor: 'border-lime-500/30',
+  },
+  Metadata: {
+    icon: FileCode2,
+    color: 'text-slate-300',
+    bgGlow: 'shadow-slate-400/20',
+    borderColor: 'border-slate-400/30',
   },
 };
 
@@ -140,7 +186,7 @@ const GlassNode = ({ data, selected }: NodeProps<GlassNodeData>) => {
             </p>
           )}
           <p className={`text-[9px] mt-1 uppercase tracking-wider ${config.color} opacity-70`}>
-            {data.type}
+            {data.metadataType || data.type}
           </p>
         </div>
       </div>
