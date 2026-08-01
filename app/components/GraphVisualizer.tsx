@@ -43,6 +43,20 @@ const edgeTypes = {
 
 // --- Layout Logic (Increased Spacing for Readability) ---
 const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'LR') => {
+  if (edges.length === 0) {
+    const columns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(nodes.length))));
+    return {
+      nodes: nodes.map((node, index) => ({
+        ...node,
+        position: {
+          x: (index % columns) * 260,
+          y: Math.floor(index / columns) * 130,
+        },
+      })),
+      edges,
+    };
+  }
+
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   // nodesep: Horizontal spacing between nodes in a row
@@ -93,6 +107,12 @@ interface ApiEdge {
   relationType?: string;
 }
 
+const graphNodeType = (value: string): GlassNodeData['type'] => {
+  return ['Object', 'Field', 'Apex', 'Flow'].includes(value)
+    ? (value as GlassNodeData['type'])
+    : 'Flow';
+};
+
 export function BlastRadiusVisualizer({ graph }: { graph: BlastRadiusGraph }) {
   const layouted = useMemo(() => {
     const rawNodes: Node<GlassNodeData>[] = graph.nodes.map((node) => ({
@@ -100,9 +120,7 @@ export function BlastRadiusVisualizer({ graph }: { graph: BlastRadiusGraph }) {
       type: 'glassNode',
       data: {
         label: node.label,
-        type: ['Field', 'Apex', 'Flow'].includes(node.type)
-          ? (node.type as GlassNodeData['type'])
-          : 'Flow',
+        type: graphNodeType(node.type),
         risk: ['Critical', 'High'].includes(node.risk) ? 'Critical' : 'Safe',
         apiName: node.apiName || node.id,
         timelineStatus:
@@ -353,7 +371,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         type: 'glassNode',
         data: { 
           label: n.label,
-          type: (n.type as 'Field' | 'Apex' | 'Flow') || 'Flow',
+          type: graphNodeType(n.type),
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
           apiName: n.id,
           createdAt: n.createdAt, // Map real timestamp from Neo4j
@@ -427,7 +445,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         type: 'glassNode',
         data: { 
           label: n.label,
-          type: (n.type as 'Field' | 'Apex' | 'Flow') || 'Flow',
+          type: graphNodeType(n.type),
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
           apiName: n.id,
           createdAt: n.createdAt,
@@ -478,6 +496,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
   // MiniMap node color
   const nodeColor = (node: Node<GlassNodeData>) => {
     const type = node.data?.type;
+    if (type === 'Object') return '#f59e0b';
     if (type === 'Field') return '#3b82f6';
     if (type === 'Apex') return '#10b981';
     if (type === 'Flow') return '#a855f7';
@@ -806,6 +825,10 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
       {/* Legend */}
       <div className="px-4 py-2.5 bg-slate-900/50 border-t border-white/5 flex items-center justify-between">
         <div className="flex gap-5 text-[11px] text-slate-500">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
+            <span className="font-mono">OBJECT</span>
+          </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" />
             <span className="font-mono">FIELD</span>

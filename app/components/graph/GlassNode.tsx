@@ -3,11 +3,11 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { motion } from 'framer-motion';
-import { Database, Shield, Zap, Trash2, Sparkles } from 'lucide-react';
+import { Boxes, Database, Shield, Zap, Trash2, Sparkles } from 'lucide-react';
 
 export interface GlassNodeData {
   label: string;
-  type: 'Field' | 'Apex' | 'Flow';
+  type: 'Object' | 'Field' | 'Apex' | 'Flow';
   risk: 'Critical' | 'Safe';
   apiName?: string;
   createdAt?: string;
@@ -17,6 +17,12 @@ export interface GlassNodeData {
 }
 
 const typeConfig = {
+  Object: {
+    icon: Boxes,
+    color: 'text-amber-400',
+    bgGlow: 'shadow-amber-500/20',
+    borderColor: 'border-amber-500/30',
+  },
   Field: {
     icon: Database,
     color: 'text-blue-400',
