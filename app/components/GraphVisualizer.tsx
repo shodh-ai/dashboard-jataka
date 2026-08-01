@@ -313,9 +313,10 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
   }, []);
 
   // Fetch data
-  const handleSearch = async () => {
+  const handleSearch = async (searchOverride?: string) => {
     const freshToken = await getToken();
-    if (!searchTerm.trim() || !baseUrl) return;
+    const requestedSearch = searchOverride?.trim() || searchTerm.trim();
+    if (!requestedSearch || !baseUrl) return;
     
     setNodes([]);
     setEdges([]);
@@ -336,7 +337,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
             'Content-Type': 'application/json',
             Authorization: `Bearer ${freshToken}` 
           },
-          body: JSON.stringify({ query: searchTerm, curriculumId: activeBrainId }),
+          body: JSON.stringify({ query: requestedSearch, curriculumId: activeBrainId }),
         });
         setAiStatus(null);
       } else {
@@ -347,7 +348,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
             'Content-Type': 'application/json',
             Authorization: `Bearer ${freshToken}` 
           },
-          body: JSON.stringify({ field_name: searchTerm , curriculumId: activeBrainId }),
+          body: JSON.stringify({ field_name: requestedSearch , curriculumId: activeBrainId }),
         });
       }
 
@@ -394,7 +395,8 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         },
       }));
 
-      const layouted = getLayoutedElements(rawNodes, rawEdges);
+      const layoutDirection = data.layoutDirection === 'TB' ? 'TB' : 'LR';
+      const layouted = getLayoutedElements(rawNodes, rawEdges, layoutDirection);
       setNodes(layouted.nodes);
       setEdges(layouted.edges);
 
@@ -405,6 +407,13 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
       setLoading(false);
       setAiStatus(null);
     }
+  };
+
+  const handleNodeDoubleClick = (_: React.MouseEvent, node: Node<GlassNodeData>) => {
+    if (node.data.type !== 'Flow' || node.data.apiName?.includes('.')) return;
+    const executionQuery = `show ${node.data.apiName || node.data.label} flow`;
+    setSearchTerm(executionQuery);
+    void handleSearch(executionQuery);
   };
 
   // Execute edited/raw Cypher query
@@ -582,7 +591,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
             )}
           </div>
           <button 
-            onClick={handleSearch}
+            onClick={() => handleSearch()}
             disabled={loading}
             className={`px-5 py-2.5 text-white text-sm font-medium rounded-lg 
                        transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg ${
@@ -735,6 +744,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
           onEdgesChange={onEdgesChange}
           onNodeMouseEnter={onNodeMouseEnter}
           onNodeMouseLeave={onNodeMouseLeave}
+          onNodeDoubleClick={handleNodeDoubleClick}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
