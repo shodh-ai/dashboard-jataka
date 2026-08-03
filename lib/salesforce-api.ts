@@ -19,6 +19,66 @@ export interface SalesforceConnectionResponse {
   auth_expired_at?: string | null;
 }
 
+export interface SalesforceIngestionTrustResponse {
+  auth: {
+    connected: boolean;
+    status: string;
+    error: string | null;
+    expiredAt: string | null;
+  };
+  freshness: {
+    freshAsOf: string | null;
+    ageHours: number | null;
+    stale: boolean;
+    thresholdHours: number;
+  };
+  latestRun: null | {
+    id: string;
+    status: "RUNNING" | "PARTIAL" | "SUCCEEDED" | "FAILED" | string;
+    currentStage: string;
+    startedAt: string;
+    completedAt: string | null;
+    coverageSummary?: {
+      accessibleContextPercent: number;
+      definition: string;
+      failures: number;
+      schema: { completed: number; discovered: number; percent: number };
+      metadata: {
+        completed: number;
+        discovered: number;
+        percent: number;
+        skippedBinaryFiles: number;
+      };
+    } | null;
+    apiBudget?: {
+      status: string;
+      max: number | null;
+      remaining: number | null;
+      used: number | null;
+      usedPercent: number | null;
+      observedAt: string;
+      message?: string;
+    } | null;
+    failureSummary?: Array<{
+      stage: string;
+      message: string;
+      retryable: boolean;
+    }> | null;
+  };
+  latestBenchmark: null | {
+    status: string;
+    suiteVersion: string;
+    completedAt: string | null;
+    corpusSummary?: { valid?: boolean; caseCount?: number } | null;
+    runtimeSummary?: {
+      passSource?: string;
+      metrics?: Record<string, number>;
+    } | null;
+  };
+  benchmarkReady: boolean;
+  benchmarkReadyChecks: Record<string, boolean>;
+}
+
 interface OAuthUrlResponse {
   url: string;
 }
@@ -41,6 +101,33 @@ export async function getSalesforceStatus(authToken: string): Promise<Salesforce
   }
 
   return response.json();
+}
+
+export async function getSalesforceIngestionTrust(
+  authToken: string,
+): Promise<SalesforceIngestionTrustResponse> {
+  const response = await fetch(
+    `${BASE_API}/integrations/salesforce/ingestion-trust`,
+    {
+      headers: { Authorization: `Bearer ${authToken}` },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new Error("Failed to load ingestion trust status");
+  return response.json();
+}
+
+export async function retrySalesforceIngestion(
+  authToken: string,
+): Promise<void> {
+  const response = await fetch(
+    `${BASE_API}/integrations/salesforce/ingestion-trust/retry`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${authToken}` },
+    },
+  );
+  if (!response.ok) throw new Error("Failed to retry Salesforce ingestion");
 }
 
 /**

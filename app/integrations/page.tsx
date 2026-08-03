@@ -29,10 +29,13 @@ import {
 } from "../../lib/jira-api";
 import {
   getSalesforceStatus,
+  getSalesforceIngestionTrust,
   connectSalesforce,
   disconnectSalesforce,
+  retrySalesforceIngestion,
   syncSalesforceSchema,
   type SalesforceConnectionResponse,
+  type SalesforceIngestionTrustResponse,
 } from "../../lib/salesforce-api";
 import Sidebar from "../components/Sidebar";
 
@@ -74,6 +77,9 @@ export default function IntegrationsAndSetupPage() {
   const [checkingSalesforce, setCheckingSalesforce] = useState(false);
   const[isSyncingSchema, setIsSyncingSchema] = useState(false);
   const [isSyncingDependencies, setIsSyncingDependencies] = useState(false);
+  const [ingestionTrust, setIngestionTrust] = useState<SalesforceIngestionTrustResponse | null>(null);
+  const [checkingIngestionTrust, setCheckingIngestionTrust] = useState(false);
+  const [retryingIngestion, setRetryingIngestion] = useState(false);
 
   // --- API Key State ---
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
@@ -131,6 +137,7 @@ export default function IntegrationsAndSetupPage() {
       checkGithubConnection();
       checkJiraConnection();
       checkSalesforceConnection();
+      checkIngestionTrust();
       fetchKeys();
       
       const params = new URLSearchParams(window.location.search);
@@ -258,6 +265,32 @@ export default function IntegrationsAndSetupPage() {
       setSalesforceConnections([]);
     } finally {
       setCheckingSalesforce(false);
+    }
+  };
+
+  const checkIngestionTrust = async () => {
+    setCheckingIngestionTrust(true);
+    try {
+      const token = await getToken();
+      setIngestionTrust(token ? await getSalesforceIngestionTrust(token) : null);
+    } catch {
+      setIngestionTrust(null);
+    } finally {
+      setCheckingIngestionTrust(false);
+    }
+  };
+
+  const handleRetryIngestion = async () => {
+    const token = await getToken();
+    if (!token) return;
+    setRetryingIngestion(true);
+    try {
+      await retrySalesforceIngestion(token);
+      await checkIngestionTrust();
+    } catch (error) {
+      alert(`Failed to retry ingestion: ${getErrorMessage(error)}`);
+    } finally {
+      setRetryingIngestion(false);
     }
   };
 
@@ -532,8 +565,8 @@ export default function IntegrationsAndSetupPage() {
                     <h2 className="text-2xl font-bold flex items-center gap-3">
                       <Cloud className="w-7 h-7 text-blue-400" /> Connect Salesforce
                     </h2>
-                    <button onClick={checkSalesforceConnection} disabled={checkingSalesforce} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition-colors">
-                      <RefreshCw className={`w-3 h-3 ${checkingSalesforce ? "animate-spin" : ""}`} /> Refresh Status
+                    <button onClick={() => { checkSalesforceConnection(); checkIngestionTrust(); }} disabled={checkingSalesforce || checkingIngestionTrust} className="text-xs flex items-center gap-1 text-slate-400 hover:text-white transition-colors">
+                      <RefreshCw className={`w-3 h-3 ${checkingSalesforce || checkingIngestionTrust ? "animate-spin" : ""}`} /> Refresh Status
                     </button>
                   </div>
                   <p className="text-slate-400 mb-6">
@@ -604,6 +637,68 @@ export default function IntegrationsAndSetupPage() {
                       );
                     })}
                   </div>
+
+                  {isSfAdminConnected && (
+                    <div className="mb-6 rounded-xl border border-slate-700 bg-slate-950 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-400">Ingestion Trust Manifest</p>
+                          <h3 className="mt-1 text-lg font-semibold text-white">
+                            {ingestionTrust?.latestRun
+                              ? `${ingestionTrust.latestRun.status} · ${ingestionTrust.latestRun.coverageSummary?.accessibleContextPercent ?? 0}% accessible context`
+                              : "No evidenced ingestion run yet"}
+                          </h3>
+                          <p className="mt-1 max-w-xl text-xs text-slate-400">
+                            Coverage only includes metadata visible to this OAuth principal. Hidden and binary content is never claimed as indexed.
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleRetryIngestion}
+                          disabled={retryingIngestion || ingestionTrust?.latestRun?.status === "RUNNING"}
+                          className="flex items-center gap-2 rounded-lg border border-cyan-700 bg-cyan-950/50 px-3 py-2 text-xs font-medium text-cyan-200 disabled:opacity-50"
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${retryingIngestion ? "animate-spin" : ""}`} />
+                          Retry failed work
+                        </button>
+                      </div>
+
+                      {ingestionTrust?.latestRun && (
+                        <>
+                          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                            {[
+                              ["Schema", `${ingestionTrust.latestRun.coverageSummary?.schema.percent ?? 0}%`],
+                              ["Metadata", `${ingestionTrust.latestRun.coverageSummary?.metadata.percent ?? 0}%`],
+                              ["Freshness", ingestionTrust.freshness.ageHours === null ? "Unknown" : `${ingestionTrust.freshness.ageHours}h ago`],
+                              ["API budget", ingestionTrust.latestRun.apiBudget?.usedPercent == null ? "Unavailable" : `${ingestionTrust.latestRun.apiBudget.usedPercent}% used`],
+                            ].map(([label, value]) => (
+                              <div key={label} className="rounded-lg border border-slate-800 bg-slate-900 p-3">
+                                <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-100">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {(ingestionTrust.latestRun.failureSummary?.length || 0) > 0 && (
+                            <div className="mt-4 rounded-lg border border-amber-700/50 bg-amber-950/30 p-3">
+                              <p className="text-xs font-semibold text-amber-300">Retryable gaps</p>
+                              {ingestionTrust.latestRun.failureSummary?.map((failure, index) => (
+                                <p key={`${failure.stage}-${index}`} className="mt-1 text-xs text-amber-100/70">
+                                  {failure.stage}: {failure.message}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                            <span className={`rounded-full px-2 py-1 ${ingestionTrust.latestBenchmark?.corpusSummary?.valid ? "bg-emerald-900/50 text-emerald-300" : "bg-slate-800 text-slate-400"}`}>
+                              Frozen corpus: {ingestionTrust.latestBenchmark?.corpusSummary?.valid ? "validated" : "not recorded"}
+                            </span>
+                            <span className={`rounded-full px-2 py-1 ${ingestionTrust.benchmarkReadyChecks.observedRuntimeBenchmarkPassed ? "bg-emerald-900/50 text-emerald-300" : "bg-amber-950/50 text-amber-300"}`}>
+                              Live benchmark: {ingestionTrust.benchmarkReadyChecks.observedRuntimeBenchmarkPassed ? "passed" : "evidence required"}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {/* Important Action Required Block - Only shows if Admin is connected */}
                   {isSfAdminConnected && (
