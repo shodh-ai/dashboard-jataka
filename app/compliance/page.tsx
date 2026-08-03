@@ -12,6 +12,20 @@ interface AccessRecord {
   can_edit: boolean;
 }
 
+interface EffectivePrincipal {
+  username: string;
+  display_name?: string;
+  can_read: boolean;
+  can_edit: boolean;
+  grants: Array<{
+    grantor_type: string;
+    grantor: string;
+    assignment: string;
+    readable: boolean;
+    editable: boolean;
+  }>;
+}
+
 interface ExposureRow {
   object: string;
   exposed_fields: string[];
@@ -39,6 +53,9 @@ export default function CompliancePage() {
   const [fieldName, setFieldName] = useState("");
   const [loading, setLoading] = useState(false);
   const [accessList, setAccessList] = useState<AccessRecord[] | null>(null);
+  const [effectivePrincipals, setEffectivePrincipals] = useState<
+    EffectivePrincipal[] | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [exposureRows, setExposureRows] = useState<ExposureRow[] | null>(null);
   const [exposureError, setExposureError] = useState<string | null>(null);
@@ -64,7 +81,8 @@ export default function CompliancePage() {
           const data = await res.json();
           setBrains(data.brains || []);
           const active =
-            data.brains?.find((b: Brain) => b.id === data.activeBrainId) || data.brains?.[0];
+            data.brains?.find((b: Brain) => b.id === data.activeBrainId) ||
+            data.brains?.[0];
           if (active) setRepoId(active.knowledgeBaseId);
         }
       } catch (e) {
@@ -149,9 +167,12 @@ export default function CompliancePage() {
           object_name: selectedObject,
           search_term: searchQuery,
         });
-        const res = await fetch(`${BASE_API}/brum-proxy/compliance/search_fields?${params.toString()}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `${BASE_API}/brum-proxy/compliance/search_fields?${params.toString()}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         if (!res.ok) throw new Error("Failed to fetch field suggestions");
 
         const data = await res.json();
@@ -169,27 +190,47 @@ export default function CompliancePage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!scopeId || !searchQuery.trim()) return;
-    
+
     setLoading(true);
     setError(null);
 
     try {
       const token = await getToken();
       const BASE_API = process.env.NEXT_PUBLIC_API_BASE_URL;
-      
+
       const resolvedField = searchQuery.trim();
-      const res = await fetch(`${BASE_API}/brum-proxy/compliance/xray?repo_id=${encodeURIComponent(scopeId)}&field_name=${encodeURIComponent(resolvedField)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [res, effectiveRes] = await Promise.all([
+        fetch(
+          `${BASE_API}/brum-proxy/compliance/xray?repo_id=${encodeURIComponent(scopeId)}&field_name=${encodeURIComponent(resolvedField)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        ),
+        fetch(`${BASE_API}/brum-proxy/governance/effective-access`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            repo_id: scopeId,
+            field_name: resolvedField,
+            branch: "main",
+          }),
+        }),
+      ]);
 
       if (!res.ok) throw new Error("Field not found or scan failed.");
-      
+
       const data = await res.json();
+      const effectiveData = effectiveRes.ok ? await effectiveRes.json() : null;
       setFieldName(resolvedField);
       setAccessList(data.access_list);
+      setEffectivePrincipals(effectiveData?.principals ?? []);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Field not found or scan failed."));
       setAccessList(null);
+      setEffectivePrincipals(null);
     } finally {
       setLoading(false);
     }
@@ -206,240 +247,387 @@ export default function CompliancePage() {
     <div className="flex min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       <Sidebar orgName="Jataka" userRole="ARCHITECT" />
       <div className="flex-1 overflow-y-auto p-6 lg:p-10">
-      <div className="max-w-5xl">
-        {brains.length > 1 && (
-          <div className="mb-6 flex items-center justify-end gap-3 print:hidden">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Audit Scope:
-            </label>
-            <select
-              className="input text-sm py-2 px-3 h-10 w-64 bg-[var(--bg-surface)] border-[var(--border-default)]"
-              value={repoId || ""}
-              onChange={(e) => {
-                setRepoId(e.target.value || null);
-                setObjects([]);
-                setSelectedObject("");
-                setSearchQuery("");
-                setSuggestedFields([]);
-                setAccessList(null);
-                setError(null);
-                setExposureRows(null);
-                setExposureError(null);
-              }}
-            >
-              {brains.map((b) => (
-                <option key={b.id} value={b.knowledgeBaseId}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
-            <Shield className="text-indigo-500" size={28} />
-            Compliance X-Ray
-          </h2>
-          <p className="text-[var(--text-secondary)] mt-2">
-            Instantly generate &quot;Net Effective Access&quot; reports for auditors (SOC2, SOX). Type a sensitive Field API Name to see exactly which Profiles and Permission Sets grant access to it.
-          </p>
-        </div>
-
-        {/* Experience Cloud public exposure (graph) */}
-        <div className="print:hidden card p-5 md:p-6 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-            Experience Cloud — public exposure
-          </h3>
-          <p className="text-xs text-[var(--text-muted)] mb-4">
-            Objects reachable via Guest User profiles (object read) or Guest Sharing Rules in the ingested graph.
-          </p>
-          {exposureError && (
-            <p className="text-sm text-rose-500">{exposureError}</p>
-          )}
-          {!exposureError && exposureRows === null && scopeId && (
-            <p className="text-sm text-[var(--text-muted)]">Loading exposure scan…</p>
-          )}
-          {!exposureError && exposureRows && exposureRows.length === 0 && (
-            <p className="text-sm text-[var(--text-secondary)]">No guest profile or guest sharing rule paths matched for this knowledge scope.</p>
-          )}
-          {!exposureError && exposureRows && exposureRows.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-[var(--text-muted)] uppercase text-[11px] tracking-wider border-b border-[var(--border-default)]">
-                  <tr>
-                    <th className="py-2 pr-4 font-medium">Object</th>
-                    <th className="py-2 pr-4 font-medium">Guest-visible fields</th>
-                    <th className="py-2 font-medium">Sharing rules</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-default)]">
-                  {exposureRows.map((row, idx) => (
-                    <tr key={`${row.object}-${idx}`}>
-                      <td className="py-3 pr-4 font-medium whitespace-nowrap">{row.object}</td>
-                      <td className="py-3 pr-4 text-[var(--text-secondary)] text-xs">
-                        {row.exposed_fields?.length
-                          ? row.exposed_fields.join(", ")
-                          : "—"}
-                      </td>
-                      <td className="py-3 text-[var(--text-secondary)] text-xs">
-                        {row.sharing_rules_applied?.length
-                          ? row.sharing_rules_applied.join(", ")
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div className="max-w-5xl">
+          {brains.length > 1 && (
+            <div className="mb-6 flex items-center justify-end gap-3 print:hidden">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Audit Scope:
+              </label>
+              <select
+                className="input text-sm py-2 px-3 h-10 w-64 bg-[var(--bg-surface)] border-[var(--border-default)]"
+                value={repoId || ""}
+                onChange={(e) => {
+                  setRepoId(e.target.value || null);
+                  setObjects([]);
+                  setSelectedObject("");
+                  setSearchQuery("");
+                  setSuggestedFields([]);
+                  setAccessList(null);
+                  setEffectivePrincipals(null);
+                  setError(null);
+                  setExposureRows(null);
+                  setExposureError(null);
+                }}
+              >
+                {brains.map((b) => (
+                  <option key={b.id} value={b.knowledgeBaseId}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
-        </div>
 
-        {/* Search Controls */}
-        <form
-          onSubmit={handleSearch}
-          className="print:hidden card p-6 md:p-7 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start rounded-xl shadow-[0_8px_32px_rgba(8,12,28,0.35)]"
-        >
-          <div className="flex flex-col w-full lg:w-1/3">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-              1. Select Object
-            </label>
-            <select
-              className="input w-full h-11"
-              value={selectedObject}
-              onChange={(e) => {
-                setSelectedObject(e.target.value);
-                setSearchQuery("");
-                setSuggestedFields([]);
-                setAccessList(null);
-                setError(null);
-              }}
-            >
-              <option value="">-- Choose an Object --</option>
-              {objects.map((obj) => (
-                <option key={obj} value={obj}>
-                  {obj}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[var(--text-muted)] mt-2">
-              {objects.length > 0 ? `${objects.length} objects available` : "Loading available objects..."}
+          {/* Header */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-3">
+              <Shield className="text-indigo-500" size={28} />
+              Compliance X-Ray
+            </h2>
+            <p className="text-[var(--text-secondary)] mt-2">
+              Instantly generate &quot;Net Effective Access&quot; reports for
+              auditors (SOC2, SOX). Type a sensitive Field API Name to see
+              exactly which Profiles and Permission Sets grant access to it.
             </p>
           </div>
 
-          <div className="flex flex-col w-full lg:w-1/3">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-              2. Search Field
-            </label>
-            <input
-              type="text"
-              list="field-suggestions"
-              className="input w-full h-11 disabled:opacity-60"
-              placeholder={selectedObject ? "e.g. Industry, Name..." : "Select an object first..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              disabled={!selectedObject}
-              required
-            />
-            <datalist id="field-suggestions">
-              {suggestedFields.map((field) => (
-                <option key={field} value={field} />
-              ))}
-            </datalist>
-            <p className="text-xs text-[var(--text-muted)] mt-2">
-              {selectedObject
-                ? "Type to see matching fields"
-                : "Choose an object to enable field search"}
+          {/* Experience Cloud public exposure (graph) */}
+          <div className="print:hidden card p-5 md:p-6 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+              Experience Cloud — public exposure
+            </h3>
+            <p className="text-xs text-[var(--text-muted)] mb-4">
+              Objects reachable via Guest User profiles (object read) or Guest
+              Sharing Rules in the ingested graph.
             </p>
-          </div>
-
-          <div className="w-full lg:w-auto lg:min-w-[220px]">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2 block">
-              3. Run Report
-            </label>
-            <button
-              type="submit"
-              disabled={loading || !searchQuery.trim()}
-              className="btn-primary whitespace-nowrap w-full h-11 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {loading ? "Scanning Graph..." : "Generate Audit Report"}
-            </button>
-            <p className="text-xs mt-2 invisible">
-              alignment spacer
-            </p>
-          </div>
-        </form>
-
-        {error && <div className="text-rose-500 mb-6">{error}</div>}
-
-        {/* Results Table (This section is targeted by print media queries for PDF) */}
-        {accessList && (
-          <div
-            className="card overflow-hidden print:overflow-visible print:border-none print:shadow-none print:bg-white print:text-black"
-            id="printable-audit-report"
-          >
-            <div className="px-5 py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)] print:bg-white print:border-gray-300 flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold text-[var(--text-primary)] print:text-black">
-                  Audit Access Report: {fieldName}
-                </h3>
-                <p className="text-xs text-[var(--text-muted)] print:text-gray-600 mt-1">
-                  Generated by Jataka AI • {todayDate}
-                </p>
-                <p className="text-xs font-semibold text-indigo-400 print:text-indigo-700 mt-1">
-                  Target Environment: Knowledge Scope ID ({scopeId || "Unavailable"})
-                </p>
-              </div>
-              <button onClick={handleExportPDF} className="btn-secondary print:!hidden flex items-center gap-2 text-xs">
-                <Download size={14} /> Export to PDF
-              </button>
-            </div>
-            
-            <div className="overflow-x-auto print:overflow-visible print:w-full">
-              <table className="w-full text-left text-sm print:table-fixed">
-                <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] print:bg-white print:text-gray-700 uppercase text-[11px] tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3 font-medium w-[52%] print:w-[56%]">Security Entity</th>
-                    <th className="px-5 py-3 font-medium w-[24%] print:w-[22%]">Type</th>
-                    <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">Read Access</th>
-                    <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">Edit Access</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-default)] print:divide-gray-300">
-                  {accessList.length === 0 ? (
+            {exposureError && (
+              <p className="text-sm text-rose-500">{exposureError}</p>
+            )}
+            {!exposureError && exposureRows === null && scopeId && (
+              <p className="text-sm text-[var(--text-muted)]">
+                Loading exposure scan…
+              </p>
+            )}
+            {!exposureError && exposureRows && exposureRows.length === 0 && (
+              <p className="text-sm text-[var(--text-secondary)]">
+                No guest profile or guest sharing rule paths matched for this
+                knowledge scope.
+              </p>
+            )}
+            {!exposureError && exposureRows && exposureRows.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-[var(--text-muted)] uppercase text-[11px] tracking-wider border-b border-[var(--border-default)]">
                     <tr>
-                      <td colSpan={4} className="p-8 text-center text-[var(--text-muted)] print:text-gray-700">
-                        No access found for this field.
-                      </td>
+                      <th className="py-2 pr-4 font-medium">Object</th>
+                      <th className="py-2 pr-4 font-medium">
+                        Guest-visible fields
+                      </th>
+                      <th className="py-2 font-medium">Sharing rules</th>
                     </tr>
-                  ) : (
-                    accessList.map((record, idx) => (
-                      <tr key={idx} className="hover:bg-[var(--bg-base)]/50 print:hover:bg-transparent">
-                        <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black whitespace-normal break-words print:break-all">
-                          {record.name}
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border-default)]">
+                    {exposureRows.map((row, idx) => (
+                      <tr key={`${row.object}-${idx}`}>
+                        <td className="py-3 pr-4 font-medium whitespace-nowrap">
+                          {row.object}
                         </td>
-                        <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black whitespace-nowrap">
-                          <span className={`badge ${record.type === 'Profile' ? 'badge-amber' : 'badge-indigo'}`}>
-                            {record.type}
-                          </span>
+                        <td className="py-3 pr-4 text-[var(--text-secondary)] text-xs">
+                          {row.exposed_fields?.length
+                            ? row.exposed_fields.join(", ")
+                            : "—"}
                         </td>
-                        <td className="px-5 py-3 text-center">
-                          {record.can_read ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          {record.can_edit ? <Check className="mx-auto text-emerald-500" size={16} /> : <X className="mx-auto text-[var(--text-muted)]" size={16} />}
+                        <td className="py-3 text-[var(--text-secondary)] text-xs">
+                          {row.sharing_rules_applied?.length
+                            ? row.sharing_rules_applied.join(", ")
+                            : "—"}
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Search Controls */}
+          <form
+            onSubmit={handleSearch}
+            className="print:hidden card p-6 md:p-7 mb-8 bg-[var(--bg-surface)] border border-[var(--border-default)] flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start rounded-xl shadow-[0_8px_32px_rgba(8,12,28,0.35)]"
+          >
+            <div className="flex flex-col w-full lg:w-1/3">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+                1. Select Object
+              </label>
+              <select
+                className="input w-full h-11"
+                value={selectedObject}
+                onChange={(e) => {
+                  setSelectedObject(e.target.value);
+                  setSearchQuery("");
+                  setSuggestedFields([]);
+                  setAccessList(null);
+                  setEffectivePrincipals(null);
+                  setError(null);
+                }}
+              >
+                <option value="">-- Choose an Object --</option>
+                {objects.map((obj) => (
+                  <option key={obj} value={obj}>
+                    {obj}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-[var(--text-muted)] mt-2">
+                {objects.length > 0
+                  ? `${objects.length} objects available`
+                  : "Loading available objects..."}
+              </p>
+            </div>
+
+            <div className="flex flex-col w-full lg:w-1/3">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+                2. Search Field
+              </label>
+              <input
+                type="text"
+                list="field-suggestions"
+                className="input w-full h-11 disabled:opacity-60"
+                placeholder={
+                  selectedObject
+                    ? "e.g. Industry, Name..."
+                    : "Select an object first..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={!selectedObject}
+                required
+              />
+              <datalist id="field-suggestions">
+                {suggestedFields.map((field) => (
+                  <option key={field} value={field} />
+                ))}
+              </datalist>
+              <p className="text-xs text-[var(--text-muted)] mt-2">
+                {selectedObject
+                  ? "Type to see matching fields"
+                  : "Choose an object to enable field search"}
+              </p>
+            </div>
+
+            <div className="w-full lg:w-auto lg:min-w-[220px]">
+              <label className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2 block">
+                3. Run Report
+              </label>
+              <button
+                type="submit"
+                disabled={loading || !searchQuery.trim()}
+                className="btn-primary whitespace-nowrap w-full h-11 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? "Scanning Graph..." : "Generate Audit Report"}
+              </button>
+              <p className="text-xs mt-2 invisible">alignment spacer</p>
+            </div>
+          </form>
+
+          {error && <div className="text-rose-500 mb-6">{error}</div>}
+
+          {/* Results Table (This section is targeted by print media queries for PDF) */}
+          {accessList && (
+            <div
+              className="card overflow-hidden print:overflow-visible print:border-none print:shadow-none print:bg-white print:text-black"
+              id="printable-audit-report"
+            >
+              <div className="px-5 py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)] print:bg-white print:border-gray-300 flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-[var(--text-primary)] print:text-black">
+                    Audit Access Report: {fieldName}
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] print:text-gray-600 mt-1">
+                    Generated by Jataka AI • {todayDate}
+                  </p>
+                  <p className="text-xs font-semibold text-indigo-400 print:text-indigo-700 mt-1">
+                    Target Environment: Knowledge Scope ID (
+                    {scopeId || "Unavailable"})
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportPDF}
+                  className="btn-secondary print:!hidden flex items-center gap-2 text-xs"
+                >
+                  <Download size={14} /> Export to PDF
+                </button>
+              </div>
+
+              <div className="overflow-x-auto print:overflow-visible print:w-full">
+                <table className="w-full text-left text-sm print:table-fixed">
+                  <thead className="bg-[var(--bg-base)] text-[var(--text-secondary)] print:bg-white print:text-gray-700 uppercase text-[11px] tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3 font-medium w-[52%] print:w-[56%]">
+                        Security Entity
+                      </th>
+                      <th className="px-5 py-3 font-medium w-[24%] print:w-[22%]">
+                        Type
+                      </th>
+                      <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">
+                        Read Access
+                      </th>
+                      <th className="px-5 py-3 font-medium text-center w-[12%] print:w-[11%]">
+                        Edit Access
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border-default)] print:divide-gray-300">
+                    {accessList.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="p-8 text-center text-[var(--text-muted)] print:text-gray-700"
+                        >
+                          No access found for this field.
+                        </td>
+                      </tr>
+                    ) : (
+                      accessList.map((record, idx) => (
+                        <tr
+                          key={idx}
+                          className="hover:bg-[var(--bg-base)]/50 print:hover:bg-transparent"
+                        >
+                          <td className="px-5 py-3 font-medium text-[var(--text-primary)] print:text-black whitespace-normal break-words print:break-all">
+                            {record.name}
+                          </td>
+                          <td className="px-5 py-3 text-[var(--text-secondary)] print:text-black whitespace-nowrap">
+                            <span
+                              className={`badge ${record.type === "Profile" ? "badge-amber" : "badge-indigo"}`}
+                            >
+                              {record.type}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            {record.can_read ? (
+                              <Check
+                                className="mx-auto text-emerald-500"
+                                size={16}
+                              />
+                            ) : (
+                              <X
+                                className="mx-auto text-[var(--text-muted)]"
+                                size={16}
+                              />
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            {record.can_edit ? (
+                              <Check
+                                className="mx-auto text-emerald-500"
+                                size={16}
+                              />
+                            ) : (
+                              <X
+                                className="mx-auto text-[var(--text-muted)]"
+                                size={16}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {effectivePrincipals && (
+            <div className="card mt-6 overflow-hidden border border-[var(--border-default)]">
+              <div className="border-b border-[var(--border-default)] bg-[var(--bg-surface)] px-5 py-4">
+                <h3 className="font-semibold text-[var(--text-primary)]">
+                  Net Effective User Access
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Live user assignments fused with Profile and PermissionSet
+                  field permissions.
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--bg-base)] text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
+                    <tr>
+                      <th className="px-5 py-3 font-medium">User</th>
+                      <th className="px-5 py-3 font-medium">Grant path</th>
+                      <th className="px-5 py-3 text-center font-medium">
+                        Read
+                      </th>
+                      <th className="px-5 py-3 text-center font-medium">
+                        Edit
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border-default)]">
+                    {effectivePrincipals.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="p-8 text-center text-[var(--text-muted)]"
+                        >
+                          No active user assignment grants this field.
+                        </td>
+                      </tr>
+                    ) : (
+                      effectivePrincipals.map((principal) => (
+                        <tr key={principal.username}>
+                          <td className="px-5 py-3">
+                            <p className="font-medium text-[var(--text-primary)]">
+                              {principal.display_name || principal.username}
+                            </p>
+                            <p className="mt-1 font-mono text-[11px] text-[var(--text-muted)]">
+                              {principal.username}
+                            </p>
+                          </td>
+                          <td className="px-5 py-3 text-xs text-[var(--text-secondary)]">
+                            {principal.grants
+                              .map(
+                                (grant) =>
+                                  `${grant.grantor_type} ${grant.grantor}`,
+                              )
+                              .join(" · ")}
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            {principal.can_read ? (
+                              <Check
+                                className="mx-auto text-emerald-500"
+                                size={16}
+                              />
+                            ) : (
+                              <X
+                                className="mx-auto text-[var(--text-muted)]"
+                                size={16}
+                              />
+                            )}
+                          </td>
+                          <td className="px-5 py-3 text-center">
+                            {principal.can_edit ? (
+                              <Check
+                                className="mx-auto text-emerald-500"
+                                size={16}
+                              />
+                            ) : (
+                              <X
+                                className="mx-auto text-[var(--text-muted)]"
+                                size={16}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </div>
   );
 }
