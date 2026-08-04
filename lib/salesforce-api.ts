@@ -42,7 +42,13 @@ export interface SalesforceIngestionTrustResponse {
       accessibleContextPercent: number;
       definition: string;
       failures: number;
-      schema: { completed: number; discovered: number; percent: number };
+      schema: {
+        completed: number;
+        discovered: number;
+        globallyVisible?: number;
+        systemRestricted?: number;
+        percent: number;
+      };
       metadata: {
         completed: number;
         discovered: number;

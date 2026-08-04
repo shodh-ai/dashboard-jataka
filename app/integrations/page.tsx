@@ -649,7 +649,7 @@ export default function IntegrationsAndSetupPage() {
                               : "No evidenced ingestion run yet"}
                           </h3>
                           <p className="mt-1 max-w-xl text-xs text-slate-400">
-                            Coverage only includes metadata visible to this OAuth principal. Hidden and binary content is never claimed as indexed.
+                            Coverage measures metadata accessible to this OAuth principal. Salesforce-restricted objects and binary assets are evidenced separately, never claimed as indexed.
                           </p>
                         </div>
                         <button
@@ -677,6 +677,14 @@ export default function IntegrationsAndSetupPage() {
                               </div>
                             ))}
                           </div>
+                          {(ingestionTrust.latestRun.coverageSummary?.schema.systemRestricted ?? 0) > 0 && (
+                            <div className="mt-4 rounded-lg border border-sky-700/50 bg-sky-950/30 p-3">
+                              <p className="text-xs font-semibold text-sky-300">System restricted / inaccessible</p>
+                              <p className="mt-1 text-xs text-sky-100/70">
+                                Salesforce exposed {ingestionTrust.latestRun.coverageSummary?.schema.globallyVisible ?? 0} objects globally, but denied describe access to {ingestionTrust.latestRun.coverageSummary?.schema.systemRestricted ?? 0}. These are excluded from the accessible coverage denominator and retained as audit evidence.
+                              </p>
+                            </div>
+                          )}
                           {(ingestionTrust.latestRun.failureSummary?.length || 0) > 0 && (
                             <div className="mt-4 rounded-lg border border-amber-700/50 bg-amber-950/30 p-3">
                               <p className="text-xs font-semibold text-amber-300">Retryable gaps</p>
