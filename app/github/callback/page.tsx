@@ -19,6 +19,17 @@ interface Brain {
   name: string;
 }
 
+async function getApiError(response: Response): Promise<string> {
+  try {
+    const payload = await response.json();
+    if (typeof payload?.message === "string") return payload.message;
+    if (Array.isArray(payload?.message)) return payload.message.join(" ");
+  } catch {
+    // Fall back to the HTTP status when the API did not return JSON.
+  }
+  return `${response.status} ${response.statusText}`.trim();
+}
+
 function GithubCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,13 +89,22 @@ function GithubCallbackInner() {
           setRepoBranches(initialBranchMap);
           
           setStatus("selecting");
+        } else if (!reposRes.ok) {
+          const detail = await getApiError(reposRes);
+          throw new Error(
+            reposRes.status === 401
+              ? `This GitHub installation belongs to another Jataka workspace. Switch to that workspace or install the app for this workspace. (${detail})`
+              : `Could not load GitHub repositories. ${detail}`,
+          );
         } else {
-          throw new Error("Failed to load setup data");
+          throw new Error(`Could not load Jataka workspaces. ${await getApiError(brainsRes)}`);
         }
       } catch (err) {
         console.error(err);
         setStatus("error");
-        setErrorMsg("Could not load installation details.");
+        setErrorMsg(
+          err instanceof Error ? err.message : "Could not load installation details.",
+        );
       }
     };
 
