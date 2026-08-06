@@ -31,6 +31,7 @@ import {
 import GlassNode, { GlassNodeData } from './graph/GlassNode';
 import AnimatedEdge, { EdgeMarkerDefs, AnimatedEdgeData } from './graph/AnimatedEdge';
 import type { BlastRadiusGraph } from '../auto-resolution/types';
+import { getApiErrorMessage } from '../lib/api-error';
 
 // --- Custom Node & Edge Types ---
 const nodeTypes = {
@@ -39,6 +40,12 @@ const nodeTypes = {
 
 const edgeTypes = {
   animatedEdge: AnimatedEdge,
+};
+
+const graphText = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
 };
 
 // --- Layout Logic (Increased Spacing for Readability) ---
@@ -357,7 +364,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to fetch dependency graph');
+        throw new Error(getApiErrorMessage(errorData, 'Failed to fetch dependency graph'));
       }
 
       const data = await res.json();
@@ -374,7 +381,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         id: n.id,
         type: 'glassNode',
         data: { 
-          label: n.label,
+          label: graphText(n.label, graphText(n.apiName, 'Unknown')),
           type: graphNodeType(n.type),
           metadataType: n.metadataType,
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
@@ -442,7 +449,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to execute custom query');
+        throw new Error(getApiErrorMessage(errorData, 'Failed to execute custom query'));
       }
 
       const data = await res.json();
@@ -457,7 +464,7 @@ export default function GraphVisualizer({ baseUrl, activeBrainId }: GraphVisuali
         id: n.id,
         type: 'glassNode',
         data: { 
-          label: n.label,
+          label: graphText(n.label, graphText(n.apiName, 'Unknown')),
           type: graphNodeType(n.type),
           metadataType: n.metadataType,
           risk: (n.risk as 'Critical' | 'Safe') || 'Safe',
